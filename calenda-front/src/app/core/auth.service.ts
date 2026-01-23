@@ -5,8 +5,10 @@ import { inject } from '@angular/core';
 import { API_BASE_URL } from './api.config';
 import { StorageService } from './storage.service';
 
+/** Rôles applicatifs (alignés sur le backend). */
 export type Role = 'ADMIN' | 'ORGANISATEUR' | 'UTILISATEUR';
 
+/** Représentation minimaliste de l'utilisateur authentifié côté front. */
 export type AuthUser = {
   id: string;
   email: string;
@@ -15,6 +17,10 @@ export type AuthUser = {
 };
 
 @Injectable({ providedIn: 'root' })
+/**
+ * Service d'authentification.
+ * Stocke le token, expose l'utilisateur courant et propose login/register/logout.
+ */
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = inject(API_BASE_URL);
@@ -30,6 +36,10 @@ export class AuthService {
 
   private loadPromise: Promise<void> | null = null;
 
+  /**
+   * S'assure que `user()` est chargé si un token existe.
+   * Déduplique les appels concurrents avec `loadPromise`.
+   */
   async ensureLoaded() {
     if (!this.token()) {
       return;
@@ -48,6 +58,7 @@ export class AuthService {
     await this.loadPromise;
   }
 
+  /** Recharge le profil courant via `/users/me` (si token présent). */
   async refreshMe() {
     if (!this.token()) {
       return;
@@ -59,6 +70,7 @@ export class AuthService {
     }
   }
 
+  /** Authentifie via `/auth/login`, persiste le token, et met à jour le user courant. */
   async login(email: string, password: string) {
     const result = await this.http
       .post<{ accessToken: string; user: AuthUser }>(`${this.apiBaseUrl}/auth/login`, {
@@ -76,6 +88,7 @@ export class AuthService {
     this.user.set(result.user);
   }
 
+  /** Inscription via `/auth/register`. */
   async register(payload: {
     pseudo: string;
     email: string;
@@ -87,6 +100,7 @@ export class AuthService {
     await this.http.post(`${this.apiBaseUrl}/auth/register`, payload).toPromise();
   }
 
+  /** Déconnecte l'utilisateur: supprime le token, reset le state et redirige vers `/`. */
   logout() {
     this.storage.remove(this.tokenKey);
     this.token.set(null);

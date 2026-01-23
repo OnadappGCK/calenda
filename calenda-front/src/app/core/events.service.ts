@@ -2,8 +2,10 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from './api.config';
 
+/** Catégories disponibles pour un événement (doit matcher le backend). */
 export type EventCategory = 'Danse' | 'Concert' | 'Spectacle' | "Feux d’artifice" | 'Exposition' | 'Autre';
 
+/** DTO événement renvoyé par l'API. */
 export type EventDto = {
   id: string;
   titre: string;
@@ -21,26 +23,32 @@ export type EventDto = {
 };
 
 @Injectable({ providedIn: 'root' })
+/** Service d'accès aux endpoints `/events` (liste, détails, création, etc.). */
 export class EventsService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = inject(API_BASE_URL);
 
+  /** Liste les événements (avec filtres optionnels via query params). */
   list(params?: Record<string, string>) {
     return this.http.get<EventDto[]>(`${this.apiBaseUrl}/events`, { params });
   }
 
+  /** Récupère les événements mis en avant (homepage). */
   featured() {
     return this.http.get<EventDto[]>(`${this.apiBaseUrl}/events/featured`);
   }
 
+  /** Récupère le détail d'un événement. */
   getOne(id: string) {
     return this.http.get<EventDto>(`${this.apiBaseUrl}/events/${id}`);
   }
 
+  /** Récupère des événements similaires à un événement donné. */
   similar(id: string) {
     return this.http.get<EventDto[]>(`${this.apiBaseUrl}/events/${id}/similar`);
   }
 
+  /** Crée un événement (réservé aux rôles autorisés côté backend). */
   create(payload: {
     titre: string;
     description: string;

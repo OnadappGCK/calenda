@@ -1,5 +1,6 @@
 import { EventCategory } from './events.service';
 
+/** Retourne une couleur (hex) associée à une catégorie d'événement. */
 export function categoryColor(category: EventCategory): string {
   switch (category) {
     case 'Spectacle':
@@ -17,6 +18,7 @@ export function categoryColor(category: EventCategory): string {
   }
 }
 
+/** Retourne une icône textuelle associée à une catégorie d'événement. */
 export function categoryIcon(category: EventCategory): string {
   switch (category) {
     case 'Concert':
