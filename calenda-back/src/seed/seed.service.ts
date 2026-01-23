@@ -10,6 +10,10 @@ import { News } from '../news/news.entity';
 import { User } from '../users/user.entity';
 
 @Injectable()
+/**
+ * Service Seed.
+ * Insère des données de démonstration en environnement de dev (comptes, events, news).
+ */
 export class SeedService {
   constructor(
     private readonly configService: ConfigService,
@@ -18,6 +22,7 @@ export class SeedService {
     @InjectRepository(News) private readonly newsRepo: Repository<News>,
   ) {}
 
+  /** Seed des comptes de dev (admin/organisateur) selon `SEED_ADMIN` / `SEED_ORGANISATEUR`. */
   async seedDevUsers() {
     const seedAdmin = (this.configService.get<string>('SEED_ADMIN') ?? 'false').toLowerCase();
     const seedOrganisateur = (
@@ -72,6 +77,7 @@ export class SeedService {
     }
   }
 
+  /** Seed des événements de dev (dont overlaps) selon `SEED_EVENTS`. */
   async seedDevEvents() {
     const enabled = (this.configService.get<string>('SEED_EVENTS') ?? 'false').toLowerCase();
     if (enabled !== 'true') {
@@ -253,6 +259,7 @@ export class SeedService {
     await this.eventsRepo.save(entities);
   }
 
+  /** Seed des news de dev selon `SEED_NEWS`. */
   async seedDevNews() {
     const enabled = (this.configService.get<string>('SEED_NEWS') ?? 'false').toLowerCase();
     if (enabled !== 'true') {

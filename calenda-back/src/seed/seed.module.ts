@@ -9,9 +9,14 @@ import { SeedService } from './seed.service';
   imports: [TypeOrmModule.forFeature([User, Event, News])],
   providers: [SeedService],
 })
+/**
+ * Module Seed.
+ * Exécute des seeds de dev au démarrage (selon variables d'environnement).
+ */
 export class SeedModule implements OnModuleInit {
   constructor(private readonly seedService: SeedService) {}
 
+  /** Hook NestJS: exécute les seeds (users/events/news) à l'initialisation du module. */
   async onModuleInit() {
     await this.seedService.seedDevUsers();
     await this.seedService.seedDevEvents();

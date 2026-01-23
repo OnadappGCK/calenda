@@ -1,3 +1,4 @@
+/** Enum des catégories d'événements (partagé front/back via chaînes). */
 export enum EventCategory {
   DANSE = 'Danse',
   CONCERT = 'Concert',
