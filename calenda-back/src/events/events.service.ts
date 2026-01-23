@@ -8,19 +8,26 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { ListEventsQueryDto } from './dto/list-events.query';
 import { UpdateEventDto } from './dto/update-event.dto';
 
+/** User minimal porté par `req.user` (ou null si route publique). */
 type RequestUser = { id: string; role: Role } | null;
 
 @Injectable()
+/**
+ * Service Events.
+ * Contient la logique de recherche/listing, featured, similar, et CRUD avec contrôle d'accès.
+ */
 export class EventsService {
   constructor(
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
   ) {}
 
+  /** Indique si le user peut voir les événements non-public (admin/organisateur). */
   private canSeeNonPublic(user: RequestUser) {
     return user?.role === Role.ADMIN || user?.role === Role.ORGANISATEUR;
   }
 
+  /** Liste les événements selon filtres et contexte utilisateur (favoris, non-public). */
   async findAll(query: ListEventsQueryDto, user: RequestUser) {
     const qb = this.eventsRepo
       .createQueryBuilder('event')
@@ -72,6 +79,7 @@ export class EventsService {
     return qb.getMany();
   }
 
+  /** Liste les événements "en avant" (homepage). */
   async findFeatured(user: RequestUser) {
     const qb = this.eventsRepo
       .createQueryBuilder('event')
@@ -86,6 +94,7 @@ export class EventsService {
     return qb.getMany();
   }
 
+  /** Récupère un événement par id (masque les non-public si non autorisé). */
   async findOne(id: string, user: RequestUser) {
     const event = await this.eventsRepo.findOne({
       where: { id },
@@ -103,6 +112,7 @@ export class EventsService {
     return event;
   }
 
+  /** Retourne une liste d'événements similaires (même catégorie ou même date). */
   async findSimilar(id: string, user: RequestUser) {
     const current = await this.findOne(id, user);
 
@@ -123,6 +133,7 @@ export class EventsService {
     return qb.getMany();
   }
 
+  /** Crée un événement: organisateur lié au user, visibilité auto selon rôle (admin peut publier). */
   async create(dto: CreateEventDto, userId: string, role: Role) {
     const organisateur = await this.usersRepo.findOne({ where: { id: userId } });
     if (!organisateur) {
@@ -147,6 +158,7 @@ export class EventsService {
     return this.eventsRepo.save(event);
   }
 
+  /** Met à jour un événement (owner ou admin). Certains champs (public) réservés à l'admin. */
   async update(id: string, dto: UpdateEventDto, userId: string, role: Role) {
     const event = await this.eventsRepo.findOne({ where: { id }, relations: { organisateur: true } });
     if (!event) {
@@ -179,6 +191,7 @@ export class EventsService {
     return this.eventsRepo.save(event);
   }
 
+  /** Supprime un événement (owner ou admin). */
   async remove(id: string, userId: string, role: Role) {
     const event = await this.eventsRepo.findOne({ where: { id }, relations: { organisateur: true } });
     if (!event) {
@@ -194,6 +207,7 @@ export class EventsService {
     return { ok: true };
   }
 
+  /** Publie un événement (validation admin). */
   async validateEvent(id: string) {
     const event = await this.eventsRepo.findOne({ where: { id } });
     if (!event) {

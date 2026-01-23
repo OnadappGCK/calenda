@@ -11,4 +11,5 @@ import { EventsService } from './events.service';
   providers: [EventsService],
   exports: [EventsService],
 })
+/** Module Events (endpoints + logique métier autour des événements). */
 export class EventsModule {}
