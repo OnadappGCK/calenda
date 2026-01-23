@@ -24,4 +24,8 @@ import { JwtStrategy } from './jwt.strategy';
   providers: [AuthService, JwtStrategy],
   exports: [AuthService],
 })
+/**
+ * Module Auth.
+ * Déclare le controller/service d'authentification et configure JWT (secret + expiration).
+ */
 export class AuthModule {}

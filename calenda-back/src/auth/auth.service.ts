@@ -11,6 +11,10 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
+/**
+ * Service Auth.
+ * Contient la logique d'inscription/connexion et la génération de JWT.
+ */
 export class AuthService {
   constructor(
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
@@ -18,6 +22,9 @@ export class AuthService {
     private readonly captchaService: CaptchaService,
   ) {}
 
+  /**
+   * Inscription: vérifie captcha, valide unicité email/pseudo, hash le mot de passe et crée un user.
+   */
   async register(dto: RegisterDto) {
     await this.captchaService.verify(dto.captchaToken);
 
@@ -58,6 +65,9 @@ export class AuthService {
     };
   }
 
+  /**
+   * Connexion: vérifie captcha + credentials, puis signe un JWT et retourne token + user.
+   */
   async login(dto: LoginDto) {
     await this.captchaService.verify(dto.captchaToken);
 
@@ -88,6 +98,7 @@ export class AuthService {
     };
   }
 
+  /** Crée un token de vérification email (non utilisé si `emailVerified=true` en dev). */
   async createEmailVerificationToken(userId: string) {
     const token = randomUUID();
     await this.usersRepo.update(userId, { emailVerificationToken: token, emailVerified: false });
