@@ -50,4 +50,8 @@ import { UsersModule } from './users/users.module';
     },
   ],
 })
+/**
+ * Module racine NestJS.
+ * Déclare la config globale, la base SQLite (TypeORM), le throttling, et les sous-modules (auth/users/events/news/admin/seed).
+ */
 export class AppModule {}
