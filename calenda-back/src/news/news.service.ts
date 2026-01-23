@@ -4,9 +4,14 @@ import { Repository } from 'typeorm';
 import { News } from './news.entity';
 
 @Injectable()
+/**
+ * Service News.
+ * Fournit une liste paginée des news triées par date de publication.
+ */
 export class NewsService {
   constructor(@InjectRepository(News) private readonly newsRepo: Repository<News>) {}
 
+  /** Récupère une page de news (page/pageSize) avec bornes de sécurité sur `pageSize`. */
   async list(page = 1, pageSize = 10) {
     const take = Math.min(Math.max(pageSize, 1), 50);
     const skip = (Math.max(page, 1) - 1) * take;

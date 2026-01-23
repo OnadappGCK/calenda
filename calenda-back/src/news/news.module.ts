@@ -9,4 +9,5 @@ import { NewsService } from './news.service';
   controllers: [NewsController],
   providers: [NewsService],
 })
+/** Module News (news.entity + service + controller). */
 export class NewsModule {}
