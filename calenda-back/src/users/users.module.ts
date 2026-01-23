@@ -11,4 +11,5 @@ import { UsersService } from './users.service';
   providers: [UsersService],
   exports: [UsersService],
 })
+/** Module Users (profil courant + favoris). */
 export class UsersModule {}

@@ -7,12 +7,17 @@ import { User } from './user.entity';
 import { UpdateMeDto } from './dto/update-me.dto';
 
 @Injectable()
+/**
+ * Service Users.
+ * Gère le profil utilisateur courant et la relation favoris (user <-> events).
+ */
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
   ) {}
 
+  /** Récupère un user par id ou lève `user_not_found`. */
   async findById(id: string) {
     const user = await this.usersRepo.findOne({ where: { id } });
     if (!user) {
@@ -21,6 +26,7 @@ export class UsersService {
     return user;
   }
 
+  /** Retourne un DTO du profil courant (sans passwordHash). */
   async getMe(id: string) {
     const user = await this.findById(id);
     return {
@@ -33,6 +39,7 @@ export class UsersService {
     };
   }
 
+  /** Liste les favoris du user (relation many-to-many). */
   async listFavorites(userId: string) {
     const user = await this.usersRepo.findOne({
       where: { id: userId },
@@ -46,6 +53,7 @@ export class UsersService {
     return user.favorites;
   }
 
+  /** Ajoute un événement aux favoris (idempotent). */
   async addFavorite(userId: string, eventId: string) {
     const user = await this.usersRepo.findOne({
       where: { id: userId },
@@ -70,6 +78,7 @@ export class UsersService {
     return { ok: true };
   }
 
+  /** Retire un événement des favoris (idempotent). */
   async removeFavorite(userId: string, eventId: string) {
     const user = await this.usersRepo.findOne({
       where: { id: userId },
@@ -86,6 +95,10 @@ export class UsersService {
     return { ok: true };
   }
 
+  /**
+   * Met à jour le profil courant.
+   * Gère l'unicité du pseudo et le changement de mot de passe si demandé.
+   */
   async updateMe(userId: string, dto: UpdateMeDto) {
     const user = await this.usersRepo.findOne({ where: { id: userId } });
     if (!user) {
