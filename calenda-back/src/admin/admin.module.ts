@@ -6,4 +6,5 @@ import { AdminController } from './admin.controller';
   imports: [EventsModule],
   controllers: [AdminController],
 })
+/** Module Admin (endpoints réservés au rôle ADMIN). */
 export class AdminModule {}
