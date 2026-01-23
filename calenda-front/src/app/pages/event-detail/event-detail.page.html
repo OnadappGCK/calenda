@@ -1,0 +1,36 @@
+<section class="wrap">
+  @if (!event()) {
+    <p>Chargement…</p>
+  } @else {
+    <a class="back" routerLink="/calendar">Retour</a>
+
+    <h1>{{ event()!.titre }}</h1>
+    <div class="meta">
+      {{ event()!.categorie }} · {{ event()!.ville }} · {{ event()!.lieu }}
+    </div>
+    <div class="meta">
+      {{ event()!.dateDebut | date: 'short' }} → {{ event()!.dateFin | date: 'short' }}
+    </div>
+
+    <p class="desc">{{ event()!.description }}</p>
+
+    <div class="actions">
+      <button class="btn" type="button" (click)="like()" [disabled]="!canLike()">Like</button>
+      <a class="btn" routerLink="/favorites">Voir mes favoris</a>
+    </div>
+
+    <h2>Événements similaires</h2>
+    @if (similar().length === 0) {
+      <p>Aucun.</p>
+    } @else {
+      <div class="grid">
+        @for (e of similar(); track e.id) {
+          <a class="card" [routerLink]="['/events', e.id]">
+            <div class="title">{{ e.titre }}</div>
+            <div class="meta">{{ e.dateDebut | date: 'short' }}</div>
+          </a>
+        }
+      </div>
+    }
+  }
+</section>

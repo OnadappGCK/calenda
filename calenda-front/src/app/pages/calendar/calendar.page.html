@@ -1,0 +1,415 @@
+<section class="container">
+  <div class="topbar">
+    <div class="topLeft">
+      @if (viewMode === 'week') {
+        <button class="iconBtn" type="button" (click)="prevPeriod()" aria-label="Précédent">‹</button>
+      }
+      <div class="weekTitle">
+        <div class="weekMain">{{ weekLabel() }}</div>
+        <div class="weekSub">{{ selectedDateObj() | date: 'EEEE d MMMM' }}</div>
+      </div>
+      @if (viewMode === 'week') {
+        <button class="iconBtn" type="button" (click)="nextPeriod()" aria-label="Suivant">›</button>
+      }
+    </div>
+
+    <div class="topRight">
+      <label class="field datePick">
+        <input type="date" [(ngModel)]="selectedDate" name="selectedDate" (change)="onDateChange()" />
+      </label>
+
+      <button class="btn" type="button" (click)="toggleFilters()">Filtres</button>
+
+      <button class="iconBtn" type="button" (click)="reload()" aria-label="Rafraîchir">↻</button>
+      @if (viewMode === 'week') {
+        <button class="iconBtn" type="button" (click)="toggleFavoris()" aria-label="Favoris">♥</button>
+      }
+
+      <div class="toggle">
+        <button class="toggleBtn" type="button" [class.active]="viewMode==='week'" (click)="setViewMode('week')">
+          Semaine
+        </button>
+        <button class="toggleBtn" type="button" [class.active]="viewMode==='day'" (click)="setViewMode('day')">
+          Journée
+        </button>
+      </div>
+
+      @if (canPropose()) {
+        <button class="btn btnPrimary" type="button" (click)="openPropose()">Proposer un événement</button>
+      }
+    </div>
+  </div>
+
+  <div class="chips">
+    @for (c of activeChips(); track c.key) {
+      @if (c.key === 'date') {
+        <span class="chip chipFixed">{{ c.label }}</span>
+      } @else {
+        <button class="chip" type="button" (click)="clearChip(c.key)">
+          {{ c.label }}
+          <span class="x">×</span>
+        </button>
+      }
+    }
+  </div>
+
+  @if (loading()) {
+    <p>Chargement…</p>
+  } @else {
+    @if (viewMode === 'week') {
+      <div class="scheduler">
+        <div class="schedScroll">
+          <div class="schedGrid" [style.--slot-px.px]="slotPx()">
+            <div class="corner"></div>
+
+            @for (d of weekDays(); track dateKey(d)) {
+              <button class="dayHead" type="button" (click)="selectedDate = dateKey(d); onDateChange()">
+                <div class="dayName dayNameFull">{{ d | date: 'EEEE' }}</div>
+                <div class="dayName dayNameShort">{{ d | date: 'EEE' }}</div>
+                <div class="dayDate dayDateFull">{{ d | date: 'd MMMM' }}</div>
+                <div class="dayDate dayDateShort">{{ d | date: 'd' }}</div>
+              </button>
+            }
+
+            <div class="timeCol" [style.height]="dayHeightPx()">
+              @for (t of timeSlots(); track t.idx) {
+                <div class="timeCell" [class.hour]="t.isHour">{{ t.label }}</div>
+              }
+            </div>
+
+            @for (d of weekDays(); track dateKey(d)) {
+              <div class="dayBody" [class.selected]="isSelectedDay(d)" [style.height]="dayHeightPx()">
+                @for (it of (layoutsByDay().get(dateKey(d)) ?? []); track $index) {
+                  @if (it.kind === 'event') {
+                    <button
+                      class="eventBlock"
+                      type="button"
+                      [style.background]="categoryColor(it.event.categorie)"
+                      [style.top.px]="it.topPx"
+                      [style.height.px]="it.heightPx"
+                      [style.left.%]="it.leftPct"
+                      [style.width.%]="it.widthPct"
+                      (click)="openSideForDay(dateKey(d))"
+                    >
+                      <div class="eventTitle">{{ it.event.titre }}</div>
+                      <div class="eventMeta">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
+                      <div class="eventMeta">{{ it.event.lieu }}</div>
+                    </button>
+                  } @else {
+                    <button
+                      class="mergedBlock"
+                      type="button"
+                      [style.top.px]="it.topPx"
+                      [style.height.px]="it.heightPx"
+                      (click)="openSideForDay(dateKey(d))"
+                    >
+                      {{ it.count }} événements
+                    </button>
+                  }
+                }
+              </div>
+            }
+
+            <div class="nightSpacer">
+              <div class="timeEnd">{{ endTimeLabel() }}</div>
+            </div>
+            @for (d of weekDays(); track dateKey(d)) {
+              <button class="nightBtn" type="button" (click)="openSideNightForDay(dateKey(d))">
+                Événements nocturnes ({{ nightCount(dateKey(d)) }})
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="weekSummary">
+        <div class="listTitle">De {{ selectedDateObj() | date: 'EEEE d MMMM' }} à la fin de la semaine</div>
+
+        <div class="weekList">
+          @for (g of eventsFromSelectedToWeekEnd(); track g.key) {
+            <div class="daySep">
+              <div class="sepTitle">{{ dayKeyToDate(g.key) | date: 'EEEE d MMMM' }}</div>
+              <div class="sepLine"></div>
+            </div>
+
+            @if (g.items.length === 0) {
+              <div class="empty">Aucun événement.</div>
+            } @else {
+              @for (e of g.items.slice(0, 1); track e.id) {
+                <div class="listRow" [style.background]="categoryColor(e.categorie)">
+                  <div class="listMain">
+                    <div class="listName">{{ e.titre }}</div>
+                    <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ e.lieu }}</div>
+                  </div>
+                  <div class="listRight">
+                    <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
+                  </div>
+                </div>
+              }
+
+              @if (g.items.length > 1) {
+                <div class="moreRow">+ {{ g.items.length - 1 }} autres</div>
+              }
+            }
+          }
+        </div>
+      </div>
+    } @else {
+      <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0.5rem; align-items: start;">
+        <button class="iconBtn" style="margin-top: 0.75rem" type="button" (click)="prevPeriod()" aria-label="Jour précédent">‹</button>
+
+        <div class="scheduler" style="margin-top: 0; min-width: 0;">
+          <div class="schedScroll">
+            <div class="schedGrid dayOnly" [style.--slot-px.px]="slotPx()">
+              <div class="corner"></div>
+
+              <button class="dayHead" type="button" (click)="openSideForDay(selectedDate)">
+                <div class="dayName">{{ selectedDateObj() | date: 'EEEE' }}</div>
+                <div class="dayDate">{{ selectedDateObj() | date: 'd MMMM' }}</div>
+              </button>
+
+              <div class="timeCol" [style.height]="dayHeightPx()">
+                @for (t of timeSlots(); track t.idx) {
+                  <div class="timeCell" [class.hour]="t.isHour">{{ t.label }}</div>
+                }
+              </div>
+
+              <div class="dayBody selected" [style.height]="dayHeightPx()">
+                @for (it of (layoutsByDay().get(selectedDate) ?? []); track $index) {
+                  @if (it.kind === 'event') {
+                    <button
+                      class="eventBlock"
+                      type="button"
+                      [style.background]="categoryColor(it.event.categorie)"
+                      [style.top.px]="it.topPx"
+                      [style.height.px]="it.heightPx"
+                      [style.left.%]="it.leftPct"
+                      [style.width.%]="it.widthPct"
+                      (click)="openSideForDay(selectedDate)"
+                    >
+                      <div class="eventTitle">{{ it.event.titre }}</div>
+                      <div class="eventMeta">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
+                      <div class="eventMeta">{{ it.event.lieu }}</div>
+                    </button>
+                  } @else {
+                    <button
+                      class="mergedBlock"
+                      type="button"
+                      [style.top.px]="it.topPx"
+                      [style.height.px]="it.heightPx"
+                      (click)="openSideForDay(selectedDate)"
+                    >
+                      {{ it.count }} événements
+                    </button>
+                  }
+                }
+              </div>
+
+              <div class="nightSpacer">
+                <div class="timeEnd">{{ endTimeLabel() }}</div>
+              </div>
+              <button class="nightBtn" type="button" (click)="openSideNightForDay(selectedDate)">
+                Événements nocturnes ({{ nightCount(selectedDate) }})
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button class="iconBtn" style="margin-top: 0.75rem" type="button" (click)="nextPeriod()" aria-label="Jour suivant">›</button>
+      </div>
+    }
+  }
+</section>
+
+@if (sideOpen()) {
+  <div class="sideBackdrop" (click)="closeSide()"></div>
+  <aside class="side">
+    <div class="sideHead">
+      <div>
+        <div class="sideTitle">{{ dayKeyToDate(sideDayKey()) | date: 'fullDate' }}</div>
+        <div class="sideTabs">
+          <button class="tab" type="button" [class.active]="sideTab()==='day'" (click)="sideTab.set('day')">
+            Jour
+          </button>
+          <button class="tab" type="button" [class.active]="sideTab()==='night'" (click)="sideTab.set('night')">
+            Nocturne
+          </button>
+        </div>
+      </div>
+      <button class="iconBtn" type="button" (click)="closeSide()">×</button>
+    </div>
+
+    <div class="sideList">
+      @if (sideTab() === 'day') {
+        @if (sideDayEvents().length === 0) {
+          <div class="empty">Aucun événement.</div>
+        } @else {
+          @for (e of sideDayEvents(); track e.id) {
+            <div class="sideCard" [style.background]="categoryColor(e.categorie)">
+              <div class="sideMain">
+                <div class="listName">{{ e.titre }}</div>
+                <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }}</div>
+                <div class="eventMeta">{{ e.ville }} · {{ e.lieu }}</div>
+                <div class="listText">{{ e.description }}</div>
+              </div>
+              <div class="sideActions">
+                <button class="iconBtn" type="button" (click)="toggleFavorite(e.id)" aria-label="Favori">
+                  {{ isFavorite(e.id) ? '♥' : '♡' }}
+                </button>
+                <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
+              </div>
+            </div>
+          }
+        }
+      } @else {
+        @if (sideNightEvents().length === 0) {
+          <div class="empty">Aucun événement nocturne.</div>
+        } @else {
+          @for (e of sideNightEvents(); track e.id) {
+            <div class="sideCard" [style.background]="categoryColor(e.categorie)">
+              <div class="sideMain">
+                <div class="listName">{{ e.titre }}</div>
+                <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }}</div>
+                <div class="eventMeta">{{ e.ville }} · {{ e.lieu }}</div>
+                <div class="listText">{{ e.description }}</div>
+              </div>
+              <div class="sideActions">
+                <button class="iconBtn" type="button" (click)="toggleFavorite(e.id)" aria-label="Favori">
+                  {{ isFavorite(e.id) ? '♥' : '♡' }}
+                </button>
+                <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
+              </div>
+            </div>
+          }
+        }
+      }
+    </div>
+  </aside>
+}
+
+@if (showPropose) {
+  <div class="modalBackdrop" (click)="closePropose()"></div>
+  <div class="modal">
+    <h2>Proposer un événement</h2>
+
+    <div class="grid">
+      <label>
+        Titre
+        <input type="text" [(ngModel)]="newTitre" name="newTitre" />
+      </label>
+
+      <label>
+        Description
+        <textarea rows="3" [(ngModel)]="newDescription" name="newDescription"></textarea>
+      </label>
+
+      <label>
+        Catégorie
+        <select [(ngModel)]="newCategorie" name="newCategorie">
+          <option value="Danse">Danse</option>
+          <option value="Concert">Concert</option>
+          <option value="Spectacle">Spectacle</option>
+          <option value="Feux d’artifice">Feux d’artifice</option>
+          <option value="Exposition">Exposition</option>
+          <option value="Autre">Autre</option>
+        </select>
+      </label>
+
+      <label>
+        Ville
+        <input type="text" [(ngModel)]="newVille" name="newVille" />
+      </label>
+
+      <label>
+        Lieu
+        <input type="text" [(ngModel)]="newLieu" name="newLieu" />
+      </label>
+
+      <label>
+        Date début
+        <input type="datetime-local" [(ngModel)]="newDateDebut" name="newDateDebut" />
+      </label>
+
+      <label>
+        Date fin
+        <input type="datetime-local" [(ngModel)]="newDateFin" name="newDateFin" />
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="btn" type="button" (click)="submitPropose()">Envoyer</button>
+      <button class="btn" type="button" (click)="closePropose()">Annuler</button>
+    </div>
+  </div>
+}
+
+@if (showFilters) {
+  <div class="modalBackdrop" (click)="toggleFilters()"></div>
+  <div class="modal">
+    <h2>Filtres</h2>
+
+    <div class="grid">
+      <div class="toggle">
+        <button class="toggleBtn" type="button" [class.active]="viewMode==='week'" (click)="setViewMode('week')">
+          Semaine
+        </button>
+        <button class="toggleBtn" type="button" [class.active]="viewMode==='day'" (click)="setViewMode('day')">
+          Journée
+        </button>
+      </div>
+
+      <label class="field">
+        Date
+        <input type="date" [(ngModel)]="selectedDate" name="selectedDateFilter" (change)="onDateChange()" />
+      </label>
+
+      <label class="field">
+        Date début
+        <input type="date" [(ngModel)]="dateDebutFilter" name="dateDebutFilter" />
+      </label>
+
+      <label class="field">
+        Date fin
+        <input type="date" [(ngModel)]="dateFinFilter" name="dateFinFilter" />
+      </label>
+
+      <label class="field">
+        Ville
+        <input type="text" [(ngModel)]="ville" name="ville" />
+      </label>
+
+      <label class="field">
+        Lieu
+        <input type="text" [(ngModel)]="lieu" name="lieu" />
+      </label>
+
+      <label class="field">
+        Catégorie
+        <select [(ngModel)]="categorie" name="categorie">
+          <option value="">Toutes catégories</option>
+          <option value="Danse">Danse</option>
+          <option value="Concert">Concert</option>
+          <option value="Spectacle">Spectacle</option>
+          <option value="Feux d’artifice">Feux d’artifice</option>
+          <option value="Exposition">Exposition</option>
+          <option value="Autre">Autre</option>
+        </select>
+      </label>
+
+      <label class="field">
+        Mot-clé
+        <input type="text" [(ngModel)]="q" name="q" />
+      </label>
+
+      <label class="field">
+        <span>Favoris</span>
+        <button class="btn" type="button" (click)="toggleFavoris()">{{ favoris ? 'Oui' : 'Non' }}</button>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="btn btnPrimary" type="button" (click)="applyFilters()">Rechercher</button>
+      <button class="btn" type="button" (click)="reset()">Réinitialiser</button>
+    </div>
+  </div>
+}

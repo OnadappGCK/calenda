@@ -1,0 +1,51 @@
+<section class="wrap">
+  <h1>Inscription</h1>
+
+  @if (error()) {
+    <div class="error">{{ error() }}</div>
+  }
+
+  <form (ngSubmit)="submit()">
+    <label>
+      Pseudo
+      <input name="pseudo" type="text" [(ngModel)]="pseudo" required />
+    </label>
+
+    <label>
+      Email
+      <input name="email" type="email" [(ngModel)]="email" required />
+    </label>
+
+    <label>
+      Ville
+      <input name="ville" type="text" [(ngModel)]="ville" required />
+    </label>
+
+    <label>
+      Lieu
+      <input name="lieu" type="text" [(ngModel)]="lieu" required />
+    </label>
+
+    <label>
+      Mot de passe
+      <input name="password" type="password" [(ngModel)]="password" required />
+    </label>
+
+    <label>
+      Confirmation
+      <input
+        name="passwordConfirmation"
+        type="password"
+        [(ngModel)]="passwordConfirmation"
+        required
+      />
+    </label>
+
+    <button class="btn" type="submit">Créer mon compte</button>
+  </form>
+
+  <p class="hint">
+    Déjà un compte ?
+    <a routerLink="/login">Connexion</a>
+  </p>
+</section>

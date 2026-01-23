@@ -1,0 +1,55 @@
+<section class="wrap">
+  @if (loading()) {
+    <p>Chargement…</p>
+  } @else {
+    <div class="card">
+      <div class="avatar">⦿</div>
+
+      <div class="title">{{ auth.user()?.pseudo }}</div>
+      <div class="role">{{ role() }}</div>
+
+      @if (!editing()) {
+        <button class="btn btnPrimary" type="button" (click)="startEdit()">Modifier le Profil</button>
+      } @else {
+        @if (error()) {
+          <div class="error">{{ error() }}</div>
+        }
+        @if (ok()) {
+          <div class="ok">Sauvegardé</div>
+        }
+
+        <div class="form">
+          <label class="field">
+            Pseudo
+            <input type="text" name="pseudo" [(ngModel)]="pseudo" />
+          </label>
+
+          <label class="field">
+            Ville
+            <input type="text" name="ville" [(ngModel)]="ville" />
+          </label>
+
+          <label class="field">
+            Lieu
+            <input type="text" name="lieu" [(ngModel)]="lieu" />
+          </label>
+
+          <label class="field">
+            Mot de passe
+            <input type="password" name="password" [(ngModel)]="password" />
+          </label>
+
+          <label class="field">
+            Confirmez
+            <input type="password" name="passwordConfirmation" [(ngModel)]="passwordConfirmation" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button class="btn btnPrimary" type="button" (click)="save()">Sauvegarder</button>
+          <button class="btn" type="button" (click)="cancelEdit()">Annuler</button>
+        </div>
+      }
+    </div>
+  }
+</section>

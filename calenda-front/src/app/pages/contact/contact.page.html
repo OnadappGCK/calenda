@@ -1,0 +1,31 @@
+<section class="container">
+  <h1>Contact</h1>
+
+  @if (ok()) {
+    <div class="ok">Message envoyé (demo)</div>
+  }
+
+  <form class="form" (ngSubmit)="submit()">
+    <label class="field">
+      Email
+      <input type="email" name="email" [(ngModel)]="email" required />
+    </label>
+
+    <label class="field">
+      Motif
+      <input type="text" name="motif" [(ngModel)]="motif" required />
+    </label>
+
+    <label class="field">
+      Pièce jointe
+      <input type="file" name="file" />
+    </label>
+
+    <label class="field">
+      Message
+      <textarea rows="6" name="message" [(ngModel)]="message" required></textarea>
+    </label>
+
+    <button class="btn btnPrimary" type="submit">Envoyer</button>
+  </form>
+</section>

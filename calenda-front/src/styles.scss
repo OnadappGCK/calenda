@@ -1,0 +1,151 @@
+/* You can add global styles to this file, and also import other style files */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: #111827;
+  background: #f6f5f2;
+}
+
+a {
+  color: inherit;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.btn {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: white;
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btnPrimary {
+  background: #0b5ed7;
+  color: white;
+  border-color: transparent;
+}
+
+.iconBtn {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+}
+
+@media screen and (max-width: 600px) {
+  app-calendar-page .schedGrid:not(.dayOnly) {
+    grid-template-columns: 40px repeat(7, minmax(0, 1fr));
+  }
+
+  app-calendar-page .schedGrid:not(.dayOnly) .dayHead {
+    padding: 0.2rem;
+    min-height: 40px;
+    gap: 0.05rem;
+  }
+
+  app-calendar-page .schedGrid:not(.dayOnly) .dayNameFull,
+  app-calendar-page .schedGrid:not(.dayOnly) .dayDateFull {
+    display: none;
+  }
+
+  app-calendar-page .schedGrid:not(.dayOnly) .dayNameShort,
+  app-calendar-page .schedGrid:not(.dayOnly) .dayDateShort {
+    display: block;
+  }
+
+  app-calendar-page .schedGrid:not(.dayOnly) .dayName,
+  app-calendar-page .schedGrid:not(.dayOnly) .dayDate {
+    white-space: nowrap;
+    word-break: normal;
+    line-height: 1;
+  }
+
+  app-calendar-page .schedGrid:not(.dayOnly) .dayName {
+    font-size: 0.6rem;
+  }
+
+  app-calendar-page .schedGrid:not(.dayOnly) .dayDate {
+    font-size: 0.58rem;
+  }
+
+  app-calendar-page .schedGrid:not(.dayOnly) .timeCell {
+    font-size: 0.54rem;
+    padding: 1px 1px 0;
+  }
+
+  app-calendar-page .schedGrid:not(.dayOnly) .eventBlock {
+    padding: 0.18rem 0.22rem;
+    border-radius: 0.5rem;
+    font-size: 0.56rem;
+  }
+
+  app-calendar-page .schedGrid:not(.dayOnly) .eventBlock .eventTitle {
+    font-size: 0.6rem;
+  }
+
+  app-calendar-page .schedGrid:not(.dayOnly) .eventBlock .eventMeta:last-child {
+    display: none;
+  }
+
+  app-calendar-page .schedGrid:not(.dayOnly) .nightBtn {
+    font-size: 0.6rem;
+  }
+}
+
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: white;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: white;
+}

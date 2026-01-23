@@ -1,0 +1,23 @@
+<section class="container">
+  <h1>Actualités</h1>
+
+  @if (items().length === 0) {
+    <p>Aucune actualité.</p>
+  } @else {
+    <div class="list">
+      @for (n of items(); track n.id) {
+        <article class="item">
+          <h2>{{ n.titre }}</h2>
+          <div class="meta">{{ n.datePublication | date }}</div>
+          <p>{{ n.texte }}</p>
+        </article>
+      }
+    </div>
+
+    <div class="pager">
+      <button class="btn" type="button" (click)="prev()">Précédent</button>
+      <div class="page">Page {{ page() }}</div>
+      <button class="btn" type="button" (click)="next()">Suivant</button>
+    </div>
+  }
+</section>

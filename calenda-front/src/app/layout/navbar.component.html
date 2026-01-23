@@ -1,0 +1,36 @@
+<header class="navbar">
+  <div class="left">
+    <a class="brand" routerLink="/">C</a>
+
+    <nav class="tabs">
+      <a class="tab" routerLink="/calendar">Calendrier</a>
+      <a class="tab" routerLink="/news">Actualité</a>
+      <a class="tab" routerLink="/contact">Contact</a>
+    </nav>
+  </div>
+
+  <div class="right">
+    @if (!auth.isLoggedIn()) {
+      <a class="btn" routerLink="/login">Connexion</a>
+    } @else {
+      <a class="iconBtn" routerLink="/favorites" aria-label="Favoris">♥</a>
+
+      @if (isAdmin()) {
+        <a class="iconBtn" routerLink="/admin/pending-events" aria-label="Admin">
+          🔔
+          @if (pendingCount() > 0) {
+            <span class="badge">{{ pendingCount() }}</span>
+          }
+        </a>
+      }
+
+      <a class="userPill" routerLink="/profile">
+        <span class="hello">Bonjour</span>
+        <span class="name">{{ auth.user()?.pseudo }}</span>
+      </a>
+
+      <a class="iconBtn" routerLink="/profile" aria-label="Profil">⦿</a>
+      <button class="iconBtn" type="button" (click)="auth.logout()" aria-label="Déconnexion">⟶</button>
+    }
+  </div>
+</header>

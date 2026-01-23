@@ -1,0 +1,17 @@
+<section class="wrap">
+  <h1>Favoris</h1>
+
+  @if (favorites().length === 0) {
+    <p>Aucun favori.</p>
+  } @else {
+    <div class="list">
+      @for (e of favorites(); track e.id) {
+        <div class="item">
+          <a class="title" [routerLink]="['/events', e.id]">{{ e.titre }}</a>
+          <div class="meta">{{ e.dateDebut | date: 'short' }}</div>
+          <button class="btn" type="button" (click)="remove(e.id)">Retirer</button>
+        </div>
+      }
+    </div>
+  }
+</section>

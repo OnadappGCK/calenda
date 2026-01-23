@@ -1,0 +1,27 @@
+.list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.item {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.meta {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.9rem;
+}
+
+.pager {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.page {
+  font-weight: 700;
+}

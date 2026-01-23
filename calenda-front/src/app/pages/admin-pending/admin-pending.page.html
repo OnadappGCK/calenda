@@ -1,0 +1,71 @@
+<section class="container">
+  <div class="head">
+    <h1>Admin · Événements en attente</h1>
+    <button class="btn" type="button" (click)="openMerge()">Merge</button>
+  </div>
+
+  @if (items().length === 0) {
+    <p>Aucun événement en attente.</p>
+  } @else {
+    <div class="list">
+      @for (e of items(); track e.id) {
+        <div class="item">
+          <div class="rowTop">
+            <div class="title">{{ e.titre }}</div>
+            <button class="chev" type="button" (click)="toggleExpanded(e.id)">
+              {{ expanded().has(e.id) ? '˄' : '˅' }}
+            </button>
+          </div>
+          <div class="meta">
+            {{ e.categorie }} · {{ e.ville }} · {{ e.lieu }} · {{ e.dateDebut | date: 'short' }}
+          </div>
+          <div class="meta">Organisateur: {{ e.organisateur.pseudo }}</div>
+
+          @if (expanded().has(e.id)) {
+            <p class="desc">{{ e.description }}</p>
+          } @else {
+            <p class="desc short">{{ e.description }}</p>
+          }
+
+          <div class="actions">
+            <button class="btn" type="button" (click)="openConfirm('validate', e)">Valider</button>
+            <button class="btn" type="button" (click)="openConfirm('delete', e)">Supprimer</button>
+            <a class="btn" [routerLink]="['/events', e.id]">Voir</a>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</section>
+
+@if (confirm()) {
+  <div class="modalBackdrop" (click)="closeConfirm()"></div>
+  <div class="modal">
+    <h2>Confirmation</h2>
+    <p>
+      @if (confirm()!.action === 'validate') {
+        Valider l’événement
+      } @else {
+        Supprimer l’événement
+      }
+      : <strong>{{ confirm()!.title }}</strong> ?
+    </p>
+    <div class="actions">
+      <button class="btn btnPrimary" type="button" (click)="confirmYes()">Oui</button>
+      <button class="btn" type="button" (click)="closeConfirm()">Annuler</button>
+    </div>
+  </div>
+}
+
+@if (showMerge()) {
+  <div class="modalBackdrop" (click)="closeMerge()"></div>
+  <div class="modal">
+    <h2>Merge (stub)</h2>
+    <p>
+      Cette interface servira à sélectionner une source externe et importer des événements en évitant les doublons.
+    </p>
+    <div class="actions">
+      <button class="btn" type="button" (click)="closeMerge()">Fermer</button>
+    </div>
+  </div>
+}
