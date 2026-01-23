@@ -25,6 +25,12 @@ export class CalendarPage implements OnInit, OnDestroy {
   private resizeObserver?: ResizeObserver;
   private observedScheduler?: Element;
 
+  /**
+   * Avoid concurrent reload() calls (e.g. user clicking refresh multiple times):
+   * - serialize requests with a single in-flight promise
+   * - keep at most one queued reload
+   * - use a token to ignore stale async responses
+   */
   private reloadInFlight = false;
   private reloadQueued = false;
   private reloadToken = 0;
@@ -69,6 +75,11 @@ export class CalendarPage implements OnInit, OnDestroy {
   private readonly startHour = 6;
   private readonly endHour = 23;
   private readonly minutesPerSlot = 30;
+
+  /**
+   * Height (in px) of one time-slot row in the grid.
+   * This is dynamically recomputed based on the rendered scheduler height.
+   */
   readonly slotPx = signal<number>(26);
 
   private readonly isDebugCalendar = () => {
@@ -86,6 +97,10 @@ export class CalendarPage implements OnInit, OnDestroy {
     console.debug('[CalendarLayout]', ...args);
   }
 
+  /**
+   * Resizing the window should re-fit slotPx.
+   * We use scheduleRecomputeSlotPx() (rAF + retries) instead of computing synchronously.
+   */
   private readonly onResize = () => {
     this.scheduleRecomputeSlotPx('resize');
   };
@@ -367,6 +382,8 @@ export class CalendarPage implements OnInit, OnDestroy {
       if (token === this.reloadToken) {
         this.loading.set(false);
         this.dbg('reload end', { token, events: this.events().length });
+        // After reload, DOM changes (headers/night buttons) can impact available height.
+        // Recompute slotPx after render (rAF + double-rAF) to avoid relying on a manual resize.
         this.scheduleRecomputeSlotPx('reload');
       }
 
@@ -479,6 +496,8 @@ export class CalendarPage implements OnInit, OnDestroy {
 
   setViewMode(mode: 'week' | 'day') {
     this.viewMode = mode;
+    // Switching view mode changes the DOM structure and header sizes.
+    // Schedule recompute after the DOM has updated.
     this.scheduleRecomputeSlotPx('viewMode');
     void this.reload();
   }
@@ -500,6 +519,7 @@ export class CalendarPage implements OnInit, OnDestroy {
   }
 
   onDateChange() {
+    // Changing date often changes labels (and can wrap), impacting measured heights.
     this.scheduleRecomputeSlotPx('dateChange');
     void this.reload();
   }
@@ -527,6 +547,12 @@ export class CalendarPage implements OnInit, OnDestroy {
     return (this.endHour - this.startHour + 1) * 60;
   }
 
+  /**
+   * Compute slotPx from measured DOM heights.
+   *
+   * Returns false when scheduler isn't rendered yet (height 0), so caller can retry
+   * on the next animation frame.
+   */
   private recomputeSlotPx(ctx?: { reason?: string; attempt?: number }) {
     const totalMinutes = this.windowMinutes();
     const slots = Math.floor(totalMinutes / this.minutesPerSlot);
@@ -573,6 +599,11 @@ export class CalendarPage implements OnInit, OnDestroy {
     return true;
   }
 
+  /**
+   * Attach a ResizeObserver to the most “layout-sensitive” element.
+   * We observe `.schedGrid` (instead of only `.scheduler`) because header wrapping
+   * changes grid height without necessarily resizing the outer container.
+   */
   private ensureSchedulerObserved() {
     const schedulerEl = this.el.nativeElement.querySelector('.scheduler') as Element | null;
     if (!schedulerEl || typeof ResizeObserver === 'undefined') {
@@ -590,6 +621,13 @@ export class CalendarPage implements OnInit, OnDestroy {
     this.observedScheduler = gridEl;
   }
 
+  /**
+   * Recompute slotPx after layout stabilizes.
+   *
+   * Why: on navigation/reload/view changes, the DOM may be present but not fully
+   * laid out yet. We schedule on requestAnimationFrame (sometimes double-rAF)
+   * and retry a few frames until scheduler has a non-zero height.
+   */
   private scheduleRecomputeSlotPx(reason: string) {
     const maxAttempts = 6;
     let attempts = 0;
