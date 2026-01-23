@@ -11,6 +11,10 @@ import { FavoritesService } from '../../core/favorites.service';
   templateUrl: './event-detail.page.html',
   styleUrl: './event-detail.page.scss',
 })
+/**
+ * Page détail d'événement.
+ * Charge un événement depuis l'ID de route et affiche des suggestions similaires.
+ */
 export class EventDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly eventsService = inject(EventsService);
@@ -22,6 +26,7 @@ export class EventDetailPage implements OnInit {
 
   readonly canLike = computed(() => this.auth.isLoggedIn());
 
+  /** Hook Angular: charge l'événement + la liste "similar" à partir du paramètre `id`. */
   async ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
@@ -35,6 +40,7 @@ export class EventDetailPage implements OnInit {
     this.similar.set(sim ?? []);
   }
 
+  /** Ajoute l'événement courant aux favoris (si connecté). */
   async like() {
     const evt = this.event();
     if (!evt) {

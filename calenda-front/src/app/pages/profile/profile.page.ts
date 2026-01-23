@@ -9,6 +9,10 @@ import { UsersService } from '../../core/users.service';
   templateUrl: './profile.page.html',
   styleUrl: './profile.page.scss',
 })
+/**
+ * Page Profil.
+ * Affiche le profil courant, permet l'édition et la mise à jour via `UsersService`.
+ */
 export class ProfilePage implements OnInit {
   protected readonly auth = inject(AuthService);
   private readonly usersService = inject(UsersService);
@@ -26,11 +30,13 @@ export class ProfilePage implements OnInit {
 
   readonly role = computed(() => this.auth.user()?.role ?? '');
 
+  /** Hook Angular: charge l'utilisateur puis récupère le profil. */
   async ngOnInit() {
     await this.auth.ensureLoaded();
     await this.reload();
   }
 
+  /** Recharge les infos profil depuis l'API et met à jour les champs du formulaire. */
   async reload() {
     this.loading.set(true);
     this.error.set(null);
@@ -46,12 +52,14 @@ export class ProfilePage implements OnInit {
     }
   }
 
+  /** Passe le formulaire en mode édition. */
   startEdit() {
     this.ok.set(false);
     this.error.set(null);
     this.editing.set(true);
   }
 
+  /** Annule l'édition, réinitialise les mots de passe et recharge les infos. */
   cancelEdit() {
     this.password = '';
     this.passwordConfirmation = '';
@@ -59,6 +67,7 @@ export class ProfilePage implements OnInit {
     void this.reload();
   }
 
+  /** Sauvegarde les modifications (et mot de passe si renseigné), puis rafraîchit l'utilisateur courant. */
   async save() {
     this.ok.set(false);
     this.error.set(null);

@@ -9,6 +9,10 @@ import { AdminService } from '../core/admin.service';
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.scss',
 })
+/**
+ * Barre de navigation principale.
+ * Affiche l'état de connexion et (si admin) le badge du nombre d'événements en attente.
+ */
 export class NavbarComponent implements OnInit {
   protected readonly auth = inject(AuthService);
   private readonly adminService = inject(AdminService);
@@ -17,6 +21,7 @@ export class NavbarComponent implements OnInit {
 
   protected readonly pendingCount = signal<number>(0);
 
+  /** Hook Angular: charge l'utilisateur puis, si admin, récupère le compteur d'événements en attente. */
   async ngOnInit() {
     await this.auth.ensureLoaded();
 

@@ -8,6 +8,10 @@ import { NewsService, NewsDto } from '../../core/news.service';
   templateUrl: './news.page.html',
   styleUrl: './news.page.scss',
 })
+/**
+ * Page News.
+ * Affiche une liste paginée de news (page/pageSize) en s'appuyant sur `NewsService`.
+ */
 export class NewsPage implements OnInit {
   private readonly newsService = inject(NewsService);
 
@@ -16,22 +20,26 @@ export class NewsPage implements OnInit {
   readonly pageSize = signal<number>(5);
   readonly total = signal<number>(0);
 
+  /** Hook Angular: charge la première page de news. */
   async ngOnInit() {
     await this.reload();
   }
 
+  /** Recharge la page courante de news et met à jour `items` et `total`. */
   async reload() {
     const res = await this.newsService.list(this.page(), this.pageSize()).toPromise();
     this.items.set(res?.items ?? []);
     this.total.set(res?.total ?? 0);
   }
 
+  /** Va à la page précédente si possible. */
   async prev() {
     if (this.page() <= 1) return;
     this.page.set(this.page() - 1);
     await this.reload();
   }
 
+  /** Va à la page suivante si possible. */
   async next() {
     const maxPage = Math.max(1, Math.ceil(this.total() / this.pageSize()));
     if (this.page() >= maxPage) return;

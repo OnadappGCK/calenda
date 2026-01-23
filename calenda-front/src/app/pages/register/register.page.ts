@@ -9,6 +9,10 @@ import { AuthService } from '../../core/auth.service';
   templateUrl: './register.page.html',
   styleUrl: './register.page.scss',
 })
+/**
+ * Page d'inscription.
+ * Envoie les infos à l'API via `AuthService.register`, puis redirige vers la connexion.
+ */
 export class RegisterPage {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -23,6 +27,7 @@ export class RegisterPage {
   readonly error = signal<string | null>(null);
   readonly ok = signal<boolean>(false);
 
+  /** Soumet le formulaire d'inscription puis redirige vers `/login` en cas de succès. */
   async submit() {
     this.error.set(null);
     this.ok.set(false);

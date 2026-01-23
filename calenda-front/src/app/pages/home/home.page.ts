@@ -12,6 +12,10 @@ import { categoryColor, categoryIcon } from '../../core/event-ui';
   templateUrl: './home.page.html',
   styleUrl: './home.page.scss',
 })
+/**
+ * Page d'accueil.
+ * Charge les événements mis en avant et les news, et gère le carrousel (auto + navigation).
+ */
 export class HomePage implements OnInit, OnDestroy {
   private readonly eventsService = inject(EventsService);
   private readonly newsService = inject(NewsService);
@@ -35,6 +39,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   private autoTimer: any = null;
 
+  /** Hook Angular: charge featured + news, et démarre l'auto-rotation côté navigateur. */
   async ngOnInit() {
     const featured = await this.eventsService.featured().toPromise();
     this.featured.set(featured ?? []);
@@ -49,6 +54,7 @@ export class HomePage implements OnInit, OnDestroy {
     this.news.set(news?.items ?? []);
   }
 
+  /** Hook Angular: stoppe le timer d'auto-rotation du carrousel. */
   ngOnDestroy() {
     if (this.autoTimer) {
       clearInterval(this.autoTimer);
@@ -56,14 +62,17 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  /** Va au slide précédent du carrousel. */
   prevFeatured() {
     this.featuredIndex.set(this.featuredIndex() - 1);
   }
 
+  /** Va au slide suivant du carrousel. */
   nextFeatured() {
     this.featuredIndex.set(this.featuredIndex() + 1);
   }
 
+  /** Force l'affichage du slide `i`. */
   setFeatured(i: number) {
     this.featuredIndex.set(i);
   }

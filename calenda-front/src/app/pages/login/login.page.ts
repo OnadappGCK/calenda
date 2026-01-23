@@ -9,6 +9,10 @@ import { AuthService } from '../../core/auth.service';
   templateUrl: './login.page.html',
   styleUrl: './login.page.scss',
 })
+/**
+ * Page de connexion.
+ * Authentifie l'utilisateur via `AuthService` puis redirige vers le calendrier.
+ */
 export class LoginPage {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -17,6 +21,7 @@ export class LoginPage {
   password = '';
   readonly error = signal<string | null>(null);
 
+  /** Soumet le formulaire: tente un login puis navigation, sinon affiche une erreur. */
   async submit() {
     this.error.set(null);
 

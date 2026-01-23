@@ -7,6 +7,10 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './contact.page.html',
   styleUrl: './contact.page.scss',
 })
+/**
+ * Page Contact.
+ * Formulaire simple (actuellement sans envoi backend) qui affiche un succès local.
+ */
 export class ContactPage {
   email = '';
   motif = '';
@@ -14,6 +18,7 @@ export class ContactPage {
 
   readonly ok = signal<boolean>(false);
 
+  /** Soumet le formulaire (version actuelle: confirme localement). */
   submit() {
     this.ok.set(true);
   }
