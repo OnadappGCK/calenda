@@ -14,6 +14,10 @@ import { FavoritesService } from '../../core/favorites.service';
   templateUrl: './calendar.page.html',
   styleUrl: './calendar.page.scss',
 })
+/**
+ * Page Calendrier.
+ * Gère l'affichage semaine/journée, le chargement des événements et le layout du scheduler (positionnement + taille des slots).
+ */
 export class CalendarPage implements OnInit, OnDestroy {
   private readonly eventsService = inject(EventsService);
   private readonly favoritesService = inject(FavoritesService);
@@ -43,16 +47,20 @@ export class CalendarPage implements OnInit, OnDestroy {
   private readonly _viewMode = signal<'week' | 'day'>('week');
   private readonly _selectedDate = signal<string>(this.todayLocalKey());
 
+  /** Récupère le mode de vue courant (`week` ou `day`). */
   get viewMode() {
     return this._viewMode();
   }
+  /** Met à jour le mode de vue courant (`week` ou `day`). */
   set viewMode(v: 'week' | 'day') {
     this._viewMode.set(v);
   }
 
+  /** Récupère la date sélectionnée au format `YYYY-MM-DD` (timezone locale). */
   get selectedDate() {
     return this._selectedDate();
   }
+  /** Met à jour la date sélectionnée au format `YYYY-MM-DD` (timezone locale). */
   set selectedDate(v: string) {
     this._selectedDate.set(v);
   }
@@ -77,11 +85,12 @@ export class CalendarPage implements OnInit, OnDestroy {
   private readonly minutesPerSlot = 30;
 
   /**
-   * Height (in px) of one time-slot row in the grid.
-   * This is dynamically recomputed based on the rendered scheduler height.
+   * Hauteur (en px) d'un slot horaire dans la grille.
+   * Recalculée dynamiquement en fonction de la hauteur réellement rendue du scheduler.
    */
   readonly slotPx = signal<number>(26);
 
+  /** Indique si les logs de layout sont activés via `localStorage.CALENDA_DEBUG_CALENDAR=1`. */
   private readonly isDebugCalendar = () => {
     if (typeof window === 'undefined') return false;
     try {
@@ -91,6 +100,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     }
   };
 
+  /** Log de diagnostic (silencieux si le debug calendar n'est pas activé). */
   private dbg(...args: unknown[]) {
     if (!this.isDebugCalendar()) return;
     // eslint-disable-next-line no-console
@@ -98,8 +108,8 @@ export class CalendarPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Resizing the window should re-fit slotPx.
-   * We use scheduleRecomputeSlotPx() (rAF + retries) instead of computing synchronously.
+   * Lors d'un resize fenêtre, on refit `slotPx`.
+   * On planifie le recalcul (rAF + retries) plutôt que de mesurer en synchrone.
    */
   private readonly onResize = () => {
     this.scheduleRecomputeSlotPx('resize');
@@ -110,11 +120,13 @@ export class CalendarPage implements OnInit, OnDestroy {
     return role === 'ADMIN' || role === 'ORGANISATEUR';
   });
 
+  /** Convertit un ISO datetime en minutes depuis minuit (heure locale). */
   private minutesOfDay(iso: string) {
     const d = new Date(iso);
     return d.getHours() * 60 + d.getMinutes();
   }
 
+  /** Détermine si un événement est « nocturne » (00:00-05:59, fin avant 06:00, même jour). */
   private isNocturne(e: EventDto) {
     if (this.localKeyFromIso(e.dateDebut) !== this.localKeyFromIso(e.dateFin)) {
       return false;
@@ -143,6 +155,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     return map;
   });
 
+  /** Retourne le nombre d'événements nocturnes pour un jour (clé `YYYY-MM-DD`). */
   nightCount(dayKey: string) {
     return this.nightEventsByDay().get(dayKey)?.length ?? 0;
   }
@@ -223,6 +236,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     return `${y}-${m}-${d}`;
   }
 
+  /** Transforme une Date en clé locale `YYYY-MM-DD`. */
   private localKeyFromDate(d: Date) {
     const y = d.getFullYear();
     const m = `${d.getMonth() + 1}`.padStart(2, '0');
@@ -230,6 +244,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     return `${y}-${m}-${day}`;
   }
 
+  /** Transforme un ISO datetime en clé locale `YYYY-MM-DD`. */
   private localKeyFromIso(iso: string) {
     return this.localKeyFromDate(new Date(iso));
   }
@@ -303,6 +318,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     return this.nightEventsByDay().get(key) ?? [];
   });
 
+  /** Hook Angular: initialise listeners (resize/navigation) puis charge favoris + événements. */
   async ngOnInit() {
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', this.onResize);
@@ -325,6 +341,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     await this.reload();
   }
 
+  /** Hook Angular: nettoyage des listeners + observers. */
   ngOnDestroy() {
     if (typeof window !== 'undefined') {
       window.removeEventListener('resize', this.onResize);
@@ -332,6 +349,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     this.resizeObserver?.disconnect();
   }
 
+  /** Recharge la liste des favoris du user (si connecté). */
   private async reloadFavorites() {
     if (!this.auth.isLoggedIn()) {
       this.favoriteIds.set(new Set());
@@ -343,6 +361,10 @@ export class CalendarPage implements OnInit, OnDestroy {
     this.favoriteIds.set(set);
   }
 
+  /**
+   * Recharge les événements selon les filtres + la période de la vue.
+   * Sérialisé pour éviter les courses (refreshs rapides) et recalculer le layout à la fin.
+   */
   async reload() {
     if (this.reloadInFlight) {
       this.reloadQueued = true;
@@ -395,10 +417,12 @@ export class CalendarPage implements OnInit, OnDestroy {
     }
   }
 
+  /** Indique si un event (id) est dans la liste des favoris. */
   isFavorite(id: string) {
     return this.favoriteIds().has(id);
   }
 
+  /** Ajoute/retire un favori côté API et met à jour le state local. */
   async toggleFavorite(id: string) {
     if (!this.auth.isLoggedIn()) {
       await this.router.navigateByUrl('/login');
@@ -419,6 +443,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     this.favoriteIds.set(next);
   }
 
+  /** Calcule le range (from/to) à envoyer à l'API selon filtres / vue semaine ou journée. */
   private computeFromTo() {
     if (this.dateDebutFilter || this.dateFinFilter) {
       const from = this.dateDebutFilter
@@ -444,6 +469,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     return { from: start.toISOString(), to: end.toISOString() };
   }
 
+  /** Réinitialise les filtres puis relance un reload. */
   reset() {
     this.q = '';
     this.ville = '';
@@ -455,10 +481,12 @@ export class CalendarPage implements OnInit, OnDestroy {
     void this.reload();
   }
 
+  /** Ouvre/ferme la modale de filtres. */
   toggleFilters() {
     this.showFilters = !this.showFilters;
   }
 
+  /** Active/désactive le filtre « favoris » (nécessite d'être connecté) puis recharge. */
   async toggleFavoris() {
     if (!this.auth.isLoggedIn()) {
       await this.router.navigateByUrl('/login');
@@ -469,6 +497,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     await this.reload();
   }
 
+  /** Construit la liste de chips (tags) affichés pour représenter les filtres actifs. */
   activeChips() {
     const chips: Array<{ key: string; label: string }> = [];
     chips.push({ key: 'date', label: this.viewMode === 'week' ? 'Semaine' : 'Journée' });
@@ -482,6 +511,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     return chips;
   }
 
+  /** Retire un filtre correspondant à une chip, puis relance un reload (sauf chip date). */
   clearChip(key: string) {
     if (key === 'date') return;
     if (key === 'ville') this.ville = '';
@@ -494,6 +524,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     void this.reload();
   }
 
+  /** Change la vue (semaine/journée) et recharge les événements correspondant à la période. */
   setViewMode(mode: 'week' | 'day') {
     this.viewMode = mode;
     // Switching view mode changes the DOM structure and header sizes.
@@ -502,6 +533,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     void this.reload();
   }
 
+  /** Navigation vers la période précédente (semaine -7 jours / journée -1 jour). */
   prevPeriod() {
     const d = this.selectedDateObj();
     const delta = this.viewMode === 'week' ? -7 : -1;
@@ -510,6 +542,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     void this.reload();
   }
 
+  /** Navigation vers la période suivante (semaine +7 jours / journée +1 jour). */
   nextPeriod() {
     const d = this.selectedDateObj();
     const delta = this.viewMode === 'week' ? 7 : 1;
@@ -518,12 +551,14 @@ export class CalendarPage implements OnInit, OnDestroy {
     void this.reload();
   }
 
+  /** Handler du date picker: planifie le recalcul du layout puis recharge les événements. */
   onDateChange() {
     // Changing date often changes labels (and can wrap), impacting measured heights.
     this.scheduleRecomputeSlotPx('dateChange');
     void this.reload();
   }
 
+  /** Ouvre le drawer latéral pour un jour donné (liste des événements du jour). */
   openSideForDay(dayKey: string) {
     this.selectedDate = dayKey;
     this.sideDayKey.set(dayKey);
@@ -531,6 +566,7 @@ export class CalendarPage implements OnInit, OnDestroy {
     this.sideOpen.set(true);
   }
 
+  /** Ouvre le drawer latéral sur l'onglet « nuit » pour un jour donné. */
   openSideNightForDay(dayKey: string) {
     this.selectedDate = dayKey;
     this.sideDayKey.set(dayKey);
@@ -538,20 +574,22 @@ export class CalendarPage implements OnInit, OnDestroy {
     this.sideOpen.set(true);
   }
 
+  /** Ferme le drawer latéral. */
   closeSide() {
     this.sideOpen.set(false);
   }
 
+  /** Nombre total de minutes affichées dans la grille (fenêtre 06:00 -> 23:59). */
   private windowMinutes() {
     // inclusive: 6:00 -> 23:59 (so start times 23:xx remain visible)
     return (this.endHour - this.startHour + 1) * 60;
   }
 
   /**
-   * Compute slotPx from measured DOM heights.
+   * Calcule `slotPx` à partir des hauteurs mesurées dans le DOM.
    *
-   * Returns false when scheduler isn't rendered yet (height 0), so caller can retry
-   * on the next animation frame.
+   * Retourne false si le scheduler n'est pas encore rendu (hauteur 0), pour permettre
+   * un retry sur la frame suivante.
    */
   private recomputeSlotPx(ctx?: { reason?: string; attempt?: number }) {
     const totalMinutes = this.windowMinutes();
@@ -600,9 +638,9 @@ export class CalendarPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Attach a ResizeObserver to the most “layout-sensitive” element.
-   * We observe `.schedGrid` (instead of only `.scheduler`) because header wrapping
-   * changes grid height without necessarily resizing the outer container.
+   * Attache un `ResizeObserver` sur l'élément le plus sensible au layout.
+   * On observe `.schedGrid` (plutôt que seulement `.scheduler`) car le wrapping
+   * des headers peut changer la hauteur du grid sans forcément toucher le container.
    */
   private ensureSchedulerObserved() {
     const schedulerEl = this.el.nativeElement.querySelector('.scheduler') as Element | null;
@@ -622,11 +660,11 @@ export class CalendarPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Recompute slotPx after layout stabilizes.
+   * Recalcule `slotPx` après stabilisation du layout.
    *
-   * Why: on navigation/reload/view changes, the DOM may be present but not fully
-   * laid out yet. We schedule on requestAnimationFrame (sometimes double-rAF)
-   * and retry a few frames until scheduler has a non-zero height.
+   * Pourquoi: lors de navigation/reload/changement de vue, le DOM peut exister mais
+   * ne pas avoir sa taille finale. On planifie via `requestAnimationFrame` (parfois double-rAF)
+   * et on retente quelques frames jusqu'à obtenir une hauteur non nulle.
    */
   private scheduleRecomputeSlotPx(reason: string) {
     const maxAttempts = 6;
@@ -662,12 +700,17 @@ export class CalendarPage implements OnInit, OnDestroy {
     }
   }
 
+  /** Calcule le delta en minutes entre le début de la fenêtre (06:00) et un datetime. */
   private minutesFromWindowStart(dayKey: string, iso: string) {
     const start = new Date(`${dayKey}T${String(this.startHour).padStart(2, '0')}:00:00`);
     const d = new Date(iso);
     return Math.floor((d.getTime() - start.getTime()) / 60000);
   }
 
+  /**
+   * Calcule le layout (top/height/colonnes) des blocs d'événements pour un jour.
+   * Gère le clipping sur la fenêtre, le regroupement des overlaps, et le bloc "n événements".
+   */
   private computeLayoutForDay(dayKey: string, items: EventDto[]): Array<LayoutItem> {
     const total = this.windowMinutes();
     const normalized = items
@@ -756,31 +799,38 @@ export class CalendarPage implements OnInit, OnDestroy {
     return out;
   }
 
+  /** Applique les filtres (ferme la modale) puis recharge les événements. */
   applyFilters() {
     this.showFilters = false;
     void this.reload();
   }
 
+  /** Helper: retourne la clé locale `YYYY-MM-DD` d'une Date. */
   dateKey(d: Date) {
     return this.localKeyFromDate(d);
   }
 
+  /** Helper: convertit une clé `YYYY-MM-DD` en Date locale à minuit. */
   dayKeyToDate(key: string) {
     return new Date(`${key}T00:00:00`);
   }
 
+  /** Indique si la Date passée correspond à la date sélectionnée. */
   isSelectedDay(d: Date) {
     return this.dateKey(d) === this.selectedDate;
   }
 
+  /** Ouvre la modale de proposition d'événement. */
   openPropose() {
     this.showPropose = true;
   }
 
+  /** Ferme la modale de proposition d'événement. */
   closePropose() {
     this.showPropose = false;
   }
 
+  /** Soumet un événement proposé via l'API puis réinitialise le formulaire et recharge. */
   async submitPropose() {
     const payload = {
       titre: this.newTitre,
