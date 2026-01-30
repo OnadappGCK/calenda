@@ -1,3 +1,5 @@
+@use 'palette' as *;
+
 .form {
   max-width: 700px;
   display: grid;
@@ -5,8 +7,8 @@
 }
 
 .ok {
-  border: 1px solid var(--status-success-border);
-  background: var(--status-success-surface);
+  border: 1px solid $status-success-border;
+  background: $status-success-surface;
   padding: 0.75rem;
   border-radius: 0.75rem;
   margin-bottom: 0.75rem;

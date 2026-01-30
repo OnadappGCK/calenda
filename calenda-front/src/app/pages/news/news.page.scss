@@ -1,17 +1,19 @@
+@use 'palette' as *;
+
 .list {
   display: grid;
   gap: 0.75rem;
 }
 
 .item {
-  background: var(--surface-1);
-  border: 1px solid var(--border-1);
+  background: $surface-1;
+  border: 1px solid $border-1;
   border-radius: 1rem;
   padding: 1rem;
 }
 
 .meta {
-  color: var(--text-muted-5);
+  color: $text-muted-5;
   font-size: 0.9rem;
 }
 

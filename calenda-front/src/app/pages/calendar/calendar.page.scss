@@ -1,11 +1,13 @@
+@use 'palette' as *;
+
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
-  background: var(--surface-2);
-  border: 1px solid var(--border-1);
+  background: $surface-2;
+  border: 1px solid $border-1;
   border-radius: 1rem;
   padding: 0.75rem;
 }
@@ -35,7 +37,7 @@
 }
 
 .weekSub {
-  color: var(--text-muted-3);
+  color: $text-muted-3;
   font-size: 0.9rem;
 }
 
@@ -52,10 +54,10 @@
 
 .toggle {
   display: inline-flex;
-  border: 1px solid var(--border-2);
+  border: 1px solid $border-2;
   border-radius: 999px;
   overflow: hidden;
-  background: var(--surface-1);
+  background: $surface-1;
 }
 
 .toggleBtn {
@@ -67,8 +69,8 @@
 }
 
 .toggleBtn.active {
-  background: var(--text-1);
-  color: var(--surface-1);
+  background: $text-1;
+  color: $surface-1;
 }
 
 .chips {
@@ -79,8 +81,8 @@
 }
 
 .chip {
-  border: 1px solid var(--border-2);
-  background: var(--surface-1);
+  border: 1px solid $border-2;
+  background: $surface-1;
   border-radius: 999px;
   padding: 0.35rem 0.6rem;
   cursor: pointer;
@@ -91,7 +93,7 @@
 
 .chipFixed {
   cursor: default;
-  background: var(--overlay-1);
+  background: $overlay-1;
 }
 
 .x {
@@ -133,8 +135,8 @@
 }
 
 .nightSpacer {
-  border: 1px solid var(--border-1);
-  background: var(--overlay-2);
+  border: 1px solid $border-1;
+  background: $overlay-2;
   height: 48px;
   display: flex;
   align-items: flex-start;
@@ -144,12 +146,12 @@
 }
 
 .nightBtn {
-  border: 1px solid var(--border-1);
-  background: var(--surface-1);
+  border: 1px solid $border-1;
+  background: $surface-1;
   height: 48px;
   cursor: pointer;
   font-weight: 800;
-  color: var(--text-muted-1);
+  color: $text-muted-1;
 }
 
 .corner {
@@ -157,8 +159,8 @@
 }
 
 .dayHead {
-  border: 1px solid var(--border-1);
-  background: var(--surface-1);
+  border: 1px solid $border-1;
+  background: $surface-1;
   cursor: pointer;
   padding: 0.45rem;
   display: grid;
@@ -170,30 +172,30 @@
 }
 
 .timeCol {
-  border: 1px solid var(--border-1);
+  border: 1px solid $border-1;
   background:
     repeating-linear-gradient(
       to bottom,
-      var(--grid-line-strong) 0px,
-      var(--grid-line-strong) 1px,
+      $grid-line-strong 0px,
+      $grid-line-strong 1px,
       transparent 1px,
       transparent calc(var(--slot-px, 26px) * 2)
     ),
     repeating-linear-gradient(
       to bottom,
-      var(--grid-line-soft) 0px,
-      var(--grid-line-soft) 1px,
+      $grid-line-soft 0px,
+      $grid-line-soft 1px,
       transparent 1px,
       transparent var(--slot-px, 26px)
     ),
-    var(--overlay-2);
+    $overlay-2;
   position: relative;
   box-sizing: border-box;
 }
 
 .timeEnd {
   font-size: 0.75rem;
-  color: var(--text-muted-3);
+  color: $text-muted-3;
   font-weight: 800;
   line-height: 1;
 }
@@ -207,7 +209,7 @@
   padding: 1px 4px 0;
   font-size: 0.75rem;
   line-height: 1;
-  color: var(--text-muted-3);
+  color: $text-muted-3;
 }
 
 @media screen and (max-height: 720px) {
@@ -219,35 +221,35 @@
 
 .timeCell.hour {
   font-weight: 800;
-  color: var(--text-muted-1);
+  color: $text-muted-1;
 }
 
 .dayBody {
   position: relative;
-  border: 1px solid var(--border-1);
+  border: 1px solid $border-1;
   overflow: hidden;
   padding: 0 2px;
   box-sizing: border-box;
   background:
     repeating-linear-gradient(
       to bottom,
-      var(--grid-line-strong) 0px,
-      var(--grid-line-strong) 1px,
+      $grid-line-strong 0px,
+      $grid-line-strong 1px,
       transparent 1px,
       transparent calc(var(--slot-px, 26px) * 2)
     ),
     repeating-linear-gradient(
       to bottom,
-      var(--grid-line-soft) 0px,
-      var(--grid-line-soft) 1px,
+      $grid-line-soft 0px,
+      $grid-line-soft 1px,
       transparent 1px,
       transparent var(--slot-px, 26px)
     ),
-    var(--overlay-2);
+    $overlay-2;
 }
 
 .dayBody.selected {
-  outline: 3px solid var(--brand-accent);
+  outline: 3px solid $brand-accent;
 }
 
 .eventBlock {
@@ -260,7 +262,7 @@
   overflow: hidden;
   display: grid;
   gap: 0.15rem;
-  box-shadow: var(--shadow-1);
+  box-shadow: $shadow-1;
   box-sizing: border-box;
 }
 
@@ -272,29 +274,29 @@
   position: absolute;
   left: 8px;
   right: 8px;
-  border: 1px solid var(--border-2);
+  border: 1px solid $border-2;
   border-radius: 0.75rem;
-  background: var(--overlay-4);
+  background: $overlay-4;
   cursor: pointer;
   font-weight: 900;
 }
 
 .dayCol {
-  background: var(--gray-500);
+  background: $gray-500;
   border-radius: 0.75rem;
-  border: 1px solid var(--border-1);
+  border: 1px solid $border-1;
   overflow: hidden;
   min-width: 160px;
 }
 
 .dayCol.selected {
-  outline: 3px solid var(--brand-accent);
+  outline: 3px solid $brand-accent;
 }
 
 .dayHeader {
   width: 100%;
   border: 0;
-  background: var(--surface-1);
+  background: $surface-1;
   cursor: pointer;
   padding: 0.6rem;
   display: grid;
@@ -312,7 +314,7 @@
 }
 
 .dayDate {
-  color: var(--text-muted-3);
+  color: $text-muted-3;
   font-size: clamp(0.72rem, 1.4vw, 0.9rem);
   white-space: normal;
   line-height: 1.1;
@@ -334,7 +336,7 @@
 
 .eventLink {
   text-decoration: none;
-  color: var(--text-1);
+  color: $text-1;
   display: grid;
   gap: 0.2rem;
 }
@@ -345,7 +347,7 @@
 
 .eventMeta {
   font-size: 0.85rem;
-  color: var(--text-muted-2);
+  color: $text-muted-2;
 }
 
 .eventActions {
@@ -359,7 +361,7 @@
 
 .heart {
   border: 0;
-  background: var(--overlay-3);
+  background: $overlay-3;
   border-radius: 999px;
   width: 32px;
   height: 32px;
@@ -373,7 +375,7 @@
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  background: var(--overlay-2);
+  background: $overlay-2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -393,7 +395,7 @@
 }
 
 .moreRow {
-  color: var(--text-muted-2);
+  color: $text-muted-2;
   font-weight: 800;
   padding: 0.25rem 0.25rem 0.5rem;
 }
@@ -415,7 +417,7 @@
 
 .sepLine {
   height: 1px;
-  background: var(--line-1);
+  background: $line-1;
   flex: 1;
 }
 
@@ -425,11 +427,11 @@
 }
 
 .empty {
-  border: 1px dashed var(--line-1);
+  border: 1px dashed $line-1;
   border-radius: 1rem;
   padding: 1rem;
-  background: var(--overlay-1b);
-  color: var(--text-muted-2);
+  background: $overlay-1b;
+  color: $text-muted-2;
 }
 
 .listRow {
@@ -447,7 +449,7 @@
 }
 
 .listText {
-  color: var(--text-muted-1);
+  color: $text-muted-1;
   font-size: 0.95rem;
   overflow: hidden;
   display: -webkit-box;
@@ -457,7 +459,7 @@
 }
 
 .listMeta {
-  color: var(--text-muted-1);
+  color: $text-muted-1;
   font-size: 0.95rem;
 }
 
@@ -476,7 +478,7 @@
 .sideBackdrop {
   position: fixed;
   inset: 0;
-  background: var(--backdrop-2);
+  background: $backdrop-2;
 }
 
 .side {
@@ -485,8 +487,8 @@
   right: 0;
   height: 100vh;
   width: min(420px, 92vw);
-  background: var(--bg-app);
-  border-left: 1px solid var(--border-2);
+  background: $bg-app;
+  border-left: 1px solid $border-2;
   padding: 1rem;
   overflow: auto;
 }
@@ -496,17 +498,17 @@
   gap: 0.75rem;
   position: sticky;
   top: 0;
-  background: var(--bg-app);
+  background: $bg-app;
   padding-bottom: 0.75rem;
   margin-bottom: 0.75rem;
 }
 
 .sideTabs {
   display: inline-flex;
-  border: 1px solid var(--border-2);
+  border: 1px solid $border-2;
   border-radius: 999px;
   overflow: hidden;
-  background: var(--surface-1);
+  background: $surface-1;
   margin-top: 0.5rem;
 }
 
@@ -519,8 +521,8 @@
 }
 
 .tab.active {
-  background: var(--text-1);
-  color: var(--surface-1);
+  background: $text-1;
+  color: $surface-1;
 }
 
 .sideTitle {
@@ -557,7 +559,7 @@
 .modalBackdrop {
   position: fixed;
   inset: 0;
-  background: var(--backdrop-1);
+  background: $backdrop-1;
 }
 
 .modal {
@@ -566,9 +568,9 @@
   left: 50%;
   transform: translateX(-50%);
   width: min(720px, 92vw);
-  background: var(--surface-1);
+  background: $surface-1;
   border-radius: 0.75rem;
-  border: 1px solid var(--border-1);
+  border: 1px solid $border-1;
   padding: 1rem;
 }
 

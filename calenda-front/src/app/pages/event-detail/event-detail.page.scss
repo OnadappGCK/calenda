@@ -1,3 +1,5 @@
+@use 'palette' as *;
+
 .wrap {
   padding: 1rem;
   max-width: 900px;
@@ -12,7 +14,7 @@
 }
 
 .meta {
-  color: var(--text-muted-4);
+  color: $text-muted-4;
   font-size: 0.9rem;
 }
 
@@ -28,8 +30,8 @@
 }
 
 .btn {
-  border: 1px solid var(--border-1);
-  background: var(--surface-1);
+  border: 1px solid $border-1;
+  background: $surface-1;
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -44,7 +46,7 @@
 }
 
 .card {
-  border: 1px solid var(--border-1);
+  border: 1px solid $border-1;
   border-radius: 0.75rem;
   padding: 0.75rem;
   text-decoration: none;

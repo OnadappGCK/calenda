@@ -1,3 +1,5 @@
+@use 'palette' as *;
+
 .wrap {
   padding: 1rem;
   max-width: 520px;
@@ -15,22 +17,22 @@ label {
 }
 
 input {
-  border: 1px solid var(--border-1);
+  border: 1px solid $border-1;
   border-radius: 0.5rem;
   padding: 0.5rem;
 }
 
 .btn {
-  border: 1px solid var(--border-1);
-  background: var(--surface-1);
+  border: 1px solid $border-1;
+  background: $surface-1;
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
   cursor: pointer;
 }
 
 .error {
-  border: 1px solid var(--status-danger-border);
-  background: var(--status-danger-surface);
+  border: 1px solid $status-danger-border;
+  background: $status-danger-surface;
   padding: 0.5rem;
   border-radius: 0.5rem;
 }

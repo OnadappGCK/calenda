@@ -1,11 +1,13 @@
+@use 'palette' as *;
+
 .navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background: var(--navbar-bg);
-  border-bottom: 1px solid var(--border-1);
+  background: $navbar-bg;
+  border-bottom: 1px solid $border-1;
 }
 
 .left {
@@ -19,13 +21,13 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: var(--brand-warm);
+  background: $brand-warm;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
   text-decoration: none;
-  color: var(--surface-1);
+  color: $surface-1;
 }
 
 .tabs {
@@ -35,8 +37,8 @@
 }
 
 .tab {
-  background: var(--brand-green);
-  color: var(--surface-1);
+  background: $brand-green;
+  color: $surface-1;
   text-decoration: none;
   padding: 0.5rem 0.75rem;
   border-radius: 0.6rem;
@@ -52,8 +54,8 @@
 }
 
 .userPill {
-  background: var(--brand-warm);
-  color: var(--text-1);
+  background: $brand-warm;
+  color: $text-1;
   text-decoration: none;
   border-radius: 999px;
   padding: 0.45rem 0.75rem;

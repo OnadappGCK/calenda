@@ -1,10 +1,12 @@
+@use 'palette' as *;
+
 .heroTop {
   margin: 0.5rem 0 1rem;
 }
 
 .heroText {
-  background: var(--surface-1);
-  border: 1px solid var(--border-1);
+  background: $surface-1;
+  border: 1px solid $border-1;
   border-radius: 1.25rem;
   padding: 1rem;
 }
@@ -26,8 +28,8 @@
 }
 
 .empty {
-  background: var(--surface-1);
-  border: 1px dashed var(--line-1);
+  background: $surface-1;
+  border: 1px dashed $line-1;
   border-radius: 1rem;
   padding: 1rem;
 }
@@ -42,8 +44,8 @@
   width: 44px;
   height: 44px;
   border-radius: 999px;
-  border: 1px solid var(--border-2);
-  background: var(--surface-1);
+  border: 1px solid $border-2;
+  background: $surface-1;
   cursor: pointer;
   font-size: 1.5rem;
 }
@@ -52,8 +54,8 @@
   flex: 1;
   min-width: 0;
   display: flex;
-  background: var(--surface-1);
-  border: 1px solid var(--border-1);
+  background: $surface-1;
+  border: 1px solid $border-1;
   border-radius: 1.25rem;
   overflow: hidden;
   height: clamp(280px, 34vw, 360px);
@@ -70,7 +72,7 @@
 .panel {
   flex: 1;
   padding: 1rem;
-  color: var(--text-1);
+  color: $text-1;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -98,7 +100,7 @@
 }
 
 .desc {
-  color: var(--text-muted-2);
+  color: $text-muted-2;
   overflow: hidden;
   display: -webkit-box;
   line-clamp: 3;
@@ -110,7 +112,7 @@
   margin-top: auto;
   display: grid;
   gap: 0.25rem;
-  color: var(--text-muted-2);
+  color: $text-muted-2;
   font-size: 0.95rem;
 }
 
@@ -129,13 +131,13 @@
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  border: 1px solid var(--border-3);
-  background: var(--surface-1);
+  border: 1px solid $border-3;
+  background: $surface-1;
   cursor: pointer;
 }
 
 .dot.active {
-  background: var(--text-muted-2);
+  background: $text-muted-2;
 }
 
 .newsHeader {
@@ -153,8 +155,8 @@
 }
 
 .newsCard {
-  background: var(--surface-1);
-  border: 1px solid var(--border-1);
+  background: $surface-1;
+  border: 1px solid $border-1;
   border-radius: 1rem;
   padding: 1rem;
   display: grid;
@@ -166,12 +168,12 @@
 }
 
 .newsMeta {
-  color: var(--text-muted-5);
+  color: $text-muted-5;
   font-size: 0.9rem;
 }
 
 .newsText {
-  color: var(--text-muted-2);
+  color: $text-muted-2;
   overflow: hidden;
   display: -webkit-box;
   line-clamp: 4;

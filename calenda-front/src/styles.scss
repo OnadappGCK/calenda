@@ -1,6 +1,6 @@
 /* You can add global styles to this file, and also import other style files */
 
-@use './palette';
+@use 'palette' as *;
 
 * {
   box-sizing: border-box;
@@ -14,8 +14,8 @@ body {
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: var(--text-1);
-  background: var(--bg-app);
+  color: $text-1;
+  background: $bg-app;
 }
 
 a {
@@ -29,8 +29,8 @@ a {
 }
 
 .btn {
-  border: 1px solid var(--border-2);
-  background: var(--surface-1);
+  border: 1px solid $border-2;
+  background: $surface-1;
   padding: 0.55rem 0.85rem;
   border-radius: 0.75rem;
   cursor: pointer;
@@ -42,14 +42,14 @@ a {
 }
 
 .btnPrimary {
-  background: var(--brand-primary);
-  color: var(--surface-1);
+  background: $brand-primary;
+  color: $surface-1;
   border-color: transparent;
 }
 
 .iconBtn {
-  border: 1px solid var(--border-2);
-  background: var(--surface-1);
+  border: 1px solid $border-2;
+  background: $surface-1;
   width: 40px;
   height: 40px;
   border-radius: 999px;
@@ -130,8 +130,8 @@ a {
   height: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  background: var(--status-danger);
-  color: var(--surface-1);
+  background: $status-danger;
+  color: $surface-1;
   font-size: 12px;
   display: inline-flex;
   align-items: center;
@@ -146,8 +146,8 @@ a {
 input,
 select,
 textarea {
-  border: 1px solid var(--border-2);
+  border: 1px solid $border-2;
   border-radius: 0.75rem;
   padding: 0.6rem 0.75rem;
-  background: var(--surface-1);
+  background: $surface-1;
 }
