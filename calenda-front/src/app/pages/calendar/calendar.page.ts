@@ -115,6 +115,9 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   readonly sideDayKey = signal<string>(this.selectedDate);
   readonly sideTab = signal<'day' | 'night'>('day');
 
+  /** Liste optionnelle d'ids sélectionnés pour le drawer (null = afficher tous les événements du jour). */
+  readonly sideSelectedEventIds = signal<string[] | null>(null);
+
   private readonly startHour = 6;
   private readonly endHour = 23;
   private readonly minutesPerSlot = 30;
@@ -445,7 +448,16 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   readonly sideEvents = computed(() => {
     const k = this.sideDayKey();
-    return this.eventsByDay().get(k) ?? [];
+    const all = this.eventsByDay().get(k) ?? [];
+
+    /** Filtre de sélection (utilisé quand on clique sur un bloc événement ou un regroupement). */
+    const ids = this.sideSelectedEventIds();
+    if (!ids || ids.length === 0) {
+      return all;
+    }
+
+    const allowed = new Set(ids);
+    return all.filter((e) => allowed.has(e.id));
   });
 
   readonly sideDayEvents = computed(() => {
@@ -807,6 +819,25 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.selectedDate = dayKey;
     this.sideDayKey.set(dayKey);
     this.sideTab.set('day');
+    this.sideSelectedEventIds.set(null);
+    this.sideOpen.set(true);
+  }
+
+  /** Ouvre le drawer latéral pour un événement (affiche uniquement cet événement). */
+  openSideForEvent(dayKey: string, eventId: string) {
+    this.selectedDate = dayKey;
+    this.sideDayKey.set(dayKey);
+    this.sideTab.set('day');
+    this.sideSelectedEventIds.set([eventId]);
+    this.sideOpen.set(true);
+  }
+
+  /** Ouvre le drawer latéral pour un regroupement d'événements (affiche tout le groupe). */
+  openSideForGroup(dayKey: string, eventIds: string[]) {
+    this.selectedDate = dayKey;
+    this.sideDayKey.set(dayKey);
+    this.sideTab.set('day');
+    this.sideSelectedEventIds.set(eventIds);
     this.sideOpen.set(true);
   }
 
@@ -815,12 +846,14 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.selectedDate = dayKey;
     this.sideDayKey.set(dayKey);
     this.sideTab.set('night');
+    this.sideSelectedEventIds.set(null);
     this.sideOpen.set(true);
   }
 
   /** Ferme le drawer latéral. */
   closeSide() {
     this.sideOpen.set(false);
+    this.sideSelectedEventIds.set(null);
   }
 
   /** Nombre total de minutes affichées dans la grille (fenêtre 06:00 -> 23:59). */
@@ -1009,6 +1042,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
         out.push({
           kind: 'merged',
           count: g.length,
+          eventIds: g.map((x) => x.e.id),
           topPx: top * pxPerMinute,
           heightPx: Math.max(18, (bottom - top) * pxPerMinute),
         });
@@ -1103,4 +1137,4 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
 type LayoutItem =
   | { kind: 'event'; event: EventDto; topPx: number; heightPx: number; leftPct: number; widthPct: number }
-  | { kind: 'merged'; count: number; topPx: number; heightPx: number };
+  | { kind: 'merged'; count: number; eventIds: string[]; topPx: number; heightPx: number };

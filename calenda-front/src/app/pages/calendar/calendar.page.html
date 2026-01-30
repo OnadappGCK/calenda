@@ -89,7 +89,7 @@
                       [style.height.px]="it.heightPx"
                       [style.left.%]="it.leftPct"
                       [style.width.%]="it.widthPct"
-                      (click)="openSideForDay(dateKey(d))"
+                      (click)="openSideForEvent(dateKey(d), it.event.id)"
                     >
                       <div class="eventTitle">{{ it.event.titre }}</div>
                       <div class="eventMeta">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
@@ -101,7 +101,7 @@
                       type="button"
                       [style.top.px]="it.topPx"
                       [style.height.px]="it.heightPx"
-                      (click)="openSideForDay(dateKey(d))"
+                      (click)="openSideForGroup(dateKey(d), it.eventIds)"
                     >
                       {{ it.count }} événements
                     </button>
@@ -198,7 +198,7 @@
                       [style.height.px]="it.heightPx"
                       [style.left.%]="it.leftPct"
                       [style.width.%]="it.widthPct"
-                      (click)="openSideForDay(selectedDate)"
+                      (click)="openSideForEvent(selectedDate, it.event.id)"
                     >
                       <div class="eventTitle">{{ it.event.titre }}</div>
                       <div class="eventMeta">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
@@ -210,7 +210,7 @@
                       type="button"
                       [style.top.px]="it.topPx"
                       [style.height.px]="it.heightPx"
-                      (click)="openSideForDay(selectedDate)"
+                      (click)="openSideForGroup(selectedDate, it.eventIds)"
                     >
                       {{ it.count }} événements
                     </button>
