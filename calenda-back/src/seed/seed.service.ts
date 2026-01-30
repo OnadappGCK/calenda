@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
+import { EventOrigin } from '../common/enums/event-origin.enum';
 import { Role } from '../common/enums/role.enum';
 import { Event } from '../events/event.entity';
 import { News } from '../news/news.entity';
@@ -94,18 +95,6 @@ export class SeedService {
       return;
     }
 
-    const desiredTitles = new Set([
-      'DEMO - Exposition (journée) - Centre ville',
-      'DEMO - Concert du soir',
-      'DEMO - Danse (chevauchement)',
-      'DEMO - Spectacle (même créneau)',
-      'DEMO - Atelier photo (même créneau)',
-      'DEMO - Rencontre auteurs (même créneau)',
-      'DEMO - Feux d’artifice (passe minuit)',
-      'DEMO - Expo multi-jours (3 jours)',
-      'DEMO - Événement en attente (organisateur)',
-    ]);
-
     const existing = await this.eventsRepo.find({ where: { ville: 'Dev' } });
     const existingTitles = new Set(existing.map((e) => e.titre));
 
@@ -119,12 +108,48 @@ export class SeedService {
       return d;
     };
 
+    /** Liste des catégories utilisées pour générer des événements de démo. */
+    const categories: EventCategory[] = [
+      EventCategory.DANSE,
+      EventCategory.CONCERT,
+      EventCategory.SPECTACLE,
+      EventCategory.FEUX_D_ARTIFICE,
+      EventCategory.EXPOSITION,
+      EventCategory.AUTRE,
+    ];
+
+    /** Origines utilisées pour simuler des imports externes (utile pour la page admin). */
+    const origins: EventOrigin[] = [
+      EventOrigin.MANUAL,
+      EventOrigin.MARTIGUES_SITE,
+      EventOrigin.SALSA_OLIVIER,
+    ];
+
+    /** Créneaux horaires variés, dont overlaps (pour tester l'affichage calendrier). */
+    const slots: Array<{ start: [number, number]; end: [number, number]; crossesMidnight?: boolean }> = [
+      { start: [7, 0], end: [9, 0] },
+      { start: [10, 0], end: [12, 0] },
+      { start: [11, 0], end: [13, 0] },
+      { start: [14, 0], end: [16, 0] },
+      { start: [18, 0], end: [20, 0] },
+      { start: [19, 0], end: [21, 0] },
+      { start: [22, 30], end: [0, 15], crossesMidnight: true },
+    ];
+
+    /**
+     * Génère un titre stable (idempotent) pour éviter de créer des doublons entre redémarrages.
+     */
+    const makeTitle = (offsetDays: number, idx: number, categorie: EventCategory, origin: EventOrigin) => {
+      return `DEMOAUTO - J+${offsetDays} - ${idx} - ${categorie} - ${origin}`;
+    };
+
     const demo: Array<Partial<Event>> = [
       {
         titre: 'DEMO - Exposition (journée) - Centre ville',
         description:
           'Exposition accessible toute la journée. Cas utile: événement long dans la même journée.',
         categorie: EventCategory.EXPOSITION,
+        origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Galerie du centre',
         theme: 'art',
@@ -139,6 +164,7 @@ export class SeedService {
         titre: 'DEMO - Concert du soir',
         description: 'Concert du soir. Sert de base pour tester les événements qui se chevauchent.',
         categorie: EventCategory.CONCERT,
+        origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Salle des fêtes',
         theme: 'musique',
@@ -153,6 +179,7 @@ export class SeedService {
         titre: 'DEMO - Danse (chevauchement)',
         description: 'Atelier danse. Chevauchement partiel avec le concert.',
         categorie: EventCategory.DANSE,
+        origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Maison des associations',
         theme: 'danse',
@@ -167,6 +194,7 @@ export class SeedService {
         titre: 'DEMO - Spectacle (même créneau)',
         description: 'Spectacle exactement sur le même créneau que le concert (test collisions).',
         categorie: EventCategory.SPECTACLE,
+        origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Théâtre municipal',
         theme: 'scene',
@@ -181,6 +209,7 @@ export class SeedService {
         titre: 'DEMO - Atelier photo (même créneau)',
         description: 'Atelier photo. Même créneau que le concert (objectif: 4+ overlaps).',
         categorie: EventCategory.AUTRE,
+        origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Médiathèque',
         theme: 'photo',
@@ -195,6 +224,7 @@ export class SeedService {
         titre: 'DEMO - Rencontre auteurs (même créneau)',
         description: 'Rencontre avec auteurs. Même créneau que le concert (objectif: 4+ overlaps).',
         categorie: EventCategory.AUTRE,
+        origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Librairie',
         theme: 'livre',
@@ -209,6 +239,7 @@ export class SeedService {
         titre: 'DEMO - Feux d’artifice (passe minuit)',
         description: 'Événement qui démarre tard et termine après minuit.',
         categorie: EventCategory.FEUX_D_ARTIFICE,
+        origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Parc',
         theme: 'feu',
@@ -223,6 +254,7 @@ export class SeedService {
         titre: 'DEMO - Expo multi-jours (3 jours)',
         description: 'Événement multi-jours pour tester le filtrage de période.',
         categorie: EventCategory.EXPOSITION,
+        origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Musée',
         theme: 'art',
@@ -238,6 +270,7 @@ export class SeedService {
         description:
           'Cas admin: événement non public (en attente de validation). Doit apparaître dans Admin pending.',
         categorie: EventCategory.AUTRE,
+        origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Lieu secret',
         theme: null,
@@ -250,7 +283,44 @@ export class SeedService {
       },
     ];
 
-    const toInsert = demo.filter((e) => !!e.titre && desiredTitles.has(e.titre) && !existingTitles.has(e.titre));
+    /** Génère un lot d'événements supplémentaires (semaine courante + jours à venir). */
+    for (let offsetDays = 0; offsetDays < 14; offsetDays += 1) {
+      for (let i = 0; i < slots.length; i += 1) {
+        const categorie = categories[(offsetDays + i) % categories.length];
+        const origin = origins[(offsetDays + i) % origins.length];
+        const slot = slots[i];
+
+        /** Organisateur alterné pour simuler des créations par différents rôles. */
+        const owner = (offsetDays + i) % 2 === 0 ? admin : organisateur;
+
+        /** Certaines entrées sont volontairement non publiques (tests admin pending). */
+        const isPublic = (offsetDays + i) % 7 !== 0;
+
+        const dateDebut = at(offsetDays, slot.start[0], slot.start[1]);
+        const dateFin = slot.crossesMidnight
+          ? at(offsetDays + 1, slot.end[0], slot.end[1])
+          : at(offsetDays, slot.end[0], slot.end[1]);
+
+        demo.push({
+          titre: makeTitle(offsetDays, i, categorie, origin),
+          description:
+            "Événement généré automatiquement pour tests (catégories variées, overlaps, origines variées).",
+          categorie,
+          origin,
+          ville: 'Dev',
+          lieu: `Lieu démo ${((offsetDays + i) % 5) + 1}`,
+          theme: null,
+          dateDebut,
+          dateFin,
+          public: isPublic,
+          enAvant: offsetDays === 0 && i === 0,
+          couleur: null,
+          organisateur: owner,
+        });
+      }
+    }
+
+    const toInsert = demo.filter((e) => !!e.titre && !existingTitles.has(e.titre));
     if (toInsert.length === 0) {
       return;
     }
@@ -266,10 +336,13 @@ export class SeedService {
       return;
     }
 
-    const existing = await this.newsRepo.findOne({ where: { titre: 'DEMO - Nouvelle version du calendrier' } });
-    if (existing) {
-      return;
-    }
+    /** Liste les titres déjà présents (préfixe `DEMO -`) pour éviter les doublons. */
+    const existing = await this.newsRepo
+      .createQueryBuilder('news')
+      .select(['news.titre'])
+      .where('news.titre LIKE :prefix', { prefix: 'DEMO - %' })
+      .getMany();
+    const existingTitles = new Set(existing.map((n) => n.titre));
 
     const today = new Date();
     const isoDate = (d: Date) => {
@@ -284,6 +357,18 @@ export class SeedService {
     d1.setDate(d1.getDate() - 2);
     const d2 = new Date(today);
     d2.setDate(d2.getDate() - 7);
+
+    /** News datée à J+1 (future fonctionnalité d'import). */
+    const d3 = new Date(today);
+    d3.setDate(d3.getDate() + 1);
+
+    /** News datée à J+3 (statut des améliorations UI). */
+    const d4 = new Date(today);
+    d4.setDate(d4.getDate() + 3);
+
+    /** News datée à J+10 (rappel des données de démo). */
+    const d5 = new Date(today);
+    d5.setDate(d5.getDate() + 10);
 
     const demo: Array<Partial<News>> = [
       {
@@ -307,8 +392,34 @@ export class SeedService {
           'Découvre les événements mis en avant sur la page d’accueil et consulte les actualités pour suivre les nouveautés de la plateforme.',
         image: null,
       },
+      {
+        titre: 'DEMO - Import d’événements (bientôt)',
+        datePublication: isoDate(d3),
+        texte:
+          'Une interface admin permettra d’importer des événements depuis des sites externes. Chaque événement conservera son origine pour audit.',
+        image: null,
+      },
+      {
+        titre: 'DEMO - Améliorations mobiles',
+        datePublication: isoDate(d4),
+        texte:
+          'Améliorations en cours sur l’affichage mobile du calendrier (lisibilité, entêtes, navigation).',
+        image: null,
+      },
+      {
+        titre: 'DEMO - Semaine à venir : plein d’événements',
+        datePublication: isoDate(d5),
+        texte:
+          'De nouveaux événements de démonstration ont été ajoutés sur la semaine et les jours à venir pour tester les chevauchements.',
+        image: null,
+      },
     ];
 
-    await this.newsRepo.save(demo.map((n) => this.newsRepo.create(n)));
+    const toInsert = demo.filter((n) => !!n.titre && !existingTitles.has(n.titre));
+    if (toInsert.length === 0) {
+      return;
+    }
+
+    await this.newsRepo.save(toInsert.map((n) => this.newsRepo.create(n)));
   }
 }
