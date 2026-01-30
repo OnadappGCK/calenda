@@ -31,6 +31,7 @@ export class Event {
   categorie!: EventCategory;
 
   @Column({ type: 'text', default: EventOrigin.MANUAL })
+  /** Origine de l'événement (création manuelle vs import externe). */
   origin!: EventOrigin;
 
   @Column()

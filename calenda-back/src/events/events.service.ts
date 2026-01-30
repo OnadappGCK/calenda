@@ -134,7 +134,7 @@ export class EventsService {
     return qb.getMany();
   }
 
-  /** Crée un événement: organisateur lié au user, visibilité auto selon rôle (admin peut publier). */
+  /** Crée un événement: organisateur lié au user, visibilité auto selon rôle (admin peut publier), origin forcée à `MANUAL`. */
   async create(dto: CreateEventDto, userId: string, role: Role) {
     const organisateur = await this.usersRepo.findOne({ where: { id: userId } });
     if (!organisateur) {

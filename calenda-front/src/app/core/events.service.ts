@@ -14,6 +14,7 @@ export type EventDto = {
   titre: string;
   description: string;
   categorie: EventCategory;
+  /** Origine (peut être absente pour des événements existants avant ajout de la colonne). */
   origin?: EventOrigin;
   ville: string;
   lieu: string;
