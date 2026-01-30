@@ -123,32 +123,37 @@
       </div>
 
       <div class="weekSummary">
-        <div class="listTitle">De {{ selectedDateObj() | date: 'EEEE d MMMM' }} à la fin de la semaine</div>
+        <div class="listTitle">Événements à venir</div>
 
         <div class="weekList">
-          @for (g of eventsFromSelectedToWeekEnd(); track g.key) {
-            <div class="daySep">
-              <div class="sepTitle">{{ dayKeyToDate(g.key) | date: 'EEEE d MMMM' }}</div>
-              <div class="sepLine"></div>
-            </div>
+          @if (upcomingWeeks().length === 0) {
+            <div class="empty">Aucun événement à venir.</div>
+          } @else {
+            @for (w of upcomingWeeks(); track w.weekStartKey) {
+              <div class="daySep">
+                <div class="sepTitle">{{ w.label }}</div>
+                <div class="sepLine"></div>
+              </div>
 
-            @if (g.items.length === 0) {
-              <div class="empty">Aucun événement.</div>
-            } @else {
-              @for (e of g.items.slice(0, 1); track e.id) {
-                <div class="listRow" [style.background]="categoryColor(e.categorie)">
-                  <div class="listMain">
-                    <div class="listName">{{ e.titre }}</div>
-                    <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ e.lieu }}</div>
-                  </div>
-                  <div class="listRight">
-                    <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
-                  </div>
+              @for (g of w.days; track g.dayKey) {
+                <div class="daySep">
+                  <div class="sepTitle">{{ dayKeyToDate(g.dayKey) | date: 'EEEE d MMMM' }}</div>
+                  <div class="sepLine"></div>
                 </div>
-              }
 
-              @if (g.items.length > 1) {
-                <div class="moreRow">+ {{ g.items.length - 1 }} autres</div>
+                @for (e of g.items; track e.id) {
+                  <div class="listRow" [style.background]="categoryColor(e.categorie)">
+                    <div class="listMain">
+                      <div class="listName">{{ e.titre }}</div>
+                      <div class="eventMeta">
+                        {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ e.lieu }}
+                      </div>
+                    </div>
+                    <div class="listRight">
+                      <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
+                    </div>
+                  </div>
+                }
               }
             }
           }

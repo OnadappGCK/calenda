@@ -389,8 +389,8 @@
 
 .weekSummary {
   flex: 0 0 auto;
-  max-height: min(140px, 12dvh);
-  overflow: hidden;
+  max-height: none;
+  overflow: visible;
 }
 
 .moreRow {

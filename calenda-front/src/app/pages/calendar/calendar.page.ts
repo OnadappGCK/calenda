@@ -84,6 +84,9 @@ export class CalendarPage implements OnInit, OnDestroy {
   private readonly endHour = 23;
   private readonly minutesPerSlot = 30;
 
+  /** Nombre de semaines à charger/afficher dans la section "Événements à venir" (en vue semaine). */
+  private readonly upcomingWeeksAhead = 6;
+
   /**
    * Hauteur (en px) d'un slot horaire dans la grille.
    * Recalculée dynamiquement en fonction de la hauteur réellement rendue du scheduler.
@@ -303,6 +306,90 @@ export class CalendarPage implements OnInit, OnDestroy {
     return this.rangeDays().map((k) => ({ key: k, items: map.get(k) ?? [] }));
   });
 
+  /** Calcule la clé `YYYY-MM-DD` du lundi de la semaine contenant `dayKey` (timezone locale). */
+  private weekStartKeyFromDayKey(dayKey: string) {
+    const d = new Date(`${dayKey}T00:00:00`);
+    const day = (d.getDay() + 6) % 7;
+    const start = new Date(d);
+    start.setDate(d.getDate() - day);
+    start.setHours(0, 0, 0, 0);
+    return this.localKeyFromDate(start);
+  }
+
+  /** Formate un libellé de semaine basé sur le lundi (ex: "Semaine du 1 janvier"). */
+  private formatWeekLabelFromStartKey(weekStartKey: string) {
+    const d = this.dayKeyToDate(weekStartKey);
+    const formatted = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+    return `Semaine du ${formatted}`;
+  }
+
+  /**
+   * Liste les jours (clés `YYYY-MM-DD`) à partir de la date sélectionnée et sur N semaines à venir.
+   * Sert de base à l'affichage "Événements à venir".
+   */
+  readonly upcomingRangeDays = computed(() => {
+    /** Démarre la liste au plus tôt à aujourd'hui (si on navigue dans le passé). */
+    const startKey = this.selectedDate < this.todayLocalKey() ? this.todayLocalKey() : this.selectedDate;
+    /** Base de calcul: lundi de la semaine contenant le point de départ (souvent aujourd'hui). */
+    const startWeekKey = this.weekStartKeyFromDayKey(startKey);
+    const startWeek = this.dayKeyToDate(startWeekKey);
+
+    const end = new Date(startWeek);
+    end.setDate(startWeek.getDate() + this.upcomingWeeksAhead * 7 - 1);
+    end.setHours(0, 0, 0, 0);
+    const endKey = this.localKeyFromDate(end);
+
+    const out: string[] = [];
+    let cursor = new Date(`${startKey}T00:00:00`);
+    cursor.setHours(0, 0, 0, 0);
+    const endDate = new Date(`${endKey}T00:00:00`);
+    endDate.setHours(0, 0, 0, 0);
+
+    while (cursor <= endDate) {
+      out.push(this.localKeyFromDate(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return out;
+  });
+
+  /**
+   * Groupes d'événements à venir, structurés par semaine (lundi) puis par jour.
+   * N'affiche que les jours qui contiennent au moins un événement.
+   */
+  readonly upcomingWeeks = computed(() => {
+    const map = this.eventsByDay();
+    /** Semaine de référence pour "Semaine en cours" (basée sur aujourd'hui). */
+    const currentWeekStartKey = this.weekStartKeyFromDayKey(this.todayLocalKey());
+
+    const weeks = new Map<
+      string,
+      {
+        weekStartKey: string;
+        label: string;
+        days: Array<{ dayKey: string; items: EventDto[] }>;
+      }
+    >();
+
+    for (const dayKey of this.upcomingRangeDays()) {
+      const items = map.get(dayKey) ?? [];
+      if (items.length === 0) continue;
+
+      const weekStartKey = this.weekStartKeyFromDayKey(dayKey);
+      const isCurrentWeek = weekStartKey === currentWeekStartKey;
+
+      const label = isCurrentWeek
+        ? 'Semaine en cours'
+        : this.formatWeekLabelFromStartKey(weekStartKey);
+
+      const w = weeks.get(weekStartKey) ?? { weekStartKey, label, days: [] };
+      w.days.push({ dayKey, items });
+      weeks.set(weekStartKey, w);
+    }
+
+    return Array.from(weeks.values()).sort((a, b) => a.weekStartKey.localeCompare(b.weekStartKey));
+  });
+
   readonly sideEvents = computed(() => {
     const k = this.sideDayKey();
     return this.eventsByDay().get(k) ?? [];
@@ -477,9 +564,18 @@ export class CalendarPage implements OnInit, OnDestroy {
     }
 
     const start = this.weekStart();
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
+    const endSelected = new Date(start);
+    endSelected.setDate(start.getDate() + this.upcomingWeeksAhead * 7 - 1);
+    endSelected.setHours(23, 59, 59, 999);
+
+    /** Garantit que la plage inclut au minimum les semaines à venir à partir d'aujourd'hui. */
+    const todayWeekStartKey = this.weekStartKeyFromDayKey(this.todayLocalKey());
+    const todayWeekStart = this.dayKeyToDate(todayWeekStartKey);
+    const endToday = new Date(todayWeekStart);
+    endToday.setDate(todayWeekStart.getDate() + this.upcomingWeeksAhead * 7 - 1);
+    endToday.setHours(23, 59, 59, 999);
+
+    const end = endSelected > endToday ? endSelected : endToday;
     return { from: start.toISOString(), to: end.toISOString() };
   }
 
