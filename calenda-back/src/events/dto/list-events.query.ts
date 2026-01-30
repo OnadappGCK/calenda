@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { EventCategory } from '../../common/enums/event-category.enum';
 
 /** DTO de query pour lister les événements (`GET /api/events`). */
@@ -38,4 +38,19 @@ export class ListEventsQueryDto {
   @IsOptional()
   @Transform(({ value }) => value === 'true')
   favoris?: boolean;
+
+  /** Pagination: nombre max d'items à retourner (optionnel). */
+  @IsOptional()
+  @Transform(({ value }) => Number.parseInt(value, 10))
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  limit?: number;
+
+  /** Pagination: offset (index de départ) pour la page (optionnel). */
+  @IsOptional()
+  @Transform(({ value }) => Number.parseInt(value, 10))
+  @IsInt()
+  @Min(0)
+  offset?: number;
 }

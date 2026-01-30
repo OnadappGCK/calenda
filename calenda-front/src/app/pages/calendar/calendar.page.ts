@@ -1,4 +1,15 @@
-import { Component, DestroyRef, ElementRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
@@ -18,7 +29,7 @@ import { FavoritesService } from '../../core/favorites.service';
  * Page Calendrier.
  * Gère l'affichage semaine/journée, le chargement des événements et le layout du scheduler (positionnement + taille des slots).
  */
-export class CalendarPage implements OnInit, OnDestroy {
+export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly eventsService = inject(EventsService);
   private readonly favoritesService = inject(FavoritesService);
   private readonly auth = inject(AuthService);
@@ -26,8 +37,18 @@ export class CalendarPage implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly el = inject(ElementRef);
 
+  /** Indique si le composant a été détruit (évite des requêtes tardives via observers). */
+  private destroyed = false;
+
   private resizeObserver?: ResizeObserver;
   private observedScheduler?: Element;
+
+  /** Observer utilisé pour déclencher le chargement progressif de la liste "à venir". */
+  private upcomingObserver?: IntersectionObserver;
+
+  /** Point d'ancrage DOM en bas de liste, observé pour déclencher le chargement de la page suivante. */
+  @ViewChild('upcomingSentinel')
+  private upcomingSentinel?: ElementRef<HTMLElement>;
 
   /**
    * Avoid concurrent reload() calls (e.g. user clicking refresh multiple times):
@@ -41,6 +62,20 @@ export class CalendarPage implements OnInit, OnDestroy {
 
   readonly events = signal<EventDto[]>([]);
   readonly loading = signal<boolean>(false);
+
+  /** Liste paginée des événements à venir (utilisée pour la section du bas). */
+  readonly upcomingEvents = signal<EventDto[]>([]);
+  /** Indique si une page "à venir" est en cours de chargement. */
+  readonly upcomingLoading = signal<boolean>(false);
+  /** Indique s'il reste potentiellement des événements à charger (pagination). */
+  readonly upcomingHasMore = signal<boolean>(true);
+
+  /** Taille de page pour le chargement progressif des événements à venir. */
+  private readonly upcomingPageSize = 50;
+  /** Offset courant pour la pagination des événements à venir. */
+  private upcomingOffset = 0;
+  /** Token d'invalidation pour ignorer les réponses "à venir" obsolètes. */
+  private upcomingToken = 0;
 
   readonly favoriteIds = signal<Set<string>>(new Set());
 
@@ -323,34 +358,13 @@ export class CalendarPage implements OnInit, OnDestroy {
     return `Semaine du ${formatted}`;
   }
 
-  /**
-   * Liste les jours (clés `YYYY-MM-DD`) à partir de la date sélectionnée et sur N semaines à venir.
-   * Sert de base à l'affichage "Événements à venir".
-   */
-  readonly upcomingRangeDays = computed(() => {
-    /** Démarre la liste au plus tôt à aujourd'hui (si on navigue dans le passé). */
-    const startKey = this.selectedDate < this.todayLocalKey() ? this.todayLocalKey() : this.selectedDate;
-    /** Base de calcul: lundi de la semaine contenant le point de départ (souvent aujourd'hui). */
-    const startWeekKey = this.weekStartKeyFromDayKey(startKey);
-    const startWeek = this.dayKeyToDate(startWeekKey);
-
-    const end = new Date(startWeek);
-    end.setDate(startWeek.getDate() + this.upcomingWeeksAhead * 7 - 1);
-    end.setHours(0, 0, 0, 0);
-    const endKey = this.localKeyFromDate(end);
-
-    const out: string[] = [];
-    let cursor = new Date(`${startKey}T00:00:00`);
-    cursor.setHours(0, 0, 0, 0);
-    const endDate = new Date(`${endKey}T00:00:00`);
-    endDate.setHours(0, 0, 0, 0);
-
-    while (cursor <= endDate) {
-      out.push(this.localKeyFromDate(cursor));
-      cursor.setDate(cursor.getDate() + 1);
+  /** Retourne les jours (clés `YYYY-MM-DD`) présents dans la liste paginée des événements à venir. */
+  readonly upcomingDayKeys = computed(() => {
+    const keys = new Set<string>();
+    for (const e of this.upcomingEvents()) {
+      keys.add(this.localKeyFromIso(e.dateDebut));
     }
-
-    return out;
+    return Array.from(keys.values()).sort((a, b) => a.localeCompare(b));
   });
 
   /**
@@ -358,7 +372,18 @@ export class CalendarPage implements OnInit, OnDestroy {
    * N'affiche que les jours qui contiennent au moins un événement.
    */
   readonly upcomingWeeks = computed(() => {
-    const map = this.eventsByDay();
+    const map = new Map<string, EventDto[]>();
+    for (const e of this.upcomingEvents()) {
+      const key = this.localKeyFromIso(e.dateDebut);
+      const arr = map.get(key) ?? [];
+      arr.push(e);
+      map.set(key, arr);
+    }
+    for (const [k, arr] of map.entries()) {
+      arr.sort((a, b) => a.dateDebut.localeCompare(b.dateDebut) || a.titre.localeCompare(b.titre));
+      map.set(k, arr);
+    }
+
     /** Semaine de référence pour "Semaine en cours" (basée sur aujourd'hui). */
     const currentWeekStartKey = this.weekStartKeyFromDayKey(this.todayLocalKey());
 
@@ -371,9 +396,8 @@ export class CalendarPage implements OnInit, OnDestroy {
       }
     >();
 
-    for (const dayKey of this.upcomingRangeDays()) {
+    for (const dayKey of this.upcomingDayKeys()) {
       const items = map.get(dayKey) ?? [];
-      if (items.length === 0) continue;
 
       const weekStartKey = this.weekStartKeyFromDayKey(dayKey);
       const isCurrentWeek = weekStartKey === currentWeekStartKey;
@@ -389,6 +413,35 @@ export class CalendarPage implements OnInit, OnDestroy {
 
     return Array.from(weeks.values()).sort((a, b) => a.weekStartKey.localeCompare(b.weekStartKey));
   });
+
+  /** Planifie l'observation du sentinel de scroll infini après rendu. */
+  private scheduleObserveUpcomingSentinel() {
+    if (typeof window === 'undefined') return;
+    requestAnimationFrame(() => this.ensureUpcomingObserved());
+  }
+
+  /** Connecte (si possible) l'IntersectionObserver sur le sentinel de bas de liste "à venir". */
+  private ensureUpcomingObserved() {
+    if (typeof window === 'undefined') return;
+    if (this.destroyed) return;
+    if (this.viewMode !== 'week') return;
+    if (!this.upcomingHasMore()) return;
+
+    const el = this.upcomingSentinel?.nativeElement;
+    if (!el) return;
+
+    if (!this.upcomingObserver) {
+      this.upcomingObserver = new IntersectionObserver((entries) => {
+        if (this.destroyed) return;
+        const hit = entries.some((e) => e.isIntersecting);
+        if (!hit) return;
+        void this.loadMoreUpcoming();
+      });
+    }
+
+    this.upcomingObserver.disconnect();
+    this.upcomingObserver.observe(el);
+  }
 
   readonly sideEvents = computed(() => {
     const k = this.sideDayKey();
@@ -442,12 +495,23 @@ export class CalendarPage implements OnInit, OnDestroy {
     await this.reload();
   }
 
+  /** Hook Angular: attache l'IntersectionObserver pour le chargement progressif de la liste "à venir". */
+  ngAfterViewInit() {
+    this.scheduleObserveUpcomingSentinel();
+  }
+
   /** Hook Angular: nettoyage des listeners + observers. */
   ngOnDestroy() {
+    this.destroyed = true;
+
+    /** Invalide les requêtes "à venir" en cours pour éviter l'application de réponses tardives. */
+    this.upcomingToken += 1;
+
     if (typeof window !== 'undefined') {
       window.removeEventListener('resize', this.onResize);
     }
     this.resizeObserver?.disconnect();
+    this.upcomingObserver?.disconnect();
   }
 
   /** Recharge la liste des favoris du user (si connecté). */
@@ -500,6 +564,11 @@ export class CalendarPage implements OnInit, OnDestroy {
       const res = await this.eventsService.list(params).toPromise();
       if (token === this.reloadToken) {
         this.events.set(res ?? []);
+
+        /** Recharge aussi la liste "à venir" (démarre à la première page) en vue semaine. */
+        if (this.viewMode === 'week') {
+          this.resetUpcoming();
+        }
       }
     } finally {
       if (token === this.reloadToken) {
@@ -508,6 +577,9 @@ export class CalendarPage implements OnInit, OnDestroy {
         // After reload, DOM changes (headers/night buttons) can impact available height.
         // Recompute slotPx after render (rAF + double-rAF) to avoid relying on a manual resize.
         this.scheduleRecomputeSlotPx('reload');
+
+        /** Ré-attache le sentinel si la section "à venir" est visible. */
+        this.scheduleObserveUpcomingSentinel();
       }
 
       this.reloadInFlight = false;
@@ -564,19 +636,81 @@ export class CalendarPage implements OnInit, OnDestroy {
     }
 
     const start = this.weekStart();
-    const endSelected = new Date(start);
-    endSelected.setDate(start.getDate() + this.upcomingWeeksAhead * 7 - 1);
-    endSelected.setHours(23, 59, 59, 999);
-
-    /** Garantit que la plage inclut au minimum les semaines à venir à partir d'aujourd'hui. */
-    const todayWeekStartKey = this.weekStartKeyFromDayKey(this.todayLocalKey());
-    const todayWeekStart = this.dayKeyToDate(todayWeekStartKey);
-    const endToday = new Date(todayWeekStart);
-    endToday.setDate(todayWeekStart.getDate() + this.upcomingWeeksAhead * 7 - 1);
-    endToday.setHours(23, 59, 59, 999);
-
-    const end = endSelected > endToday ? endSelected : endToday;
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
     return { from: start.toISOString(), to: end.toISOString() };
+  }
+
+  /** Réinitialise la pagination de la liste "à venir" et charge la première page. */
+  private resetUpcoming() {
+    this.upcomingOffset = 0;
+    this.upcomingToken += 1;
+    this.upcomingEvents.set([]);
+    this.upcomingHasMore.set(true);
+    void this.loadMoreUpcoming();
+  }
+
+  /** Charge la prochaine page (50 par 50) pour la liste "Événements à venir". */
+  private async loadMoreUpcoming() {
+    if (this.viewMode !== 'week') return;
+    if (this.destroyed) return;
+    if (this.upcomingLoading()) return;
+    if (!this.upcomingHasMore()) return;
+
+    const token = this.upcomingToken;
+    this.upcomingLoading.set(true);
+    try {
+      const params: Record<string, string> = {};
+
+      /**
+       * Période de base: si un filtre date est utilisé, on le respecte.
+       * Sinon, on démarre au plus tôt à aujourd'hui (événements à venir).
+       */
+      if (this.dateDebutFilter || this.dateFinFilter) {
+        if (this.dateDebutFilter) {
+          params['from'] = new Date(`${this.dateDebutFilter}T00:00:00`).toISOString();
+        }
+        if (this.dateFinFilter) {
+          params['to'] = new Date(`${this.dateFinFilter}T23:59:59`).toISOString();
+        }
+      } else {
+        const startKey = this.selectedDate < this.todayLocalKey() ? this.todayLocalKey() : this.selectedDate;
+        const start = new Date(`${startKey}T00:00:00`);
+        start.setHours(0, 0, 0, 0);
+        params['from'] = start.toISOString();
+      }
+
+      if (this.q) params['q'] = this.q;
+      if (this.ville) params['ville'] = this.ville;
+      if (this.lieu) params['lieu'] = this.lieu;
+      if (this.categorie) params['categorie'] = this.categorie as string;
+      if (this.favoris) params['favoris'] = 'true';
+
+      params['limit'] = String(this.upcomingPageSize);
+      params['offset'] = String(this.upcomingOffset);
+
+      const res = await this.eventsService.list(params).toPromise();
+      if (token !== this.upcomingToken) {
+        return;
+      }
+
+      const items = res ?? [];
+      const next = [...this.upcomingEvents(), ...items];
+      this.upcomingEvents.set(next);
+      this.upcomingOffset += items.length;
+      this.upcomingHasMore.set(items.length === this.upcomingPageSize);
+    } catch {
+      /** En cas d'erreur réseau, on stoppe le chargement progressif pour éviter une boucle. */
+      if (token === this.upcomingToken) {
+        this.upcomingHasMore.set(false);
+      }
+    } finally {
+      if (token === this.upcomingToken) {
+        this.upcomingLoading.set(false);
+        this.scheduleObserveUpcomingSentinel();
+      }
+    }
   }
 
   /** Réinitialise les filtres puis relance un reload. */

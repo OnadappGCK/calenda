@@ -75,7 +75,15 @@ export class EventsService {
       });
     }
 
-    qb.orderBy('event.dateDebut', 'ASC').addOrderBy('event.titre', 'ASC');
+    qb.orderBy('event.dateDebut', 'ASC').addOrderBy('event.titre', 'ASC').addOrderBy('event.id', 'ASC');
+
+    /** Applique la pagination (si fournie) pour limiter le volume renvoyé. */
+    if (query.offset !== undefined) {
+      qb.skip(query.offset);
+    }
+    if (query.limit !== undefined) {
+      qb.take(query.limit);
+    }
 
     return qb.getMany();
   }
