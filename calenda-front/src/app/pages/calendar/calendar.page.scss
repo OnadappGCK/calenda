@@ -171,6 +171,15 @@
   min-width: 0;
 }
 
+.dayLabel {
+  font-weight: 800;
+  text-transform: capitalize;
+  font-size: clamp(0.75rem, 1.6vw, 0.95rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .timeCol {
   border: 1px solid $border-1;
   background:

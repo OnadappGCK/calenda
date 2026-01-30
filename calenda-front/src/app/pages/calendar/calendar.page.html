@@ -64,10 +64,7 @@
 
             @for (d of weekDays(); track dateKey(d)) {
               <button class="dayHead" type="button" (click)="selectedDate = dateKey(d); onDateChange()">
-                <div class="dayName dayNameFull">{{ d | date: 'EEEE' }}</div>
-                <div class="dayName dayNameShort">{{ d | date: 'EEE' }}</div>
-                <div class="dayDate dayDateFull">{{ d | date: 'd MMMM' }}</div>
-                <div class="dayDate dayDateShort">{{ d | date: 'd' }}</div>
+                <div class="dayLabel">{{ d | date: 'EEEE d MMMM' }}</div>
               </button>
             }
 
@@ -94,6 +91,9 @@
                       <div class="eventTitle">{{ it.event.titre }}</div>
                       <div class="eventMeta">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
                       <div class="eventMeta">{{ it.event.lieu }}</div>
+                      <div class="eventActions">
+                        <div class="catMini">{{ categoryIcon(it.event.categorie) }}</div>
+                      </div>
                     </button>
                   } @else {
                     <button
@@ -177,8 +177,7 @@
               <div class="corner"></div>
 
               <button class="dayHead" type="button" (click)="openSideForDay(selectedDate)">
-                <div class="dayName">{{ selectedDateObj() | date: 'EEEE' }}</div>
-                <div class="dayDate">{{ selectedDateObj() | date: 'd MMMM' }}</div>
+                <div class="dayLabel">{{ selectedDateObj() | date: 'EEEE d MMMM' }}</div>
               </button>
 
               <div class="timeCol" [style.height]="dayHeightPx()">
@@ -203,6 +202,9 @@
                       <div class="eventTitle">{{ it.event.titre }}</div>
                       <div class="eventMeta">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
                       <div class="eventMeta">{{ it.event.lieu }}</div>
+                      <div class="eventActions">
+                        <div class="catMini">{{ categoryIcon(it.event.categorie) }}</div>
+                      </div>
                     </button>
                   } @else {
                     <button
