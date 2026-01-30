@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AdminService } from '../../core/admin.service';
-import { EventDto } from '../../core/events.service';
+import { EventDto, EventOrigin } from '../../core/events.service';
 
 @Component({
   selector: 'app-admin-pending-page',
@@ -17,11 +17,24 @@ import { EventDto } from '../../core/events.service';
 export class AdminPendingPage implements OnInit {
   private readonly adminService = inject(AdminService);
 
+  /** Libellés d'UI pour afficher l'origine d'un événement (champ `origin`). */
+  private readonly originLabels: Record<EventOrigin, string> = {
+    MANUAL: 'Manuel',
+    MARTIGUES_SITE: 'Import: Martigues site',
+    SALSA_OLIVIER: 'Import: Salsa Olivier',
+  };
+
   readonly items = signal<EventDto[]>([]);
 
   readonly expanded = signal<Set<string>>(new Set());
   readonly confirm = signal<null | { action: 'validate' | 'delete'; id: string; title: string }>(null);
   readonly showMerge = signal<boolean>(false);
+
+  /** Retourne un libellé lisible pour l'origine d'un événement (fallback si non renseignée). */
+  originLabel(origin: EventOrigin | undefined) {
+    if (!origin) return 'Non renseignée';
+    return this.originLabels[origin] ?? origin;
+  }
 
   /** Hook Angular: charge la liste initiale des événements en attente. */
   async ngOnInit() {

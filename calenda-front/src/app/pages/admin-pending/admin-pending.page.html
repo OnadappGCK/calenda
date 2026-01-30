@@ -20,6 +20,7 @@
             {{ e.categorie }} · {{ e.ville }} · {{ e.lieu }} · {{ e.dateDebut | date: 'short' }}
           </div>
           <div class="meta">Organisateur: {{ e.organisateur.pseudo }}</div>
+          <div class="meta">Origine: {{ originLabel(e.origin) }}</div>
 
           @if (expanded().has(e.id)) {
             <p class="desc">{{ e.description }}</p>
