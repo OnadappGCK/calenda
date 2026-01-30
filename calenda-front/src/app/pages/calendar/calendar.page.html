@@ -89,8 +89,10 @@
                       (click)="openSideForEvent(dateKey(d), it.event.id)"
                     >
                       <div class="eventTitle">{{ it.event.titre }}</div>
-                      <div class="eventMeta">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
-                      <div class="eventMeta">{{ it.event.lieu }}</div>
+                      <div class="eventInfo">
+                        <div class="eventTime">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
+                        <div class="eventPlace">{{ it.event.lieu }}</div>
+                      </div>
                       <div class="eventActions">
                         <div class="catMini">{{ categoryIcon(it.event.categorie) }}</div>
                       </div>
@@ -201,8 +203,10 @@
                       (click)="openSideForEvent(selectedDate, it.event.id)"
                     >
                       <div class="eventTitle">{{ it.event.titre }}</div>
-                      <div class="eventMeta">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
-                      <div class="eventMeta">{{ it.event.lieu }}</div>
+                      <div class="eventInfo">
+                        <div class="eventTime">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
+                        <div class="eventPlace">{{ it.event.lieu }}</div>
+                      </div>
                       <div class="eventActions">
                         <div class="catMini">{{ categoryIcon(it.event.categorie) }}</div>
                       </div>

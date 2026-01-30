@@ -263,9 +263,12 @@
 
 .eventBlock {
   position: absolute;
+  --mini-size: clamp(12px, calc(var(--slot-px, 26px) * 0.6), 18px);
   border: 0;
   border-radius: 0.75rem;
-  padding: 0.4rem 0.5rem;
+  padding: 0.35rem 0.45rem;
+  padding-right: calc(var(--mini-size) + 0.55rem);
+  padding-bottom: calc(var(--mini-size) + 0.45rem);
   cursor: pointer;
   text-align: left;
   overflow: hidden;
@@ -273,10 +276,39 @@
   gap: 0.15rem;
   box-shadow: $shadow-1;
   box-sizing: border-box;
+  font-size: clamp(0.62rem, 1.05vw, 0.78rem);
+  line-height: 1.12;
 }
 
 .eventBlock .eventTitle {
-  font-size: 0.95rem;
+  font-size: 1em;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eventBlock .eventInfo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.35rem;
+  min-width: 0;
+}
+
+.eventBlock .eventTime {
+  flex: 0 0 auto;
+  font-weight: 800;
+  font-size: 0.95em;
+  white-space: nowrap;
+}
+
+.eventBlock .eventPlace {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.95em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mergedBlock {
@@ -368,6 +400,11 @@
   gap: 0.35rem;
 }
 
+.eventBlock .eventActions {
+  right: 4px;
+  bottom: 4px;
+}
+
 .heart {
   border: 0;
   background: $overlay-3;
@@ -389,6 +426,13 @@
   align-items: center;
   justify-content: center;
   font-weight: 900;
+}
+
+.eventBlock .catMini {
+  width: var(--mini-size);
+  height: var(--mini-size);
+  font-size: calc(var(--mini-size) * 0.62);
+  background: $overlay-2;
 }
 
 .listTitle {
