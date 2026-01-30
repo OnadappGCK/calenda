@@ -12,8 +12,8 @@
 }
 
 .item {
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--surface-1);
+  border: 1px solid var(--border-1);
   border-radius: 1rem;
   padding: 1rem;
 }
@@ -29,8 +29,8 @@
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background: white;
+  border: 1px solid var(--border-2);
+  background: var(--surface-1);
   cursor: pointer;
   font-weight: 900;
 }
@@ -40,7 +40,7 @@
 }
 
 .meta {
-  color: #555;
+  color: var(--text-muted-4);
   font-size: 0.9rem;
 }
 
@@ -65,7 +65,7 @@
 .modalBackdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--backdrop-1);
 }
 
 .modal {
@@ -74,8 +74,8 @@
   left: 50%;
   transform: translateX(-50%);
   width: min(720px, 92vw);
-  background: white;
+  background: var(--surface-1);
   border-radius: 0.75rem;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--border-2);
   padding: 1rem;
 }

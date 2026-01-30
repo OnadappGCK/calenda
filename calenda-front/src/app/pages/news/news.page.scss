@@ -4,14 +4,14 @@
 }
 
 .item {
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--surface-1);
+  border: 1px solid var(--border-1);
   border-radius: 1rem;
   padding: 1rem;
 }
 
 .meta {
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--text-muted-5);
   font-size: 0.9rem;
 }
 

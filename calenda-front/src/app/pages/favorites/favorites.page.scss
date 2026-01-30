@@ -10,7 +10,7 @@
 }
 
 .item {
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--border-1);
   border-radius: 0.75rem;
   padding: 0.75rem;
   display: grid;
@@ -24,14 +24,14 @@
 }
 
 .meta {
-  color: #555;
+  color: var(--text-muted-4);
   font-size: 0.9rem;
 }
 
 .btn {
   width: fit-content;
-  border: 1px solid #e5e5e5;
-  background: white;
+  border: 1px solid var(--border-1);
+  background: var(--surface-1);
   padding: 0.4rem 0.6rem;
   border-radius: 0.5rem;
   cursor: pointer;

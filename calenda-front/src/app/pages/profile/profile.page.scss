@@ -6,7 +6,7 @@
 
 .card {
   width: min(520px, 92vw);
-  background: #bdbdbd;
+  background: var(--surface-3);
   border-radius: 1.25rem;
   padding: 1.5rem;
   display: flex;
@@ -19,7 +19,7 @@
   width: 140px;
   height: 140px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #cfe9ff, #bfe1ff);
+  background: linear-gradient(180deg, var(--blue-100), var(--blue-200));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,16 +51,16 @@
 
 .error {
   width: 100%;
-  border: 1px solid #ffb4b4;
-  background: #fff3f3;
+  border: 1px solid var(--status-danger-border);
+  background: var(--status-danger-surface);
   padding: 0.5rem;
   border-radius: 0.75rem;
 }
 
 .ok {
   width: 100%;
-  border: 1px solid #a7f3d0;
-  background: #ecfdf5;
+  border: 1px solid var(--status-success-border);
+  background: var(--status-success-surface);
   padding: 0.5rem;
   border-radius: 0.75rem;
 }
