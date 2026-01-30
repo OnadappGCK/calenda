@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
+import { EventOrigin } from '../common/enums/event-origin.enum';
 import { User } from '../users/user.entity';
 
 @Entity('events')
@@ -28,6 +29,9 @@ export class Event {
   @Column({ type: 'text' })
   /** Catégorie (enum). */
   categorie!: EventCategory;
+
+  @Column({ type: 'text', default: EventOrigin.MANUAL })
+  origin!: EventOrigin;
 
   @Column()
   /** Ville. */

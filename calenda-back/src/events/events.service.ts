@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventOrigin } from '../common/enums/event-origin.enum';
 import { Role } from '../common/enums/role.enum';
 import { User } from '../users/user.entity';
 import { Event } from './event.entity';
@@ -144,6 +145,7 @@ export class EventsService {
       titre: dto.titre,
       description: dto.description,
       categorie: dto.categorie,
+      origin: EventOrigin.MANUAL,
       ville: dto.ville,
       lieu: dto.lieu,
       theme: dto.theme ?? null,

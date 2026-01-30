@@ -5,12 +5,16 @@ import { API_BASE_URL } from './api.config';
 /** Catégories disponibles pour un événement (doit matcher le backend). */
 export type EventCategory = 'Danse' | 'Concert' | 'Spectacle' | "Feux d’artifice" | 'Exposition' | 'Autre';
 
+/** Origine d'un événement (création manuelle ou import externe). */
+export type EventOrigin = 'MANUAL' | 'MARTIGUES_SITE' | 'SALSA_OLIVIER';
+
 /** DTO événement renvoyé par l'API. */
 export type EventDto = {
   id: string;
   titre: string;
   description: string;
   categorie: EventCategory;
+  origin?: EventOrigin;
   ville: string;
   lieu: string;
   theme: string | null;

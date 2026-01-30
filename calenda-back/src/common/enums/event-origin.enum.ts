@@ -1,0 +1,5 @@
+export enum EventOrigin {
+  MANUAL = 'MANUAL',
+  MARTIGUES_SITE = 'MARTIGUES_SITE',
+  SALSA_OLIVIER = 'SALSA_OLIVIER',
+}
