@@ -336,8 +336,22 @@ export class CalendarPage implements OnInit, OnDestroy {
 
     this.scheduleRecomputeSlotPx('init');
 
-    await this.auth.ensureLoaded();
-    await this.reloadFavorites();
+    /**
+     * Charge l'utilisateur si un token est présent.
+     * Tolère les erreurs (token expiré/invalidé) pour ne pas bloquer le chargement des événements publics.
+     */
+    try {
+      await this.auth.ensureLoaded();
+    } catch {
+      // Ignore: l'utilisateur sera considéré comme déconnecté si l'API refuse le token.
+    }
+
+    /** Recharge les favoris si possible, sinon repart sur un état vide. */
+    try {
+      await this.reloadFavorites();
+    } catch {
+      this.favoriteIds.set(new Set());
+    }
     await this.reload();
   }
 
