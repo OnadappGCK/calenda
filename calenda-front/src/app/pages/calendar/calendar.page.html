@@ -94,7 +94,11 @@
                         <div class="eventTime">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
                       </div>
                       <div class="eventActions">
-                        <div class="catMini">{{ categoryIcon(it.event.categorie) }}</div>
+                        <div class="tagsMini">
+                          @for (t of (it.event.caracteristiques ?? []).slice(0, 3); track t) {
+                            <span class="tagMini" [title]="t">{{ tagIcon(t) }}</span>
+                          }
+                        </div>
                       </div>
                     </button>
                   } @else {
@@ -152,7 +156,11 @@
                       </div>
                     </div>
                     <div class="listRight">
-                      <div class="catMini">{{ categoryIcon(e.categorie) }}</div>
+                      <div class="tagsMini">
+                        @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
+                          <span class="tagMini" [title]="t">{{ tagIcon(t) }}</span>
+                        }
+                      </div>
                       <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
                     </div>
                   </div>
@@ -208,7 +216,11 @@
                         <div class="eventTime">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
                       </div>
                       <div class="eventActions">
-                        <div class="catMini">{{ categoryIcon(it.event.categorie) }}</div>
+                        <div class="tagsMini">
+                          @for (t of (it.event.caracteristiques ?? []).slice(0, 3); track t) {
+                            <span class="tagMini" [title]="t">{{ tagIcon(t) }}</span>
+                          }
+                        </div>
                       </div>
                     </button>
                   } @else {
@@ -264,7 +276,11 @@
                       <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ e.lieu }}</div>
                     </div>
                     <div class="listRight">
-                      <div class="catMini">{{ categoryIcon(e.categorie) }}</div>
+                      <div class="tagsMini">
+                        @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
+                          <span class="tagMini" [title]="t">{{ tagIcon(t) }}</span>
+                        }
+                      </div>
                       <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
                     </div>
                   </div>
@@ -388,6 +404,17 @@
       <label>
         Lieu
         <input type="text" [(ngModel)]="newLieu" name="newLieu" />
+      </label>
+
+      <label>
+        Caractéristiques (max 3)
+        <div class="tagsPick">
+          @for (t of availableTags; track t) {
+            <button class="tagPick" type="button" [class.active]="isNewTagSelected(t)" (click)="toggleNewTag(t)">
+              {{ tagIcon(t) }} {{ t }}
+            </button>
+          }
+        </div>
       </label>
 
       <label>

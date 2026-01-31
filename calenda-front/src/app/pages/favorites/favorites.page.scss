@@ -124,6 +124,24 @@
   justify-content: flex-end;
 }
 
+.tagsMini {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.tagMini {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: $overlay-2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.85rem;
+}
+
 .catMini {
   width: 22px;
   height: 22px;

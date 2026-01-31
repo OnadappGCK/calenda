@@ -5,6 +5,9 @@ import { API_BASE_URL } from './api.config';
 /** Catégories disponibles pour un événement (doit matcher le backend). */
 export type EventCategory = 'Danse' | 'Concert' | 'Spectacle' | "Feux d’artifice" | 'Exposition' | 'Autre';
 
+/** Caractéristiques disponibles pour un événement (max 3, doit matcher le backend). */
+export type EventTag = 'MUSIQUE' | 'DANSE' | 'PLEIN AIR' | 'RENCONTRE' | 'FEU D’ARTIFICE' | 'SPORT' | 'MARCHÉ';
+
 /** Origine d'un événement (création manuelle ou import externe). */
 export type EventOrigin = 'MANUAL' | 'MARTIGUES_SITE' | 'SALSA_OLIVIER';
 
@@ -19,6 +22,7 @@ export type EventDto = {
   ville: string;
   lieu: string;
   theme: string | null;
+  caracteristiques?: EventTag[] | null;
   dateDebut: string;
   dateFin: string;
   public: boolean;
@@ -60,6 +64,8 @@ export class EventsService {
     categorie: EventCategory;
     ville: string;
     lieu: string;
+    theme?: string;
+    caracteristiques?: EventTag[];
     dateDebut: string;
     dateFin: string;
     enAvant?: boolean;

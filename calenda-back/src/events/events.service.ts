@@ -157,6 +157,7 @@ export class EventsService {
       ville: dto.ville,
       lieu: dto.lieu,
       theme: dto.theme ?? null,
+      caracteristiques: dto.caracteristiques ? dto.caracteristiques.slice(0, 3) : null,
       dateDebut: new Date(dto.dateDebut),
       dateFin: new Date(dto.dateFin),
       couleur: dto.couleur ?? null,
@@ -186,6 +187,9 @@ export class EventsService {
     if (dto.ville !== undefined) event.ville = dto.ville;
     if (dto.lieu !== undefined) event.lieu = dto.lieu;
     if (dto.theme !== undefined) event.theme = dto.theme;
+    if (dto.caracteristiques !== undefined) {
+      event.caracteristiques = dto.caracteristiques ? dto.caracteristiques.slice(0, 3) : null;
+    }
     if (dto.dateDebut !== undefined) event.dateDebut = new Date(dto.dateDebut);
     if (dto.dateFin !== undefined) event.dateFin = new Date(dto.dateFin);
     if (dto.couleur !== undefined) event.couleur = dto.couleur;

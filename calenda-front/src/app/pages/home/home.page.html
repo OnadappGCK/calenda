@@ -27,7 +27,11 @@
         <div class="panel">
           <div class="panelHeader">
             <span class="cat">{{ currentFeatured()!.categorie }}</span>
-            <span class="catIcon">{{ categoryIcon(currentFeatured()!.categorie) }}</span>
+            <span class="catIcon">
+              @for (t of (currentFeatured()!.caracteristiques ?? []).slice(0, 3); track t) {
+                <span style="margin-left: 4px;">{{ tagIcon(t) }}</span>
+              }
+            </span>
           </div>
 
           <div class="title">{{ currentFeatured()!.titre }}</div>

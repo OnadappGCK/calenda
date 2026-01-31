@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { FavoritesService } from '../../core/favorites.service';
 import { EventCategory, EventDto } from '../../core/events.service';
-import { categoryColor, categoryIcon } from '../../core/event-ui';
+import { categoryColor, tagIcon } from '../../core/event-ui';
 
 @Component({
   selector: 'app-favorites-page',
@@ -114,7 +114,7 @@ export class FavoritesPage implements OnInit {
   });
 
   categoryColor = categoryColor;
-  categoryIcon = categoryIcon;
+  tagIcon = tagIcon;
 
   /** Hook Angular: charge la liste initiale des favoris. */
   async ngOnInit() {

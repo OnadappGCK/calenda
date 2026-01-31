@@ -42,7 +42,11 @@
                 <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ e.lieu }}</div>
               </div>
               <div class="listRight">
-                <div class="catMini">{{ categoryIcon(e.categorie) }}</div>
+                <div class="tagsMini">
+                  @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
+                    <span class="tagMini" [title]="t">{{ tagIcon(t) }}</span>
+                  }
+                </div>
                 <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
                 <button class="btn" type="button" (click)="remove(e.id)">Retirer</button>
               </div>

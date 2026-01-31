@@ -1,5 +1,6 @@
-import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
 import { EventCategory } from '../../common/enums/event-category.enum';
+import { EventTag } from '../../common/enums/event-tag.enum';
 
 /** DTO de mise à jour d'événement (`PATCH /api/events/:id`). */
 export class UpdateEventDto {
@@ -32,6 +33,13 @@ export class UpdateEventDto {
   @IsOptional()
   @IsString()
   theme?: string;
+
+  /** Caractéristiques (tags) optionnelles (max 3). */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @IsEnum(EventTag, { each: true })
+  caracteristiques?: EventTag[] | null;
 
   /** Date/heure de début (ISO, optionnel). */
   @IsOptional()

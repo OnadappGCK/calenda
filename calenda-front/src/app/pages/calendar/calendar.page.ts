@@ -15,8 +15,8 @@ import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
-import { EventsService, EventCategory, EventDto } from '../../core/events.service';
-import { categoryColor, categoryIcon } from '../../core/event-ui';
+import { EventsService, EventCategory, EventDto, EventTag } from '../../core/events.service';
+import { categoryColor, tagIcon } from '../../core/event-ui';
 import { FavoritesService } from '../../core/favorites.service';
 
 @Component({
@@ -233,11 +233,22 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   newCategorie: EventCategory = 'Concert';
   newVille = '';
   newLieu = '';
+  newCaracteristiques: EventTag[] = [];
   newDateDebut = '';
   newDateFin = '';
 
   protected readonly categoryColor = categoryColor;
-  protected readonly categoryIcon = categoryIcon;
+  protected readonly tagIcon = tagIcon;
+
+  readonly availableTags: EventTag[] = [
+    'MUSIQUE',
+    'DANSE',
+    'PLEIN AIR',
+    'RENCONTRE',
+    'FEU D’ARTIFICE',
+    'SPORT',
+    'MARCHÉ',
+  ];
 
   readonly selectedDateObj = computed(() => {
     const d = new Date(`${this.selectedDate}T00:00:00`);
@@ -1112,6 +1123,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       categorie: this.newCategorie,
       ville: this.newVille,
       lieu: this.newLieu,
+      caracteristiques: this.newCaracteristiques.slice(0, 3),
       dateDebut: new Date(this.newDateDebut).toISOString(),
       dateFin: new Date(this.newDateFin).toISOString(),
     };
@@ -1123,11 +1135,26 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.newCategorie = 'Concert';
     this.newVille = '';
     this.newLieu = '';
+    this.newCaracteristiques = [];
     this.newDateDebut = '';
     this.newDateFin = '';
 
     this.closePropose();
     await this.reload();
+  }
+
+  isNewTagSelected(tag: EventTag) {
+    return this.newCaracteristiques.includes(tag);
+  }
+
+  toggleNewTag(tag: EventTag) {
+    const current = this.newCaracteristiques;
+    if (current.includes(tag)) {
+      this.newCaracteristiques = current.filter((t) => t !== tag);
+      return;
+    }
+    if (current.length >= 3) return;
+    this.newCaracteristiques = [...current, tag];
   }
 }
 

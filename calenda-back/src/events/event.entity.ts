@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
+import { EventTag } from '../common/enums/event-tag.enum';
 import { User } from '../users/user.entity';
 
 @Entity('events')
@@ -45,6 +46,10 @@ export class Event {
   @Column({ type: 'text', nullable: true })
   /** Thème (optionnel) utilisé pour l'UI. */
   theme!: string | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  /** Liste de caractéristiques (tags) associées à l'événement (max 3). */
+  caracteristiques!: EventTag[] | null;
 
   @Column({ type: 'datetime' })
   /** Date/heure de début. */

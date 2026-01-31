@@ -263,12 +263,12 @@
 
 .eventBlock {
   position: absolute;
-  --mini-size: clamp(12px, calc(var(--slot-px, 26px) * 0.6), 18px);
+  --tag-size: clamp(10px, calc(var(--slot-px, 26px) * 0.45), 14px);
   border: 0;
   border-radius: 0.75rem;
   padding: 0.35rem 0.45rem;
-  padding-right: calc(var(--mini-size) + 0.4rem);
-  padding-bottom: calc(var(--mini-size) + 0.25rem);
+  padding-right: calc((var(--tag-size) * 3) + 0.85rem);
+  padding-bottom: calc(var(--tag-size) + 0.25rem);
   cursor: pointer;
   text-align: left;
   overflow: hidden;
@@ -411,6 +411,34 @@
   bottom: 3px;
 }
 
+.tagsMini {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.eventBlock .tagsMini {
+  gap: 1px;
+}
+
+.tagMini {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: $overlay-2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.85rem;
+}
+
+.eventBlock .tagMini {
+  width: var(--tag-size);
+  height: var(--tag-size);
+  font-size: calc(var(--tag-size) * 0.72);
+}
+
 .heart {
   border: 0;
   background: $overlay-3;
@@ -435,10 +463,32 @@
 }
 
 .eventBlock .catMini {
-  width: var(--mini-size);
-  height: var(--mini-size);
-  font-size: calc(var(--mini-size) * 0.62);
+  width: var(--tag-size);
+  height: var(--tag-size);
+  font-size: calc(var(--tag-size) * 0.62);
   background: $overlay-2;
+}
+
+.tagsPick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.tagPick {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tagPick.active {
+  background: $text-1;
+  color: $surface-1;
 }
 
 .listTitle {

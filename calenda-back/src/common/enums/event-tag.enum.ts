@@ -1,0 +1,9 @@
+export enum EventTag {
+  MUSIQUE = 'MUSIQUE',
+  DANSE = 'DANSE',
+  PLEIN_AIR = 'PLEIN AIR',
+  RENCONTRE = 'RENCONTRE',
+  FEU_D_ARTIFICE = 'FEU D’ARTIFICE',
+  SPORT = 'SPORT',
+  MARCHE = 'MARCHÉ',
+}

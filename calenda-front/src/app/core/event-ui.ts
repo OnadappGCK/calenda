@@ -1,4 +1,4 @@
-import { EventCategory } from './events.service';
+import { EventCategory, EventTag } from './events.service';
 
 /** Retourne une couleur (hex) associée à une catégorie d'événement. */
 export function categoryColor(category: EventCategory): string {
@@ -33,5 +33,26 @@ export function categoryIcon(category: EventCategory): string {
       return '▸';
     default:
       return '•';
+  }
+}
+
+export function tagIcon(tag: EventTag): string {
+  switch (tag) {
+    case 'MUSIQUE':
+      return '🎵';
+    case 'DANSE':
+      return '🩰';
+    case 'PLEIN AIR':
+      return '☀️';
+    case 'RENCONTRE':
+      return '🤝';
+    case 'FEU D’ARTIFICE':
+      return '🎆';
+    case 'SPORT':
+      return '⚽';
+    case 'MARCHÉ':
+      return '🏠';
+    default:
+      return '🏠';
   }
 }
