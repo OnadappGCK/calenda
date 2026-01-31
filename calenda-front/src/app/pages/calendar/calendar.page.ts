@@ -16,7 +16,7 @@ import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { EventsService, EventCategory, EventDto, EventTag } from '../../core/events.service';
-import { categoryColor, tagIcon } from '../../core/event-ui';
+import { categoryColor, categoryIcon, tagIcon } from '../../core/event-ui';
 import { FavoritesService } from '../../core/favorites.service';
 
 @Component({
@@ -238,6 +238,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   newDateFin = '';
 
   protected readonly categoryColor = categoryColor;
+  protected readonly categoryIcon = categoryIcon;
   protected readonly tagIcon = tagIcon;
 
   readonly availableTags: EventTag[] = [
