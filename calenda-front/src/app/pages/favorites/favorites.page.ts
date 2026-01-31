@@ -3,7 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { FavoritesService } from '../../core/favorites.service';
-import { EventCategory, EventDto } from '../../core/events.service';
+import { EventCategory, EventDto, EventTag } from '../../core/events.service';
 import { categoryColor, tagIcon } from '../../core/event-ui';
 
 @Component({
@@ -25,8 +25,19 @@ export class FavoritesPage implements OnInit {
   ville = '';
   lieu = '';
   categorie: EventCategory | '' = '';
+  caracteristiquesFilter: EventTag[] = [];
   dateDebutFilter = '';
   dateFinFilter = '';
+
+  readonly availableTags: EventTag[] = [
+    'MUSIQUE',
+    'DANSE',
+    'PLEIN AIR',
+    'RENCONTRE',
+    'FEU D’ARTIFICE',
+    'SPORT',
+    'MARCHÉ',
+  ];
 
   showFilters = false;
 
@@ -41,6 +52,12 @@ export class FavoritesPage implements OnInit {
     return (this.favorites() ?? [])
       .filter((e) => {
         if (categorie && e.categorie !== categorie) return false;
+
+        if (this.caracteristiquesFilter.length) {
+          const tags = e.caracteristiques ?? [];
+          const hit = this.caracteristiquesFilter.some((t) => tags.includes(t));
+          if (!hit) return false;
+        }
 
         if (ville) {
           if (!e.ville?.toLowerCase().includes(ville)) return false;
@@ -108,6 +125,9 @@ export class FavoritesPage implements OnInit {
     if (this.ville.trim()) out.push({ key: 'ville', label: `Ville: ${this.ville.trim()}` });
     if (this.lieu.trim()) out.push({ key: 'lieu', label: `Lieu: ${this.lieu.trim()}` });
     if (this.categorie) out.push({ key: 'categorie', label: `Catégorie: ${this.categorie}` });
+    if (this.caracteristiquesFilter.length) {
+      out.push({ key: 'caracteristiques', label: `Caractéristiques: ${this.caracteristiquesFilter.join(', ')}` });
+    }
     if (this.dateDebutFilter) out.push({ key: 'dateDebut', label: `Début: ${this.dateDebutFilter}` });
     if (this.dateFinFilter) out.push({ key: 'dateFin', label: `Fin: ${this.dateFinFilter}` });
     return out;
@@ -145,6 +165,7 @@ export class FavoritesPage implements OnInit {
     this.ville = '';
     this.lieu = '';
     this.categorie = '';
+    this.caracteristiquesFilter = [];
     this.dateDebutFilter = '';
     this.dateFinFilter = '';
     this.showFilters = false;
@@ -164,6 +185,9 @@ export class FavoritesPage implements OnInit {
       case 'categorie':
         this.categorie = '';
         break;
+      case 'caracteristiques':
+        this.caracteristiquesFilter = [];
+        break;
       case 'dateDebut':
         this.dateDebutFilter = '';
         break;
@@ -171,6 +195,20 @@ export class FavoritesPage implements OnInit {
         this.dateFinFilter = '';
         break;
     }
+  }
+
+  isCaracteristiqueFilterSelected(tag: EventTag) {
+    return this.caracteristiquesFilter.includes(tag);
+  }
+
+  toggleCaracteristiqueFilter(tag: EventTag) {
+    const current = this.caracteristiquesFilter;
+    if (current.includes(tag)) {
+      this.caracteristiquesFilter = current.filter((t) => t !== tag);
+      return;
+    }
+    if (current.length >= 3) return;
+    this.caracteristiquesFilter = [...current, tag];
   }
 
   dayKeyToDate(dayKey: string) {

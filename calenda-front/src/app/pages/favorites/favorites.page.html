@@ -97,7 +97,18 @@
         </select>
       </label>
 
-      <label class="field">
+      <label class="field span2">
+        Caractéristiques (max 3)
+        <div class="tagsPick">
+          @for (t of availableTags; track t) {
+            <button class="tagPick" type="button" [class.active]="isCaracteristiqueFilterSelected(t)" (click)="toggleCaracteristiqueFilter(t)">
+              {{ tagIcon(t) }} {{ t }}
+            </button>
+          }
+        </div>
+      </label>
+
+      <label class="field span2">
         Mot-clé
         <input type="text" [(ngModel)]="q" name="q" />
       </label>

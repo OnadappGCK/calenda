@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { EventOrigin } from '../common/enums/event-origin.enum';
 import { Role } from '../common/enums/role.enum';
 import { User } from '../users/user.entity';
@@ -62,6 +62,18 @@ export class EventsService {
       qb.andWhere(
         '(LOWER(event.titre) LIKE LOWER(:q) OR LOWER(event.description) LIKE LOWER(:q))',
         { q: `%${query.q}%` },
+      );
+    }
+
+    if (query.caracteristiques?.length) {
+      qb.andWhere(
+        new Brackets((sub) => {
+          query.caracteristiques!.forEach((t, idx) => {
+            sub.orWhere(`event.caracteristiques LIKE :tag${idx}`, {
+              [`tag${idx}`]: `%"${t}"%`,
+            });
+          });
+        }),
       );
     }
 

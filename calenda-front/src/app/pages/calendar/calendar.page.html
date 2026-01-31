@@ -441,7 +441,7 @@
     <h2>Filtres</h2>
 
     <div class="grid">
-      <div class="toggle">
+      <div class="toggle span2">
         <button class="toggleBtn" type="button" [class.active]="viewMode==='week'" (click)="setViewMode('week')">
           Semaine
         </button>
@@ -488,6 +488,17 @@
         </select>
       </label>
 
+      <label class="field span2">
+        Caractéristiques (max 3)
+        <div class="tagsPick">
+          @for (t of availableTags; track t) {
+            <button class="tagPick" type="button" [class.active]="isCaracteristiqueFilterSelected(t)" (click)="toggleCaracteristiqueFilter(t)">
+              {{ tagIcon(t) }} {{ t }}
+            </button>
+          }
+        </div>
+      </label>
+
       <label class="field">
         Mot-clé
         <input type="text" [(ngModel)]="q" name="q" />
@@ -495,7 +506,7 @@
 
       <label class="field">
         <span>Favoris</span>
-        <button class="btn" type="button" (click)="toggleFavoris()">{{ favoris ? 'Oui' : 'Non' }}</button>
+        <input type="checkbox" [checked]="favoris" (change)="onFavorisFilterChange($event)" />
       </label>
     </div>
 

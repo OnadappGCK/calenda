@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { EventCategory } from '../../common/enums/event-category.enum';
+import { EventTag } from '../../common/enums/event-tag.enum';
 
 /** DTO de query pour lister les événements (`GET /api/events`). */
 export class ListEventsQueryDto {
@@ -33,6 +34,18 @@ export class ListEventsQueryDto {
   @IsOptional()
   @IsString()
   q?: string;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string'
+      ? value
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean)
+      : undefined,
+  )
+  @IsEnum(EventTag, { each: true })
+  caracteristiques?: EventTag[];
 
   /** Filtre: uniquement les favoris (si user connecté). */
   @IsOptional()

@@ -106,6 +106,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   categorie: EventCategory | '' = '';
   favoris = false;
 
+  caracteristiquesFilter: EventTag[] = [];
+
   dateDebutFilter = '';
   dateFinFilter = '';
 
@@ -575,6 +577,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       if (this.lieu) params['lieu'] = this.lieu;
       if (this.categorie) params['categorie'] = this.categorie as string;
       if (this.favoris) params['favoris'] = 'true';
+      if (this.caracteristiquesFilter.length) params['caracteristiques'] = this.caracteristiquesFilter.join(',');
 
       this.dbg('reload start', {
         token,
@@ -706,6 +709,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       if (this.lieu) params['lieu'] = this.lieu;
       if (this.categorie) params['categorie'] = this.categorie as string;
       if (this.favoris) params['favoris'] = 'true';
+      if (this.caracteristiquesFilter.length) params['caracteristiques'] = this.caracteristiquesFilter.join(',');
 
       params['limit'] = String(this.upcomingPageSize);
       params['offset'] = String(this.upcomingOffset);
@@ -740,6 +744,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.lieu = '';
     this.categorie = '';
     this.favoris = false;
+    this.caracteristiquesFilter = [];
     this.dateDebutFilter = '';
     this.dateFinFilter = '';
     void this.reload();
@@ -761,6 +766,30 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     await this.reload();
   }
 
+  async onFavorisFilterChange(ev: Event) {
+    const next = (ev.target as HTMLInputElement | null)?.checked ?? false;
+    if (next && !this.auth.isLoggedIn()) {
+      this.favoris = false;
+      await this.router.navigateByUrl('/login');
+      return;
+    }
+    this.favoris = next;
+  }
+
+  isCaracteristiqueFilterSelected(tag: EventTag) {
+    return this.caracteristiquesFilter.includes(tag);
+  }
+
+  toggleCaracteristiqueFilter(tag: EventTag) {
+    const current = this.caracteristiquesFilter;
+    if (current.includes(tag)) {
+      this.caracteristiquesFilter = current.filter((t) => t !== tag);
+      return;
+    }
+    if (current.length >= 3) return;
+    this.caracteristiquesFilter = [...current, tag];
+  }
+
   /** Construit la liste de chips (tags) affichés pour représenter les filtres actifs. */
   activeChips() {
     const chips: Array<{ key: string; label: string }> = [];
@@ -769,6 +798,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.lieu) chips.push({ key: 'lieu', label: this.lieu });
     if (this.categorie) chips.push({ key: 'categorie', label: this.categorie });
     if (this.q) chips.push({ key: 'q', label: this.q });
+    if (this.caracteristiquesFilter.length) chips.push({ key: 'caracteristiques', label: this.caracteristiquesFilter.join(', ') });
     if (this.dateDebutFilter) chips.push({ key: 'dateDebut', label: `Du ${this.dateDebutFilter}` });
     if (this.dateFinFilter) chips.push({ key: 'dateFin', label: `Au ${this.dateFinFilter}` });
     if (this.favoris) chips.push({ key: 'favoris', label: 'Favoris' });
@@ -782,6 +812,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     if (key === 'lieu') this.lieu = '';
     if (key === 'categorie') this.categorie = '';
     if (key === 'q') this.q = '';
+    if (key === 'caracteristiques') this.caracteristiquesFilter = [];
     if (key === 'dateDebut') this.dateDebutFilter = '';
     if (key === 'dateFin') this.dateFinFilter = '';
     if (key === 'favoris') this.favoris = false;
