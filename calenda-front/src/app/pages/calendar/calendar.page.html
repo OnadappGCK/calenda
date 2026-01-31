@@ -81,6 +81,8 @@
                     <button
                       class="eventBlock"
                       type="button"
+                      [class.small]="it.heightPx < 52"
+                      [class.tiny]="it.heightPx < 34"
                       [style.background]="categoryColor(it.event.categorie)"
                       [style.top.px]="it.topPx"
                       [style.height.px]="it.heightPx"
@@ -88,17 +90,13 @@
                       [style.width.%]="it.widthPct"
                       (click)="openSideForEvent(dateKey(d), it.event.id)"
                     >
-                      <div class="eventTitle">{{ it.event.titre }}</div>
+                      <div class="eventTitle">{{ displayTitle(it.event) }}</div>
                       <div class="eventInfo">
                         <div class="eventPlace">{{ it.event.lieu }}</div>
                         <div class="eventTime">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
                       </div>
                       <div class="eventActions">
-                        <div class="tagsMini">
-                          @for (t of (it.event.caracteristiques ?? []).slice(0, 3); track t) {
-                            <span class="tagMini" [title]="t">{{ tagIcon(t) }}</span>
-                          }
-                        </div>
+                        <span class="catMini" [title]="it.event.categorie">{{ categoryIcon(it.event.categorie) }}</span>
                       </div>
                     </button>
                   } @else {
@@ -203,6 +201,8 @@
                     <button
                       class="eventBlock"
                       type="button"
+                      [class.small]="it.heightPx < 52"
+                      [class.tiny]="it.heightPx < 34"
                       [style.background]="categoryColor(it.event.categorie)"
                       [style.top.px]="it.topPx"
                       [style.height.px]="it.heightPx"
@@ -210,17 +210,13 @@
                       [style.width.%]="it.widthPct"
                       (click)="openSideForEvent(selectedDate, it.event.id)"
                     >
-                      <div class="eventTitle">{{ it.event.titre }}</div>
+                      <div class="eventTitle">{{ displayTitle(it.event) }}</div>
                       <div class="eventInfo">
                         <div class="eventPlace">{{ it.event.lieu }}</div>
                         <div class="eventTime">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
                       </div>
                       <div class="eventActions">
-                        <div class="tagsMini">
-                          @for (t of (it.event.caracteristiques ?? []).slice(0, 3); track t) {
-                            <span class="tagMini" [title]="t">{{ tagIcon(t) }}</span>
-                          }
-                        </div>
+                        <span class="catMini" [title]="it.event.categorie">{{ categoryIcon(it.event.categorie) }}</span>
                       </div>
                     </button>
                   } @else {

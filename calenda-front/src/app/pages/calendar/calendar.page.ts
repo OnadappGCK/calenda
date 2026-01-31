@@ -1188,6 +1188,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     if (current.length >= 3) return;
     this.newCaracteristiques = [...current, tag];
   }
+
+  displayTitle(e: EventDto) {
+    const t = (e.titre ?? '').trim();
+    return t ? t : 'Sans titre';
+  }
 }
 
 type LayoutItem =

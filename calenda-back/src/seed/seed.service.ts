@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
 import { Role } from '../common/enums/role.enum';
+import { EventTag } from '../common/enums/event-tag.enum';
 import { Event } from '../events/event.entity';
 import { News } from '../news/news.entity';
 import { User } from '../users/user.entity';
@@ -96,7 +97,7 @@ export class SeedService {
     }
 
     const existing = await this.eventsRepo.find({ where: { ville: 'Dev' } });
-    const existingTitles = new Set(existing.map((e) => e.titre));
+    const existingByTitle = new Map(existing.map((e) => [e.titre, e] as const));
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -133,6 +134,7 @@ export class SeedService {
       { start: [14, 0], end: [16, 0] },
       { start: [18, 0], end: [20, 0] },
       { start: [19, 0], end: [21, 0] },
+      { start: [1, 0], end: [5, 30] },
       { start: [22, 30], end: [0, 15], crossesMidnight: true },
     ];
 
@@ -153,6 +155,7 @@ export class SeedService {
         ville: 'Dev',
         lieu: 'Galerie du centre',
         theme: 'art',
+        caracteristiques: [EventTag.PLEIN_AIR, EventTag.RENCONTRE],
         dateDebut: at(0, 9, 0),
         dateFin: at(0, 18, 0),
         public: true,
@@ -168,6 +171,7 @@ export class SeedService {
         ville: 'Dev',
         lieu: 'Salle des fêtes',
         theme: 'musique',
+        caracteristiques: [EventTag.MUSIQUE, EventTag.PLEIN_AIR, EventTag.RENCONTRE],
         dateDebut: at(0, 18, 0),
         dateFin: at(0, 20, 0),
         public: true,
@@ -183,6 +187,7 @@ export class SeedService {
         ville: 'Dev',
         lieu: 'Maison des associations',
         theme: 'danse',
+        caracteristiques: [EventTag.DANSE, EventTag.SPORT],
         dateDebut: at(0, 19, 0),
         dateFin: at(0, 21, 0),
         public: true,
@@ -198,6 +203,7 @@ export class SeedService {
         ville: 'Dev',
         lieu: 'Théâtre municipal',
         theme: 'scene',
+        caracteristiques: [EventTag.RENCONTRE, EventTag.MARCHE],
         dateDebut: at(0, 18, 0),
         dateFin: at(0, 20, 0),
         public: true,
@@ -213,6 +219,7 @@ export class SeedService {
         ville: 'Dev',
         lieu: 'Médiathèque',
         theme: 'photo',
+        caracteristiques: [EventTag.RENCONTRE],
         dateDebut: at(0, 18, 0),
         dateFin: at(0, 20, 0),
         public: true,
@@ -243,6 +250,7 @@ export class SeedService {
         ville: 'Dev',
         lieu: 'Parc',
         theme: 'feu',
+        caracteristiques: [EventTag.FEU_D_ARTIFICE, EventTag.PLEIN_AIR],
         dateDebut: at(0, 23, 0),
         dateFin: at(1, 0, 30),
         public: true,
@@ -258,6 +266,7 @@ export class SeedService {
         ville: 'Dev',
         lieu: 'Musée',
         theme: 'art',
+        caracteristiques: [EventTag.MARCHE, EventTag.RENCONTRE],
         dateDebut: at(2, 10, 0),
         dateFin: at(4, 17, 0),
         public: true,
@@ -310,6 +319,11 @@ export class SeedService {
           ville: 'Dev',
           lieu: `Lieu démo ${((offsetDays + i) % 5) + 1}`,
           theme: null,
+          caracteristiques: [
+            Object.values(EventTag)[(offsetDays + i) % Object.values(EventTag).length] as EventTag,
+            Object.values(EventTag)[(offsetDays + i + 2) % Object.values(EventTag).length] as EventTag,
+            Object.values(EventTag)[(offsetDays + i + 4) % Object.values(EventTag).length] as EventTag,
+          ],
           dateDebut,
           dateFin,
           public: isPublic,
@@ -320,13 +334,37 @@ export class SeedService {
       }
     }
 
-    const toInsert = demo.filter((e) => !!e.titre && !existingTitles.has(e.titre));
-    if (toInsert.length === 0) {
+    const toSave: Event[] = [];
+    for (const e of demo) {
+      const title = (e.titre ?? '').trim();
+      if (!title) continue;
+
+      const existingEvent = existingByTitle.get(title);
+      if (existingEvent) {
+        existingEvent.description = (e.description ?? existingEvent.description) as string;
+        existingEvent.categorie = (e.categorie ?? existingEvent.categorie) as EventCategory;
+        existingEvent.origin = (e.origin ?? existingEvent.origin) as EventOrigin;
+        existingEvent.ville = (e.ville ?? existingEvent.ville) as string;
+        existingEvent.lieu = (e.lieu ?? existingEvent.lieu) as string;
+        existingEvent.theme = (e.theme ?? existingEvent.theme) as string | null;
+        existingEvent.caracteristiques = (e.caracteristiques ?? existingEvent.caracteristiques) as EventTag[] | null;
+        existingEvent.dateDebut = (e.dateDebut ?? existingEvent.dateDebut) as Date;
+        existingEvent.dateFin = (e.dateFin ?? existingEvent.dateFin) as Date;
+        existingEvent.public = (e.public ?? existingEvent.public) as boolean;
+        existingEvent.enAvant = (e.enAvant ?? existingEvent.enAvant) as boolean;
+        existingEvent.couleur = (e.couleur ?? existingEvent.couleur) as string | null;
+        existingEvent.organisateur = (e.organisateur ?? existingEvent.organisateur) as User;
+        toSave.push(existingEvent);
+      } else {
+        toSave.push(this.eventsRepo.create({ ...e, titre: title }));
+      }
+    }
+
+    if (toSave.length === 0) {
       return;
     }
 
-    const entities = toInsert.map((e) => this.eventsRepo.create(e));
-    await this.eventsRepo.save(entities);
+    await this.eventsRepo.save(toSave);
   }
 
   /** Seed des news de dev selon `SEED_NEWS`. */
