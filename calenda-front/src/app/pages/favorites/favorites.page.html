@@ -1,17 +1,107 @@
 <section class="wrap">
-  <h1>Favoris</h1>
+  <div class="topbar">
+    <div class="topLeft">
+      <div class="pageTitle">Favoris</div>
+    </div>
 
-  @if (favorites().length === 0) {
-    <p>Aucun favori.</p>
+    <div class="topRight">
+      <button class="btn" type="button" (click)="toggleFilters()">Filtres</button>
+      <button class="iconBtn" type="button" (click)="reload()" aria-label="Rafraîchir">↻</button>
+    </div>
+  </div>
+
+  <div class="chips">
+    @for (c of activeChips(); track c.key) {
+      <button class="chip" type="button" (click)="clearChip(c.key)">
+        {{ c.label }}
+        <span class="x">×</span>
+      </button>
+    }
+  </div>
+
+  @if (favoritesFiltered().length === 0) {
+    <div class="empty">Aucun favori.</div>
   } @else {
-    <div class="list">
-      @for (e of favorites(); track e.id) {
-        <div class="item">
-          <a class="title" [routerLink]="['/events', e.id]">{{ e.titre }}</a>
-          <div class="meta">{{ e.dateDebut | date: 'short' }}</div>
-          <button class="btn" type="button" (click)="remove(e.id)">Retirer</button>
+    <div class="weekList">
+      @for (w of favoritesWeeks(); track w.weekStartKey) {
+        <div class="daySep">
+          <div class="sepTitle">{{ w.label }}</div>
+          <div class="sepLine"></div>
         </div>
+
+        @for (g of w.days; track g.dayKey) {
+          <div class="daySep">
+            <div class="sepTitle">{{ dayKeyToDate(g.dayKey) | date: 'EEEE d MMMM' }}</div>
+            <div class="sepLine"></div>
+          </div>
+
+          @for (e of g.items; track e.id) {
+            <div class="listRow" [style.background]="categoryColor(e.categorie)">
+              <div class="listMain">
+                <div class="listName">{{ e.titre }}</div>
+                <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ e.lieu }}</div>
+              </div>
+              <div class="listRight">
+                <div class="catMini">{{ categoryIcon(e.categorie) }}</div>
+                <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
+                <button class="btn" type="button" (click)="remove(e.id)">Retirer</button>
+              </div>
+            </div>
+          }
+        }
       }
     </div>
   }
 </section>
+
+@if (showFilters) {
+  <div class="modalBackdrop" (click)="toggleFilters()"></div>
+  <div class="modal">
+    <h2>Filtres</h2>
+
+    <div class="grid">
+      <label class="field">
+        Date début
+        <input type="date" [(ngModel)]="dateDebutFilter" name="dateDebutFilter" />
+      </label>
+
+      <label class="field">
+        Date fin
+        <input type="date" [(ngModel)]="dateFinFilter" name="dateFinFilter" />
+      </label>
+
+      <label class="field">
+        Ville
+        <input type="text" [(ngModel)]="ville" name="ville" />
+      </label>
+
+      <label class="field">
+        Lieu
+        <input type="text" [(ngModel)]="lieu" name="lieu" />
+      </label>
+
+      <label class="field">
+        Catégorie
+        <select [(ngModel)]="categorie" name="categorie">
+          <option value="">Toutes catégories</option>
+          <option value="Danse">Danse</option>
+          <option value="Concert">Concert</option>
+          <option value="Spectacle">Spectacle</option>
+          <option value="Feux d’artifice">Feux d’artifice</option>
+          <option value="Exposition">Exposition</option>
+          <option value="Autre">Autre</option>
+        </select>
+      </label>
+
+      <label class="field">
+        Mot-clé
+        <input type="text" [(ngModel)]="q" name="q" />
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="btn btnPrimary" type="button" (click)="applyFilters()">Rechercher</button>
+      <button class="btn" type="button" (click)="reset()">Réinitialiser</button>
+    </div>
+  </div>
+}

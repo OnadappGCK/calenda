@@ -6,35 +6,164 @@
   margin: 0 auto;
 }
 
-.list {
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  background: $surface-2;
+  border: 1px solid $border-1;
+  border-radius: 1rem;
+  padding: 0.75rem;
+}
+
+.topLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.pageTitle {
+  font-weight: 900;
+  font-size: 1.15rem;
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.iconBtn {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0;
+}
+
+.chip {
+  border: 1px solid $border-2;
+  background: $surface-1;
+  border-radius: 999px;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.x {
+  opacity: 0.7;
+}
+
+.empty {
+  border: 1px dashed $line-1;
+  border-radius: 1rem;
+  padding: 1rem;
+  background: $overlay-1b;
+  color: $text-muted-2;
+}
+
+.weekList {
   display: grid;
   gap: 0.75rem;
 }
 
-.item {
-  border: 1px solid $border-1;
-  border-radius: 0.75rem;
+.daySep {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sepTitle {
+  font-weight: 900;
+}
+
+.sepLine {
+  height: 1px;
+  background: $line-1;
+  flex: 1;
+}
+
+.listRow {
+  border-radius: 1rem;
   padding: 0.75rem;
   display: grid;
-  gap: 0.25rem;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
 }
 
-.title {
-  font-weight: 700;
-  text-decoration: none;
-  color: inherit;
+.listName {
+  font-weight: 900;
+  font-size: 1.1rem;
 }
 
-.meta {
-  color: $text-muted-4;
-  font-size: 0.9rem;
+.eventMeta {
+  font-size: 0.85rem;
+  color: $text-muted-2;
 }
 
-.btn {
-  width: fit-content;
-  border: 1px solid $border-1;
-  background: $surface-1;
-  padding: 0.4rem 0.6rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
+.listRight {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.catMini {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: $overlay-2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.85rem;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: $backdrop-1;
+}
+
+.modal {
+  position: fixed;
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(720px, 92vw);
+  max-height: 78vh;
+  overflow: auto;
+  border: 1px solid $border-2;
+  border-radius: 1rem;
+  background: $bg-app;
+  padding: 1rem;
+}
+
+.grid {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
