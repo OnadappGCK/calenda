@@ -237,6 +237,51 @@
 
         <button class="iconBtn" style="margin-top: 0.75rem" type="button" (click)="nextPeriod()" aria-label="Jour suivant">›</button>
       </div>
+
+      <div class="weekSummary">
+        <div class="listTitle">Événements à venir</div>
+
+        <div class="weekList">
+          @if (upcomingWeeks().length === 0) {
+            <div class="empty">Aucun événement à venir.</div>
+          } @else {
+            @for (w of upcomingWeeks(); track w.weekStartKey) {
+              <div class="daySep">
+                <div class="sepTitle">{{ w.label }}</div>
+                <div class="sepLine"></div>
+              </div>
+
+              @for (g of w.days; track g.dayKey) {
+                <div class="daySep">
+                  <div class="sepTitle">{{ dayKeyToDate(g.dayKey) | date: 'EEEE d MMMM' }}</div>
+                  <div class="sepLine"></div>
+                </div>
+
+                @for (e of g.items; track e.id) {
+                  <div class="listRow" [style.background]="categoryColor(e.categorie)">
+                    <div class="listMain">
+                      <div class="listName">{{ e.titre }}</div>
+                      <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ e.lieu }}</div>
+                    </div>
+                    <div class="listRight">
+                      <div class="catMini">{{ categoryIcon(e.categorie) }}</div>
+                      <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
+                    </div>
+                  </div>
+                }
+              }
+            }
+
+            @if (upcomingLoading()) {
+              <div class="empty">Chargement…</div>
+            }
+
+            @if (upcomingHasMore()) {
+              <div #upcomingSentinel style="height: 1px;"></div>
+            }
+          }
+        </div>
+      </div>
     }
   }
 </section>

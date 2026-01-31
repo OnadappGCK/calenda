@@ -427,7 +427,6 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   private ensureUpcomingObserved() {
     if (typeof window === 'undefined') return;
     if (this.destroyed) return;
-    if (this.viewMode !== 'week') return;
     if (!this.upcomingHasMore()) return;
 
     const el = this.upcomingSentinel?.nativeElement;
@@ -577,10 +576,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       if (token === this.reloadToken) {
         this.events.set(res ?? []);
 
-        /** Recharge aussi la liste "à venir" (démarre à la première page) en vue semaine. */
-        if (this.viewMode === 'week') {
-          this.resetUpcoming();
-        }
+        /** Recharge aussi la liste "à venir" (démarre à la première page) en vue semaine et journée. */
+        this.resetUpcoming();
       }
     } finally {
       if (token === this.reloadToken) {
@@ -665,7 +662,6 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Charge la prochaine page (50 par 50) pour la liste "Événements à venir". */
   private async loadMoreUpcoming() {
-    if (this.viewMode !== 'week') return;
     if (this.destroyed) return;
     if (this.upcomingLoading()) return;
     if (!this.upcomingHasMore()) return;
