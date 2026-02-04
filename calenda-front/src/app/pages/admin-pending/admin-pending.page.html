@@ -1,17 +1,63 @@
 <section class="container">
   <div class="head">
     <h1>Admin · Événements en attente</h1>
-    <button class="btn" type="button" (click)="openMerge()">Merge</button>
+    <div class="headActions">
+      <button class="btn" type="button" (click)="toggleFilters()">Filtres</button>
+      <button class="btn" type="button" (click)="openMerge()">Merge</button>
+    </div>
   </div>
 
-  @if (items().length === 0) {
+  @if (showFilters()) {
+    <div class="filters">
+      <label class="field">
+        Origine
+        <select name="originFilter" [(ngModel)]="originFilter" (ngModelChange)="clearSelection()">
+          <option value="">Toutes</option>
+          <option value="NONE">Non renseignée</option>
+          <option value="MANUAL">Manuel</option>
+          <option value="MARTIGUES_SITE">Import: Martigues site</option>
+          <option value="SALSA_OLIVIER">Import: Salsa Olivier</option>
+        </select>
+      </label>
+
+      <label class="field">
+        Trier par origine
+        <select name="originSort" [(ngModel)]="originSort" (ngModelChange)="clearSelection()">
+          <option value="">Aucun</option>
+          <option value="asc">A → Z</option>
+          <option value="desc">Z → A</option>
+        </select>
+      </label>
+    </div>
+  }
+
+  @if (filteredItems().length === 0) {
     <p>Aucun événement en attente.</p>
   } @else {
+    @if (selectedCount() > 0) {
+      <div class="bulkBar">
+        <div class="bulkLeft">
+          <button class="btn" type="button" (click)="toggleSelectAll()">Tout sélectionner</button>
+          <button class="btn" type="button" (click)="clearSelection()">Effacer</button>
+          <span class="bulkCount">{{ selectedCount() }} sélectionné(s)</span>
+        </div>
+        <div class="bulkActions">
+          <button class="btn" type="button" (click)="openConfirmBulk('validate')">Valider</button>
+          <button class="btn" type="button" (click)="openConfirmBulk('delete')">Supprimer</button>
+        </div>
+      </div>
+    }
+
     <div class="list">
-      @for (e of items(); track e.id) {
+      @for (e of filteredItems(); track e.id) {
         <div class="item">
           <div class="rowTop">
-            <div class="title">{{ e.titre }}</div>
+            <div class="rowLeft">
+              <label class="selectBox">
+                <input type="checkbox" [checked]="isSelected(e.id)" (change)="toggleSelected(e.id)" />
+              </label>
+              <div class="title">{{ e.titre }}</div>
+            </div>
             <button class="chev" type="button" (click)="toggleExpanded(e.id)">
               {{ expanded().has(e.id) ? '˄' : '˅' }}
             </button>
@@ -45,11 +91,15 @@
     <h2>Confirmation</h2>
     <p>
       @if (confirm()!.action === 'validate') {
-        Valider l’événement
+        Valider
       } @else {
-        Supprimer l’événement
+        Supprimer
       }
-      : <strong>{{ confirm()!.title }}</strong> ?
+      @if (confirm()!.count === 1) {
+        : <strong>{{ confirm()!.title }}</strong> ?
+      } @else {
+        : <strong>{{ confirm()!.count }}</strong> événements ?
+      }
     </p>
     <div class="actions">
       <button class="btn btnPrimary" type="button" (click)="confirmYes()">Oui</button>

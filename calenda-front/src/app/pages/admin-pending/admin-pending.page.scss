@@ -8,6 +8,59 @@
   flex-wrap: wrap;
 }
 
+.headActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filters {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  background: $surface-1;
+  border: 1px solid $border-1;
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.bulkBar {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  background: $surface-1;
+  border: 1px solid $border-2;
+  border-radius: 1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.bulkLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.bulkActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.bulkCount {
+  color: $text-muted-4;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .list {
   display: grid;
   gap: 0.75rem;
@@ -27,6 +80,26 @@
   gap: 0.75rem;
 }
 
+.rowLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.selectBox {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.selectBox input {
+  width: 18px;
+  height: 18px;
+}
+
 .chev {
   width: 40px;
   height: 40px;
@@ -39,6 +112,9 @@
 
 .title {
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .meta {
