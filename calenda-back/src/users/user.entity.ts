@@ -34,6 +34,9 @@ export class User {
   /** Lieu (ex: quartier) du profil. */
   lieu!: string;
 
+  @Column({ type: 'text', nullable: true })
+  profileImage!: string | null;
+
   @Column()
   /** Hash bcrypt du mot de passe (jamais exposé au front). */
   passwordHash!: string;

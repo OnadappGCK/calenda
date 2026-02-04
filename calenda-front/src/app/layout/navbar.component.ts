@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { AdminService } from '../core/admin.service';
+import { profileImageUrl } from '../core/profile-images';
 
 @Component({
   selector: 'app-navbar',
@@ -16,6 +17,8 @@ import { AdminService } from '../core/admin.service';
 export class NavbarComponent implements OnInit {
   protected readonly auth = inject(AuthService);
   private readonly adminService = inject(AdminService);
+
+  protected readonly profileImageUrl = profileImageUrl;
 
   protected readonly isAdmin = computed(() => this.auth.user()?.role === 'ADMIN');
 

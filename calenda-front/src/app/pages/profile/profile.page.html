@@ -3,7 +3,17 @@
     <p>Chargement…</p>
   } @else {
     <div class="card">
-      <div class="avatar">⦿</div>
+      <button
+        class="avatar"
+        type="button"
+        [class.editable]="editing()"
+        (click)="editing() ? openAvatarPicker() : null"
+      >
+        <img class="avatarImg" [src]="profileImageUrl(profileImage)" alt="" />
+        @if (editing()) {
+          <span class="avatarEdit">✎</span>
+        }
+      </button>
 
       <div class="title">{{ auth.user()?.pseudo }}</div>
       <div class="role">{{ role() }}</div>
@@ -53,3 +63,20 @@
     </div>
   }
 </section>
+
+@if (showAvatarPicker()) {
+  <div class="modalBackdrop" (click)="closeAvatarPicker()"></div>
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h2>Choisir une photo</h2>
+    <div class="avatarGrid">
+      @for (img of allowedAvatars(); track img) {
+        <button class="avatarChoice" type="button" (click)="selectAvatar(img)">
+          <img [src]="profileImageUrl(img)" alt="" />
+        </button>
+      }
+    </div>
+    <div class="actions">
+      <button class="btn" type="button" (click)="closeAvatarPicker()">Fermer</button>
+    </div>
+  </div>
+}

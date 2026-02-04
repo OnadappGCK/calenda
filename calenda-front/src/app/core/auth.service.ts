@@ -14,6 +14,7 @@ export type AuthUser = {
   email: string;
   pseudo: string;
   role: Role;
+  profileImage?: string | null;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -96,6 +97,7 @@ export class AuthService {
     lieu: string;
     password: string;
     passwordConfirmation: string;
+    profileImage?: string | null;
   }) {
     await this.http.post(`${this.apiBaseUrl}/auth/register`, payload).toPromise();
   }

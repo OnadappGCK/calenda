@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
+import { Role } from '../common/enums/role.enum';
 import { Event } from '../events/event.entity';
 import { User } from './user.entity';
 import { UpdateMeDto } from './dto/update-me.dto';
@@ -36,7 +37,29 @@ export class UsersService {
       ville: user.ville,
       lieu: user.lieu,
       role: user.role,
+      profileImage: user.profileImage,
     };
+  }
+
+  private validateProfileImageForRole(role: Role, profileImage: string) {
+    const img = (profileImage ?? '').trim();
+    if (!img) {
+      throw new BadRequestException('profile_image_invalid');
+    }
+
+    if (!/^img\/profil\/.+\.png$/i.test(img)) {
+      throw new BadRequestException('profile_image_invalid');
+    }
+
+    if (role === Role.UTILISATEUR) {
+      if (!/\-pp\.png$/i.test(img)) {
+        throw new BadRequestException('profile_image_forbidden');
+      }
+    } else if (role === Role.ORGANISATEUR) {
+      if (!/(\-pp|\-ppa)\.png$/i.test(img)) {
+        throw new BadRequestException('profile_image_forbidden');
+      }
+    }
   }
 
   /** Liste les favoris du user (relation many-to-many). */
@@ -115,6 +138,11 @@ export class UsersService {
 
     if (dto.ville !== undefined) user.ville = dto.ville;
     if (dto.lieu !== undefined) user.lieu = dto.lieu;
+
+    if (dto.profileImage !== undefined) {
+      this.validateProfileImageForRole(user.role, dto.profileImage);
+      user.profileImage = dto.profileImage.trim();
+    }
 
     if (dto.password !== undefined || dto.passwordConfirmation !== undefined) {
       if (!dto.password || !dto.passwordConfirmation) {

@@ -18,6 +18,10 @@ export class RegisterDto {
   @IsString()
   lieu!: string;
 
+  @IsOptional()
+  @IsString()
+  profileImage?: string;
+
   /** Mot de passe (min 8). */
   @IsString()
   @MinLength(8)

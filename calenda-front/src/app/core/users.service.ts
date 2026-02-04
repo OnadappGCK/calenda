@@ -19,6 +19,7 @@ export class UsersService {
     pseudo?: string;
     ville?: string;
     lieu?: string;
+    profileImage?: string | null;
     password?: string;
     passwordConfirmation?: string;
   }) {

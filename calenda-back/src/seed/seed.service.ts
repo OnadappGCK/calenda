@@ -46,6 +46,7 @@ export class SeedService {
           lieu: 'Dev',
           passwordHash,
           role: Role.ADMIN,
+          profileImage: 'img/profil/picture/cat-pp.png',
           emailVerified: true,
           emailVerificationToken: null,
         });
@@ -71,6 +72,7 @@ export class SeedService {
           lieu: 'Dev',
           passwordHash: orgPasswordHash,
           role: Role.ORGANISATEUR,
+          profileImage: 'img/profil/picture/dog-pp.png',
           emailVerified: true,
           emailVerificationToken: null,
         });

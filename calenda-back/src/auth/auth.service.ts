@@ -44,6 +44,11 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
+    const profileImage = (dto.profileImage ?? '').trim();
+    if (profileImage && (!/^img\/profil\/.+\.png$/i.test(profileImage) || !/\-pp\.png$/i.test(profileImage))) {
+      throw new BadRequestException('profile_image_forbidden');
+    }
+
     const user = this.usersRepo.create({
       email: dto.email,
       pseudo: dto.pseudo,
@@ -51,6 +56,7 @@ export class AuthService {
       lieu: dto.lieu,
       passwordHash,
       role: Role.UTILISATEUR,
+      profileImage: profileImage || null,
       emailVerified: true,
       emailVerificationToken: null,
     });
@@ -62,6 +68,7 @@ export class AuthService {
       email: user.email,
       pseudo: user.pseudo,
       role: user.role,
+      profileImage: user.profileImage,
     };
   }
 
@@ -94,6 +101,7 @@ export class AuthService {
         email: user.email,
         pseudo: user.pseudo,
         role: user.role,
+        profileImage: user.profileImage,
       },
     };
   }

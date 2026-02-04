@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { allowedProfileImagesForRole, profileImageUrl } from '../../core/profile-images';
 
 @Component({
   selector: 'app-register-page',
@@ -23,6 +24,24 @@ export class RegisterPage {
   lieu = '';
   password = '';
   passwordConfirmation = '';
+  profileImage: string | null = null;
+
+  readonly showAvatarPicker = signal<boolean>(false);
+  readonly allowedAvatars = allowedProfileImagesForRole('UTILISATEUR');
+  readonly profileImageUrl = profileImageUrl;
+
+  openAvatarPicker() {
+    this.showAvatarPicker.set(true);
+  }
+
+  closeAvatarPicker() {
+    this.showAvatarPicker.set(false);
+  }
+
+  selectAvatar(path: string) {
+    this.profileImage = path;
+    this.closeAvatarPicker();
+  }
 
   readonly error = signal<string | null>(null);
   readonly ok = signal<boolean>(false);
@@ -40,6 +59,7 @@ export class RegisterPage {
         lieu: this.lieu,
         password: this.password,
         passwordConfirmation: this.passwordConfirmation,
+        profileImage: this.profileImage,
       });
       this.ok.set(true);
       await this.router.navigateByUrl('/login');

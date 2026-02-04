@@ -5,6 +5,13 @@
     <div class="error">{{ error() }}</div>
   }
 
+  <div class="avatarRow">
+    <div class="avatarPreview">
+      <img [src]="profileImageUrl(profileImage)" alt="" />
+    </div>
+    <button class="btn" type="button" (click)="openAvatarPicker()">Choisir une photo</button>
+  </div>
+
   <form (ngSubmit)="submit()">
     <label>
       Pseudo
@@ -49,3 +56,20 @@
     <a routerLink="/login">Connexion</a>
   </p>
 </section>
+
+@if (showAvatarPicker()) {
+  <div class="modalBackdrop" (click)="closeAvatarPicker()"></div>
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h2>Choisir une photo</h2>
+    <div class="avatarGrid">
+      @for (img of allowedAvatars; track img) {
+        <button class="avatarChoice" type="button" (click)="selectAvatar(img)">
+          <img [src]="profileImageUrl(img)" alt="" />
+        </button>
+      }
+    </div>
+    <div class="actions">
+      <button class="btn" type="button" (click)="closeAvatarPicker()">Fermer</button>
+    </div>
+  </div>
+}

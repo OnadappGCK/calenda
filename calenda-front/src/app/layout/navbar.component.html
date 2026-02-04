@@ -31,7 +31,9 @@
         <span class="name">{{ auth.user()?.pseudo }}</span>
       </a>
 
-      <a class="iconBtn" routerLink="/profile" aria-label="Profil">⦿</a>
+      <a class="avatarBtn" routerLink="/profile" aria-label="Profil">
+        <img class="avatarImg" [src]="profileImageUrl(auth.user()?.profileImage)" alt="" />
+      </a>
       <button class="iconBtn" type="button" (click)="auth.logout()" aria-label="Déconnexion">⟶</button>
     }
   </div>

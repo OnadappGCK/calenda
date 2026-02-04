@@ -17,6 +17,10 @@ export class UpdateMeDto {
   @IsString()
   lieu?: string;
 
+  @IsOptional()
+  @IsString()
+  profileImage?: string;
+
   /** Nouveau mot de passe (min 8). */
   @IsOptional()
   @IsString()

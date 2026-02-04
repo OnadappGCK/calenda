@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/auth.service';
 import { UsersService } from '../../core/users.service';
+import { allowedProfileImagesForRole, profileImageUrl } from '../../core/profile-images';
 
 @Component({
   selector: 'app-profile-page',
@@ -27,8 +28,13 @@ export class ProfilePage implements OnInit {
   lieu = '';
   password = '';
   passwordConfirmation = '';
+  profileImage: string | null = null;
+
+  readonly showAvatarPicker = signal<boolean>(false);
 
   readonly role = computed(() => this.auth.user()?.role ?? '');
+  readonly allowedAvatars = computed(() => allowedProfileImagesForRole(this.auth.user()?.role ?? 'UTILISATEUR'));
+  readonly profileImageUrl = profileImageUrl;
 
   /** Hook Angular: charge l'utilisateur puis récupère le profil. */
   async ngOnInit() {
@@ -46,6 +52,7 @@ export class ProfilePage implements OnInit {
         this.pseudo = me.pseudo;
         this.ville = me.ville;
         this.lieu = me.lieu;
+        this.profileImage = me.profileImage ?? null;
       }
     } finally {
       this.loading.set(false);
@@ -67,6 +74,19 @@ export class ProfilePage implements OnInit {
     void this.reload();
   }
 
+  openAvatarPicker() {
+    this.showAvatarPicker.set(true);
+  }
+
+  closeAvatarPicker() {
+    this.showAvatarPicker.set(false);
+  }
+
+  selectAvatar(path: string) {
+    this.profileImage = path;
+    this.closeAvatarPicker();
+  }
+
   /** Sauvegarde les modifications (et mot de passe si renseigné), puis rafraîchit l'utilisateur courant. */
   async save() {
     this.ok.set(false);
@@ -78,6 +98,7 @@ export class ProfilePage implements OnInit {
           pseudo: this.pseudo,
           ville: this.ville,
           lieu: this.lieu,
+          profileImage: this.profileImage,
           password: this.password || undefined,
           passwordConfirmation: this.passwordConfirmation || undefined,
         })
