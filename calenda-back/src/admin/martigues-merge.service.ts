@@ -1,0 +1,1372 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Between, Repository } from 'typeorm';
+import { EventCategory } from '../common/enums/event-category.enum';
+import { EventOrigin } from '../common/enums/event-origin.enum';
+import { Role } from '../common/enums/role.enum';
+import { Event } from '../events/event.entity';
+import { User } from '../users/user.entity';
+
+type MergeOptions = {
+  pages?: number;
+  dryRun?: boolean;
+};
+
+type MergeResult = {
+  scannedPages: number;
+  foundUrls: number;
+  dedupedUrls: number;
+  created: number;
+  skippedExisting: number;
+  failed: number;
+};
+
+type PreviewResult = {
+  scannedPages: number;
+  foundUrls: number;
+  dedupedUrls: number;
+  parsed: number;
+  withImage: number;
+  withDescription: number;
+  wouldCreate: number;
+  skippedExisting: number;
+  skippedPast: number;
+  failed: number;
+  urls: string[];
+  failures: { url: string; reason: string }[];
+  debugSamples: {
+    status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
+    url: string;
+    reason?: string;
+    titre?: string;
+    dateDebut?: string;
+    dateFin?: string;
+    image?: boolean;
+    descLen?: number;
+  }[];
+};
+
+type ApplyResult = {
+  processed: number;
+  created: number;
+  skippedExisting: number;
+  skippedPast: number;
+  failed: number;
+  debugSamples: {
+    status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
+    url: string;
+    reason?: string;
+    titre?: string;
+    dateDebut?: string;
+    dateFin?: string;
+  }[];
+};
+
+@Injectable()
+export class MartiguesMergeService {
+  private readonly logger = new Logger(MartiguesMergeService.name);
+
+  constructor(
+    @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
+  ) {}
+
+  async merge(options?: MergeOptions): Promise<MergeResult> {
+    const pages = Math.max(1, Math.min(20, options?.pages ?? 2));
+    const dryRun = options?.dryRun ?? false;
+
+    const preview = await this.preview({ pages });
+    if (dryRun) {
+      return {
+        scannedPages: preview.scannedPages,
+        foundUrls: preview.foundUrls,
+        dedupedUrls: preview.dedupedUrls,
+        created: preview.wouldCreate,
+        skippedExisting: preview.skippedExisting,
+        failed: preview.failed,
+      };
+    }
+
+    const apply = await this.apply({ urls: preview.urls });
+    return {
+      scannedPages: preview.scannedPages,
+      foundUrls: preview.foundUrls,
+      dedupedUrls: preview.dedupedUrls,
+      created: apply.created,
+      skippedExisting: apply.skippedExisting,
+      failed: preview.failed + apply.failed,
+    };
+  }
+
+  async preview(options?: { pages?: number }): Promise<PreviewResult> {
+    const pages = Math.max(1, Math.min(20, options?.pages ?? 2));
+
+    const organisateur = await this.usersRepo.findOne({ where: { role: Role.ADMIN } });
+    const fallbackOrganisateur = organisateur ?? (await this.usersRepo.findOne({ where: { role: Role.ORGANISATEUR } }));
+    if (!fallbackOrganisateur) {
+      return {
+        scannedPages: 0,
+        foundUrls: 0,
+        dedupedUrls: 0,
+        parsed: 0,
+        withImage: 0,
+        withDescription: 0,
+        wouldCreate: 0,
+        skippedExisting: 0,
+        skippedPast: 0,
+        failed: 1,
+        urls: [],
+        failures: [{ url: '', reason: 'no_organisateur' }],
+        debugSamples: [{ status: 'exception', url: '', reason: 'no_organisateur' }],
+      };
+    }
+
+    let skippedExisting = 0;
+    let failed = 0;
+    let parsed = 0;
+    let withImage = 0;
+    let withDescription = 0;
+    let wouldCreate = 0;
+    let skippedPast = 0;
+    const failures: { url: string; reason: string }[] = [];
+    const debugSamples: PreviewResult['debugSamples'] = [];
+
+    const now = new Date();
+
+    const allUrls = await this.listAgendaUrls(pages);
+    const uniqueUrls = [...new Set(allUrls)];
+    const urls: string[] = [];
+
+    this.logger.log(
+      `martigues_preview_start pages=${pages} foundUrls=${allUrls.length} uniqueUrls=${uniqueUrls.length}`,
+    );
+
+    let sampleLogged = 0;
+
+    for (const sourceUrl of uniqueUrls) {
+      try {
+        const detailHtml = await this.fetchHtml(sourceUrl);
+        const parsedRes = this.parseDetailResult(sourceUrl, detailHtml);
+        const detail = parsedRes.detail;
+        if (!detail) {
+          this.logger.warn(`martigues_parse_failed url=${sourceUrl} reason=${parsedRes.reason}`);
+          if (failures.length < 5) {
+            failures.push({ url: sourceUrl, reason: parsedRes.reason });
+          }
+          if (debugSamples.length < 20) {
+            debugSamples.push({ status: 'parse_failed', url: sourceUrl, reason: parsedRes.reason });
+          }
+          failed++;
+          continue;
+        }
+
+        parsed++;
+
+        if (detail.dateFin < now) {
+          skippedPast++;
+
+          if (debugSamples.length < 20) {
+            debugSamples.push({
+              status: 'past',
+              url: sourceUrl,
+              titre: detail.titre,
+              dateDebut: detail.dateDebut.toISOString(),
+              dateFin: detail.dateFin.toISOString(),
+              image: !!detail.imageUrl,
+              descLen: (detail.description ?? '').length,
+            });
+          }
+
+          if (sampleLogged < 10) {
+            sampleLogged++;
+            this.logger.log(
+              `martigues_detail_sample status=past url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()}`,
+            );
+          }
+          continue;
+        }
+
+        if (detail.imageUrl) withImage++;
+        if (detail.description && detail.description.trim() && detail.description.trim() !== detail.titre.trim()) {
+          withDescription++;
+        }
+
+        const start = new Date(detail.dateDebut);
+        const end = new Date(detail.dateDebut);
+        start.setMinutes(start.getMinutes() - 1);
+        end.setMinutes(end.getMinutes() + 1);
+
+        const existing = await this.eventsRepo.findOne({
+          where: {
+            origin: EventOrigin.MARTIGUES_SITE,
+            titre: detail.titre,
+            dateDebut: Between(start, end),
+          },
+        });
+
+        if (existing) {
+          skippedExisting++;
+
+          if (debugSamples.length < 20) {
+            debugSamples.push({
+              status: 'existing',
+              url: sourceUrl,
+              titre: detail.titre,
+              dateDebut: detail.dateDebut.toISOString(),
+              dateFin: detail.dateFin.toISOString(),
+              image: !!detail.imageUrl,
+              descLen: (detail.description ?? '').length,
+            });
+          }
+
+          if (sampleLogged < 10) {
+            sampleLogged++;
+            this.logger.log(
+              `martigues_detail_sample status=existing url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()}`,
+            );
+          }
+          continue;
+        }
+
+        wouldCreate++;
+        urls.push(sourceUrl);
+
+        if (debugSamples.length < 20) {
+          debugSamples.push({
+            status: 'addable',
+            url: sourceUrl,
+            titre: detail.titre,
+            dateDebut: detail.dateDebut.toISOString(),
+            dateFin: detail.dateFin.toISOString(),
+            image: !!detail.imageUrl,
+            descLen: (detail.description ?? '').length,
+          });
+        }
+
+        if (sampleLogged < 10) {
+          sampleLogged++;
+          this.logger.log(
+            `martigues_detail_sample status=addable url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()} image=${detail.imageUrl ? 1 : 0} descLen=${(detail.description ?? '').length}`,
+          );
+        }
+      } catch {
+        if (failures.length < 5) {
+          failures.push({ url: sourceUrl, reason: 'exception' });
+        }
+        if (debugSamples.length < 20) {
+          debugSamples.push({ status: 'exception', url: sourceUrl, reason: 'exception' });
+        }
+        failed++;
+      }
+    }
+
+    this.logger.log(
+      `martigues_preview_done pages=${pages} parsed=${parsed} addable=${wouldCreate} skippedPast=${skippedPast} skippedExisting=${skippedExisting} failed=${failed}`,
+    );
+
+    return {
+      scannedPages: pages,
+      foundUrls: allUrls.length,
+      dedupedUrls: uniqueUrls.length,
+      parsed,
+      withImage,
+      withDescription,
+      wouldCreate,
+      skippedExisting,
+      skippedPast,
+      failed,
+      urls,
+      failures,
+      debugSamples,
+    };
+  }
+
+  async apply(payload: { urls: string[] }): Promise<ApplyResult> {
+    const organisateur = await this.usersRepo.findOne({ where: { role: Role.ADMIN } });
+    const fallbackOrganisateur = organisateur ?? (await this.usersRepo.findOne({ where: { role: Role.ORGANISATEUR } }));
+    if (!fallbackOrganisateur) {
+      return {
+        processed: 0,
+        created: 0,
+        skippedExisting: 0,
+        skippedPast: 0,
+        failed: 1,
+        debugSamples: [{ status: 'exception', url: '', reason: 'no_organisateur' }],
+      };
+    }
+
+    const uniqueUrls = [...new Set(payload.urls ?? [])];
+    let created = 0;
+    let skippedExisting = 0;
+    let skippedPast = 0;
+    let failed = 0;
+    const debugSamples: ApplyResult['debugSamples'] = [];
+
+    const now = new Date();
+
+    this.logger.log(`martigues_apply_start urls=${uniqueUrls.length}`);
+    let sampleLogged = 0;
+
+    for (const sourceUrl of uniqueUrls) {
+      try {
+        const detailHtml = await this.fetchHtml(sourceUrl);
+        const parsedRes = this.parseDetailResult(sourceUrl, detailHtml);
+        const detail = parsedRes.detail;
+        if (!detail) {
+          this.logger.warn(`martigues_parse_failed_apply url=${sourceUrl} reason=${parsedRes.reason}`);
+          if (debugSamples.length < 20) {
+            debugSamples.push({ status: 'parse_failed', url: sourceUrl, reason: parsedRes.reason });
+          }
+          failed++;
+          continue;
+        }
+
+        if (detail.dateFin < now) {
+          skippedPast++;
+
+          if (sampleLogged < 10) {
+            sampleLogged++;
+            this.logger.log(
+              `martigues_apply_sample status=past url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()}`,
+            );
+          }
+          continue;
+        }
+
+        const start = new Date(detail.dateDebut);
+        const end = new Date(detail.dateDebut);
+        start.setMinutes(start.getMinutes() - 1);
+        end.setMinutes(end.getMinutes() + 1);
+
+        const existing = await this.eventsRepo.findOne({
+          where: {
+            origin: EventOrigin.MARTIGUES_SITE,
+            titre: detail.titre,
+            dateDebut: Between(start, end),
+          },
+        });
+
+        if (existing) {
+          skippedExisting++;
+
+          if (sampleLogged < 10) {
+            sampleLogged++;
+            this.logger.log(
+              `martigues_apply_sample status=existing url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()}`,
+            );
+          }
+          continue;
+        }
+
+        const ev = this.eventsRepo.create({
+          titre: detail.titre,
+          description: detail.description,
+          categorie: detail.categorie,
+          origin: EventOrigin.MARTIGUES_SITE,
+          ville: detail.ville,
+          lieu: detail.lieu,
+          theme: null,
+          caracteristiques: null,
+          imageUrl: detail.imageUrl,
+          tarif: detail.tarif ?? 'Non renseigné',
+          dateDebut: detail.dateDebut,
+          dateFin: detail.dateFin,
+          couleur: null,
+          enAvant: false,
+          public: false,
+          organisateur: fallbackOrganisateur,
+        });
+
+        await this.eventsRepo.save(ev);
+        created++;
+
+        if (debugSamples.length < 20) {
+          debugSamples.push({
+            status: 'created',
+            url: sourceUrl,
+            titre: detail.titre,
+            dateDebut: detail.dateDebut.toISOString(),
+            dateFin: detail.dateFin.toISOString(),
+          });
+        }
+
+        if (sampleLogged < 10) {
+          sampleLogged++;
+          this.logger.log(
+            `martigues_apply_sample status=created url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()}`,
+          );
+        }
+      } catch {
+        if (debugSamples.length < 20) {
+          debugSamples.push({ status: 'exception', url: sourceUrl, reason: 'exception' });
+        }
+        failed++;
+      }
+    }
+
+    this.logger.log(
+      `martigues_apply_done processed=${uniqueUrls.length} created=${created} skippedPast=${skippedPast} skippedExisting=${skippedExisting} failed=${failed}`,
+    );
+
+    return {
+      processed: uniqueUrls.length,
+      created,
+      skippedExisting,
+      skippedPast,
+      failed,
+      debugSamples,
+    };
+  }
+
+  private async listAgendaUrls(pages: number) {
+    const allUrls: string[] = [];
+    for (let page = 1; page <= pages; page++) {
+      const url =
+        page === 1
+          ? 'https://www.martigues-tourisme.com/agenda-manifestations.html'
+          : `https://www.martigues-tourisme.com/agenda-manifestations.html?page=${page}`;
+      const html = await this.fetchHtml(url);
+      const urls = this.extractDetailUrls(html);
+
+      const title = (this.matchTag(html, 'title') ?? '').replace(/\s+/g, ' ').trim();
+      const uniq = [...new Set(urls)];
+      this.logger.log(
+        `martigues_agenda_page page=${page} url=${url} title=${JSON.stringify(title)} found=${urls.length} unique=${uniq.length}`,
+      );
+      if (uniq.length) {
+        this.logger.log(`martigues_agenda_page_sample page=${page} sample=${JSON.stringify(uniq.slice(0, 5))}`);
+      }
+
+      allUrls.push(...urls);
+    }
+    return allUrls;
+  }
+
+  private async fetchHtml(url: string) {
+    const res = await fetch(url, {
+      headers: {
+        'user-agent': 'calenda-bot/1.0',
+        accept: 'text/html,application/xhtml+xml',
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`fetch_failed_${res.status}`);
+    }
+
+    return await res.text();
+  }
+
+  private extractDetailUrls(html: string): string[] {
+    const out: string[] = [];
+    const base = 'https://www.martigues-tourisme.com';
+
+    const add = (raw: string) => {
+      const href = this.decodeHtml((raw ?? '').trim());
+      if (!href) return;
+      try {
+        const u = new URL(href, base);
+        if (!u.host.endsWith('martigues-tourisme.com')) return;
+
+        const pathname = u.pathname || '';
+        if (!pathname.toLowerCase().endsWith('.html')) return;
+        if (!(pathname.startsWith('/evenements/') || pathname.startsWith('/activites-'))) return;
+
+        const normalized = new URL(base);
+        normalized.pathname = pathname;
+        normalized.search = '';
+        normalized.hash = '';
+        out.push(normalized.toString());
+      } catch {
+        return;
+      }
+    };
+
+    const addEscapedUrl = (raw: string) => {
+      const s = (raw ?? '').trim();
+      if (!s) return;
+      const unescaped = s.replace(/\\\//g, '/');
+      add(unescaped);
+    };
+
+    const reQuoted = /href\s*=\s*(['"])([^'">\s]+)\1/gi;
+    let m: RegExpExecArray | null;
+    while ((m = reQuoted.exec(html))) {
+      if (m?.[2]) add(m[2]);
+    }
+
+    const reUnquoted = /href\s*=\s*([^"'\s>]+)(?=\s|>)/gi;
+    while ((m = reUnquoted.exec(html))) {
+      if (m?.[1]) add(m[1]);
+    }
+
+    const reAbs = /https?:\/\/[^\s"'<>]+\.html(?:\?[^\s"'<>]*)?/gi;
+    const absMatches = html.match(reAbs) ?? [];
+    for (const u of absMatches) {
+      add(u);
+    }
+
+    const reEscapedAbs = /https?:\\\/\\\/[^\s"'<>]+?\.html(?:\\\?[^\s"'<>]*)?/gi;
+    const escMatches = html.match(reEscapedAbs) ?? [];
+    for (const u of escMatches) {
+      addEscapedUrl(u);
+    }
+
+    return out;
+  }
+
+  private decodeHtml(s: string) {
+    const map: Record<string, string> = {
+      amp: '&',
+      quot: '"',
+      apos: "'",
+      nbsp: ' ',
+      lt: '<',
+      gt: '>',
+      eacute: 'é',
+      egrave: 'è',
+      ecirc: 'ê',
+      euml: 'ë',
+      agrave: 'à',
+      acirc: 'â',
+      auml: 'ä',
+      ccedil: 'ç',
+      icirc: 'î',
+      iuml: 'ï',
+      ocirc: 'ô',
+      ouml: 'ö',
+      ugrave: 'ù',
+      ucirc: 'û',
+      uuml: 'ü',
+      oelig: 'œ',
+      aelig: 'æ',
+      rsquo: '’',
+      lsquo: '‘',
+      laquo: '«',
+      raquo: '»',
+      ndash: '–',
+      mdash: '—',
+      hellip: '…',
+      deg: '°',
+    };
+
+    return (s ?? '')
+      .replace(/&#(\d+);/g, (_m, n) => {
+        const code = Number(n);
+        if (!Number.isFinite(code)) return '';
+        try {
+          return String.fromCodePoint(code);
+        } catch {
+          return '';
+        }
+      })
+      .replace(/&#x([0-9a-f]+);/gi, (_m, hex) => {
+        const code = Number.parseInt(String(hex), 16);
+        if (!Number.isFinite(code)) return '';
+        try {
+          return String.fromCodePoint(code);
+        } catch {
+          return '';
+        }
+      })
+      .replace(/&([a-z]+);/gi, (_m, name) => {
+        const key = String(name).toLowerCase();
+        return map[key] ?? `&${name};`;
+      })
+      .trim();
+  }
+
+  private htmlToText(html: string) {
+    const cleaned = (html ?? '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '');
+
+    const withBreaks = cleaned
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p\s*>/gi, '\n')
+      .replace(/<\/div\s*>/gi, '\n')
+      .replace(/<\/li\s*>/gi, '\n');
+
+    const noTags = withBreaks.replace(/<[^>]+>/g, ' ');
+    const decoded = this.decodeHtml(noTags);
+    return decoded
+      .replace(/\r/g, '')
+      .split('\n')
+      .map((l) => l.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+  }
+
+  private extractTextBetweenHeadings(text: string, startTitle: string, stopTitles: string[]) {
+    const src = (text ?? '').replace(/\r/g, '');
+    const lines = src.split('\n');
+
+    const stripPrefix = (line: string) =>
+      line
+        .trim()
+        .replace(/^[>»›•◉\-–—\s]+/g, '')
+        .trim();
+
+    const norm = (line: string) => stripPrefix(line).toLowerCase();
+
+    const startLower = startTitle.toLowerCase();
+    const stopLower = stopTitles.map((x) => x.toLowerCase());
+
+    const startLineRe = new RegExp(
+      `^\\s*[>»›•◉\\-–—\\s]*${this.escapeRegExp(startTitle)}\\s*:?(.*)$`,
+      'i',
+    );
+
+    for (let i = 0; i < lines.length; i++) {
+      const n = norm(lines[i]);
+      if (!n.startsWith(startLower)) continue;
+
+      const out: string[] = [];
+      const m = startLineRe.exec(lines[i]);
+      const remainder = (m?.[1] ?? '').trim();
+      if (remainder) out.push(remainder);
+
+      for (let j = i + 1; j < lines.length; j++) {
+        const nj = norm(lines[j]);
+        if (stopLower.some((s) => nj.startsWith(s))) break;
+        out.push(stripPrefix(lines[j]));
+      }
+
+      const joined = out
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+
+      if (joined.length >= 20) {
+        return joined;
+      }
+    }
+
+    return null;
+  }
+
+  private extractPresentationTextFromPageText(pageText: string) {
+    return this.extractTextBetweenHeadings(pageText, 'Présentation', [
+      "Période(s) d'ouverture",
+      'Tarifs',
+      'Localisation',
+      'Informations pratiques',
+    ]);
+  }
+
+  private extractTarifTextFromPageText(pageText: string) {
+    return this.extractTextBetweenHeadings(pageText, 'Tarifs', [
+      "Période(s) d'ouverture",
+      'Modes de paiement',
+      'Localisation',
+      'Contact',
+    ]);
+  }
+
+  private extractOpeningHoursTextFromPageText(pageText: string) {
+    return this.extractTextBetweenHeadings(pageText, "Période(s) d'ouverture", [
+      'Tarifs',
+      'Complément Réservation',
+      'Complement Réservation',
+      'Localisation',
+      'Informations pratiques',
+    ]);
+  }
+
+  private extractLocalisationTextFromPageText(pageText: string) {
+    return this.extractTextBetweenHeadings(pageText, 'Localisation', [
+      'Tarifs',
+      'Modes de paiement',
+      "Période(s) d'ouverture",
+      'Contact',
+    ]);
+  }
+
+  private extractSectionHtml(html: string, title: string, stopTitles?: string[]) {
+    const t = this.escapeRegExp(title);
+    const headingRe = new RegExp(`<h[1-6][^>]*>[\\s\\S]*?${t}[\\s\\S]*?<\\/h[1-6]>`, 'i');
+    const m = headingRe.exec(html);
+    if (!m || m.index === undefined) return null;
+
+    const start = m.index + m[0].length;
+    const rest = html.slice(start);
+    if (!stopTitles || stopTitles.length === 0) {
+      return rest;
+    }
+
+    const stopsLower = stopTitles.map((x) => x.toLowerCase());
+    const nextHeadingBlock = /<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi;
+    let next: RegExpExecArray | null;
+    while ((next = nextHeadingBlock.exec(rest))) {
+      const block = next[0].toLowerCase();
+      if (stopsLower.some((s) => block.includes(s))) {
+        const end = next.index ?? 0;
+        return rest.slice(0, end);
+      }
+    }
+
+    return rest;
+  }
+
+  private extractPresentationText(html: string) {
+    const pageText = this.htmlToText(html);
+    return this.extractPresentationTextFromPageText(pageText);
+  }
+
+  private extractTarifText(html: string) {
+    const pageText = this.htmlToText(html);
+    return this.extractTarifTextFromPageText(pageText);
+  }
+
+  private extractOpeningHoursText(html: string) {
+    const pageText = this.htmlToText(html);
+    return this.extractOpeningHoursTextFromPageText(pageText);
+  }
+
+  private parseDetailResult(sourceUrl: string, html: string): {
+    detail: null | {
+      titre: string;
+      description: string;
+      imageUrl: string | null;
+      tarif: string | null;
+      dateDebut: Date;
+      dateFin: Date;
+      ville: string;
+      lieu: string;
+      categorie: EventCategory;
+    };
+    reason: string;
+  } {
+    const jsonLd = this.extractJsonLdEvent(html);
+
+    const ogTitle = this.matchMeta(html, 'og:title');
+    const titleTag = this.matchTag(html, 'title');
+    const fallbackTitleRaw = (ogTitle ?? titleTag ?? '').replace(/\s+\|\s+Martigues\s*$/i, '');
+
+    const titre = this.decodeHtml((jsonLd?.name ?? fallbackTitleRaw) || '').trim();
+    if (!titre) {
+      return { detail: null, reason: 'missing_title' };
+    }
+
+    const ogDesc = this.matchMeta(html, 'og:description');
+    const presDesc = this.extractPresentationText(html);
+    const jsonDesc = this.decodeHtml((jsonLd?.description ?? '') || '');
+    const metaDesc = this.decodeHtml((ogDesc ?? '') || '');
+    const description = [presDesc, jsonDesc, metaDesc]
+      .filter((x): x is string => Boolean(x && x.trim()))
+      .sort((a, b) => b.length - a.length)[0];
+
+    const ogImage = this.matchMeta(html, 'og:image');
+    const imageUrl = (this.firstString(jsonLd?.image) ?? ogImage ?? null)?.trim() || null;
+
+    const tarif = this.extractTarifText(html) ?? 'Non renseigné';
+
+    const startMicro = this.matchItemPropContent(html, 'startDate');
+    const endMicro = this.matchItemPropContent(html, 'endDate');
+    const timeStart = this.matchDateTimeAttr(html);
+    const range = this.extractFrenchDateRange(html);
+
+    const now = new Date();
+    const min = new Date(now);
+    min.setFullYear(min.getFullYear() - 1);
+    const max = new Date(now);
+    max.setFullYear(max.getFullYear() + 3);
+    const plausible = (d: Date | null) => {
+      if (!d) return null;
+      if (isNaN(d.getTime())) return null;
+      if (d < min || d > max) return null;
+      return d;
+    };
+
+    const bestStart = this.pickBestDate(this.collectCandidateDates(html));
+
+    const dateDebut =
+      plausible(this.parseAnyDateTime(jsonLd?.startDate)) ??
+      plausible(this.parseAnyDateTime(startMicro)) ??
+      plausible(this.parseAnyDateTime(timeStart)) ??
+      plausible(range?.start ?? null) ??
+      plausible(this.extractIsoDateTime(html)) ??
+      plausible(this.extractYmdDate(html)) ??
+      plausible(this.extractFrenchLongDate(html)) ??
+      plausible(this.extractStartDateTime(html)) ??
+      plausible(this.extractFrenchSlashDate(html)) ??
+      plausible(bestStart);
+
+    const dateFin =
+      plausible(this.parseAnyDateTime(jsonLd?.endDate)) ??
+      plausible(this.parseAnyDateTime(endMicro)) ??
+      plausible(range?.end ?? null) ??
+      plausible(this.extractEndDateTime(html, dateDebut)) ??
+      (dateDebut ? new Date(dateDebut.getTime() + 2 * 60 * 60 * 1000) : null);
+    if (!dateDebut || !dateFin) {
+      const jsonldTypes = this.extractJsonLdTypes(html).join(',') || 'none';
+      const startRaw = String(jsonLd?.startDate ?? '').slice(0, 80);
+      const endRaw = String(jsonLd?.endDate ?? '').slice(0, 80);
+      const startMicroRaw = String(startMicro ?? '').slice(0, 80);
+      const endMicroRaw = String(endMicro ?? '').slice(0, 80);
+      const hintIso = plausible(this.extractIsoDateTime(html)) ? 'iso=1' : 'iso=0';
+      const hintYmd = plausible(this.extractYmdDate(html)) ? 'ymd=1' : 'ymd=0';
+      const hintFrSlash = plausible(this.extractFrenchSlashDate(html)) ? 'frslash=1' : 'frslash=0';
+      const hintFrLong = plausible(this.extractFrenchLongDate(html)) ? 'frlong=1' : 'frlong=0';
+      const cands = this.collectCandidateDates(html);
+      const candidates = cands.length;
+      const sample = cands
+        .slice(0, 3)
+        .map((d) => d.toISOString())
+        .join(';');
+      return {
+        detail: null,
+        reason: `missing_dates ${hintIso} ${hintYmd} ${hintFrSlash} ${hintFrLong} candidates=${candidates} jsonldTypes=${jsonldTypes} startRaw=${startRaw} endRaw=${endRaw} startMicro=${startMicroRaw} endMicro=${endMicroRaw} sample=${sample}`,
+      };
+    }
+
+    const ville = 'Martigues';
+    const localisationText = this.extractLocalisationTextFromPageText(this.htmlToText(html));
+    const localisationFirstLine = (localisationText ?? '')
+      .split('\n')
+      .map((x) => x.trim())
+      .filter(Boolean)[0];
+    const lieu =
+      this.decodeHtml(jsonLd?.locationName ?? '') ||
+      localisationFirstLine ||
+      this.extractLieu(html) ||
+      this.decodeHtml(jsonLd?.addressLocality ?? '') ||
+      'Martigues';
+
+    const categorie = this.guessCategory(sourceUrl, titre);
+
+    if (!range && dateDebut && dateFin) {
+      const opening = this.extractOpeningHoursText(html);
+      const hr = opening ? this.extractHoursRange(opening) : null;
+      if (hr) {
+        dateDebut.setHours(hr.start.hh, hr.start.mm, 0, 0);
+        const end = new Date(dateDebut);
+        end.setHours(hr.end.hh, hr.end.mm, 0, 0);
+        if (end <= dateDebut) end.setDate(end.getDate() + 1);
+        dateFin.setTime(end.getTime());
+      }
+    }
+
+    return {
+      detail: {
+        titre,
+        description: description || titre,
+        imageUrl,
+        tarif,
+        dateDebut,
+        dateFin,
+        ville,
+        lieu,
+        categorie,
+      },
+      reason: 'ok',
+    };
+  }
+
+  private firstString(v: unknown): string | null {
+    if (!v) return null;
+    if (typeof v === 'string') return v;
+    if (Array.isArray(v)) {
+      const s = v.find((x) => typeof x === 'string');
+      return typeof s === 'string' ? s : null;
+    }
+    if (typeof v === 'object') {
+      const anyV = v as any;
+      if (typeof anyV.url === 'string') return anyV.url;
+    }
+    return null;
+  }
+
+  private parseAnyDateTime(v: unknown): Date | null {
+    if (!v || typeof v !== 'string') return null;
+    const raw = v.trim();
+    if (!raw) return null;
+
+    const iso = new Date(raw);
+    if (!isNaN(iso.getTime())) return iso;
+
+    const fr = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/.exec(raw);
+    if (fr) {
+      const dd = Number(fr[1]);
+      const mm = Number(fr[2]);
+      const yyyy = Number(fr[3]);
+      const hh = fr[4] ? Number(fr[4]) : 12;
+      const mi = fr[5] ? Number(fr[5]) : 0;
+      const d = new Date(yyyy, mm - 1, dd, hh, mi, 0, 0);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    const ymd = /^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{1,2}):(\d{2}))?$/.exec(raw);
+    if (ymd) {
+      const yyyy = Number(ymd[1]);
+      const mm = Number(ymd[2]);
+      const dd = Number(ymd[3]);
+      const hh = ymd[4] ? Number(ymd[4]) : 12;
+      const mi = ymd[5] ? Number(ymd[5]) : 0;
+      const d = new Date(yyyy, mm - 1, dd, hh, mi, 0, 0);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    return null;
+  }
+
+  private matchItemPropContent(html: string, itemprop: string) {
+    const p = this.escapeRegExp(itemprop);
+    const re = new RegExp(
+      `itemprop=['\"]${p}['\"][^>]*content=['\"]([^'\"]+)['\"]`,
+      'i',
+    );
+    const m = re.exec(html);
+    return m?.[1] ?? null;
+  }
+
+  private matchDateTimeAttr(html: string) {
+    const re = /<time[^>]+datetime=['\"]([^'\"]+)['\"]/i;
+    const m = re.exec(html);
+    return m?.[1] ?? null;
+  }
+
+  private extractIsoDateTime(html: string): Date | null {
+    const re = /\b(20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?)\b/i;
+    const m = re.exec(html);
+    return this.parseAnyDateTime(m?.[1] ?? null);
+  }
+
+  private extractYmdDate(html: string): Date | null {
+    const re = /\b(20\d{2}-\d{2}-\d{2})\b/;
+    const m = re.exec(html);
+    return this.parseAnyDateTime(m?.[1] ?? null);
+  }
+
+  private extractFrenchLongDate(html: string): Date | null {
+    const re = /\b(\d{1,2}\s+(janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)\s+\d{4})\b/i;
+    const m = re.exec(html);
+    if (!m?.[1]) return null;
+    const d = this.parseFrenchDate(m[1]);
+    if (d) return d;
+    const parts = /(\d{1,2})\s+([a-zéû]+)\s+(\d{4})/i.exec(m[1]);
+    if (!parts) return null;
+    const day = Number(parts[1]);
+    const monthName = (parts[2] ?? '').toLowerCase();
+    const year = Number(parts[3]);
+    const monthMap: Record<string, number> = {
+      janvier: 0,
+      février: 1,
+      fevrier: 1,
+      mars: 2,
+      avril: 3,
+      mai: 4,
+      juin: 5,
+      juillet: 6,
+      août: 7,
+      aout: 7,
+      septembre: 8,
+      octobre: 9,
+      novembre: 10,
+      décembre: 11,
+      decembre: 11,
+    };
+    const month = monthMap[monthName];
+    if (month === undefined) return null;
+    const dd = new Date(year, month, day, 12, 0, 0, 0);
+    return isNaN(dd.getTime()) ? null : dd;
+  }
+
+  private collectCandidateDates(html: string): Date[] {
+    const out: Date[] = [];
+
+    const push = (d: Date | null) => {
+      if (!d) return;
+      if (isNaN(d.getTime())) return;
+      out.push(d);
+    };
+
+    const pushAllMatches = (re: RegExp) => {
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(html))) {
+        if (m?.[1]) {
+          push(this.parseAnyDateTime(m[1]));
+        }
+      }
+    };
+
+    push(this.extractIsoDateTime(html));
+    push(this.extractYmdDate(html));
+    push(this.extractFrenchSlashDate(html));
+    push(this.extractFrenchLongDate(html));
+    push(this.extractStartDateTime(html));
+
+    pushAllMatches(/\b(20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?)\b/gi);
+    pushAllMatches(/\b(20\d{2}-\d{2}-\d{2})\b/g);
+    pushAllMatches(/\b(\d{1,2}\/\d{1,2}\/\d{4}(?:\s+\d{1,2}:\d{2})?)\b/g);
+
+    const longRe = /\b(\d{1,2}\s+(janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)\s+\d{4})\b/gi;
+    let lm: RegExpExecArray | null;
+    while ((lm = longRe.exec(html))) {
+      if (lm?.[1]) {
+        const d = this.parseFrenchDate(lm[1]);
+        if (d) {
+          d.setHours(12, 0, 0, 0);
+        }
+        push(d);
+      }
+    }
+
+    const weekdayRe = /\b((Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche)\s+\d{1,2}\s+[a-zàâäçéèêëîïôöùûüÿœ-]+\s+\d{4})\b/gi;
+    let wm: RegExpExecArray | null;
+    while ((wm = weekdayRe.exec(html))) {
+      const d = wm?.[1] ? this.parseFrenchDate(wm[1]) : null;
+      push(d);
+    }
+
+    return out;
+  }
+
+  private pickBestDate(candidates: Date[]): Date | null {
+    if (!candidates.length) return null;
+    const now = new Date();
+    const min = new Date(now);
+    min.setFullYear(min.getFullYear() - 1);
+    const max = new Date(now);
+    max.setFullYear(max.getFullYear() + 3);
+
+    const filtered = candidates.filter((d) => d >= min && d <= max);
+    const pool = filtered.length ? filtered : candidates;
+
+    const future = pool.filter((d) => d >= now);
+    if (future.length) {
+      return future.sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
+    }
+
+    const past = pool.filter((d) => d < now);
+    if (past.length) {
+      return past.sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+    }
+
+    return pool.sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
+  }
+
+  private extractFrenchSlashDate(html: string): Date | null {
+    const re = /\b(\d{1,2}\/\d{1,2}\/\d{4})(?:\s+(\d{1,2}:\d{2}))?\b/;
+    const m = re.exec(html);
+    if (!m?.[1]) return null;
+    const val = m[2] ? `${m[1]} ${m[2]}` : m[1];
+    return this.parseAnyDateTime(val);
+  }
+
+  private extractJsonLdTypes(html: string): string[] {
+    const blocks = this.extractJsonLdBlocks(html);
+    const types = new Set<string>();
+    const pushType = (t: any) => {
+      if (!t) return;
+      if (Array.isArray(t)) {
+        for (const x of t) pushType(x);
+        return;
+      }
+      types.add(String(t));
+    };
+
+    const walk = (n: any) => {
+      if (!n) return;
+      if (Array.isArray(n)) {
+        for (const x of n) walk(x);
+        return;
+      }
+      if (typeof n === 'object') {
+        if (n['@type']) pushType(n['@type']);
+        for (const k of Object.keys(n)) walk(n[k]);
+      }
+    };
+
+    for (const b of blocks) walk(b);
+    return [...types].slice(0, 20);
+  }
+
+  private extractJsonLdEvent(html: string): {
+    name?: string;
+    description?: string;
+    image?: unknown;
+    startDate?: string;
+    endDate?: string;
+    locationName?: string;
+    addressLocality?: string;
+  } | null {
+    const blocks = this.extractJsonLdBlocks(html);
+    for (const block of blocks) {
+      const ev = this.findEventLike(block);
+      if (!ev) continue;
+
+      const loc = (ev.location ?? null) as any;
+      const addr = (loc?.address ?? null) as any;
+
+      const locationName = typeof loc?.name === 'string' ? loc.name : undefined;
+      const addressLocality =
+        typeof addr?.addressLocality === 'string'
+          ? addr.addressLocality
+          : typeof addr?.addressRegion === 'string'
+            ? addr.addressRegion
+            : undefined;
+
+      return {
+        name: typeof ev.name === 'string' ? ev.name : undefined,
+        description: typeof ev.description === 'string' ? ev.description : undefined,
+        image: ev.image,
+        startDate: typeof ev.startDate === 'string' ? ev.startDate : undefined,
+        endDate: typeof ev.endDate === 'string' ? ev.endDate : undefined,
+        locationName,
+        addressLocality,
+      };
+    }
+    return null;
+  }
+
+  private extractJsonLdBlocks(html: string): any[] {
+    const out: any[] = [];
+    const re = /<script[^>]+type=['"]application\/ld\+json['"][^>]*>([\s\S]*?)<\/script>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html))) {
+      const raw = (m[1] ?? '').trim();
+      if (!raw) continue;
+      try {
+        out.push(JSON.parse(raw));
+      } catch {
+        const cleaned = raw.replace(/\u0000/g, '').trim();
+        try {
+          out.push(JSON.parse(cleaned));
+        } catch {
+          continue;
+        }
+      }
+    }
+    return out;
+  }
+
+  private findEventLike(node: any): any | null {
+    if (!node) return null;
+    if (Array.isArray(node)) {
+      for (const n of node) {
+        const ev = this.findEventLike(n);
+        if (ev) return ev;
+      }
+      return null;
+    }
+
+    if (typeof node === 'object') {
+      const t = node['@type'];
+      const types = Array.isArray(t) ? t : t ? [t] : [];
+      if (types.some((x) => String(x).toLowerCase() === 'event')) {
+        return node;
+      }
+
+      if (node['@graph']) {
+        const ev = this.findEventLike(node['@graph']);
+        if (ev) return ev;
+      }
+
+      for (const k of Object.keys(node)) {
+        const ev = this.findEventLike(node[k]);
+        if (ev) return ev;
+      }
+    }
+    return null;
+  }
+
+  private escapeRegExp(s: string) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private matchMeta(html: string, property: string) {
+    const p = this.escapeRegExp(property);
+    const re1 = new RegExp(
+      `<meta[^>]+property=['\"]${p}['\"][^>]*content=['\"]([^'\"]+)['\"][^>]*>`,
+      'i',
+    );
+    const m1 = re1.exec(html);
+    if (m1?.[1]) return m1[1];
+
+    const re2 = new RegExp(
+      `<meta[^>]+content=['\"]([^'\"]+)['\"][^>]*property=['\"]${p}['\"][^>]*>`,
+      'i',
+    );
+    const m2 = re2.exec(html);
+    return m2?.[1] ?? null;
+  }
+
+  private matchTag(html: string, tag: string) {
+    const t = this.escapeRegExp(tag);
+    const re = new RegExp(`<${t}[^>]*>([^<]+)</${t}>`, 'i');
+    const m = re.exec(html);
+    return m?.[1] ?? null;
+  }
+
+  private extractLieu(html: string) {
+    const re = /Localisation\s*:\s*([^<\n\r]+)/i;
+    const m = re.exec(html);
+    const raw = m?.[1] ? this.decodeHtml(m[1]) : '';
+    return raw ? raw.trim() : null;
+  }
+
+  private extractStartDateTime(html: string): Date | null {
+    const dateRe = /((Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche)\s+\d{1,2}\s+[a-zàâäçéèêëîïôöùûüÿœ-]+\s+\d{4})/i;
+    const m = dateRe.exec(html);
+    if (!m?.[1]) {
+      return null;
+    }
+
+    const date = this.parseFrenchDate(m[1]);
+    if (!date) return null;
+
+    const time =
+      this.extractTime(html, /de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)/i) ??
+      this.extractTime(html, /à\s*partir\s*de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)/i);
+    if (!time) {
+      date.setHours(12, 0, 0, 0);
+      return date;
+    }
+
+    date.setHours(time.hh, time.mm, 0, 0);
+    return date;
+  }
+
+  private extractFrenchDateRange(html: string): { start: Date; end: Date } | null {
+    const month = '(janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)';
+    const weekday = '(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)';
+
+    const reFull = new RegExp(
+      `\\bDu\\s+(?:${weekday}\\s+)?(\\d{1,2}\\s+${month}\\s+\\d{4})\\s+au\\s+(?:${weekday}\\s+)?(\\d{1,2}\\s+${month}\\s+\\d{4})\\b`,
+      'i',
+    );
+    const mFull = reFull.exec(html);
+    if (mFull?.[1] && mFull?.[2]) {
+      const start = this.parseFrenchDate(mFull[1]);
+      const end = this.parseFrenchDate(mFull[2]);
+      if (!start || !end) return null;
+      start.setHours(12, 0, 0, 0);
+      end.setHours(23, 59, 0, 0);
+      return { start, end };
+    }
+
+    const reMissingYear = new RegExp(
+      `\\bDu\\s+(?:${weekday}\\s+)?(\\d{1,2}\\s+${month})(?:\\s+(\\d{4}))?\\s+au\\s+(?:${weekday}\\s+)?(\\d{1,2}\\s+${month})(?:\\s+(\\d{4}))?\\b`,
+      'i',
+    );
+    const m = reMissingYear.exec(html);
+    if (!m?.[1] || !m?.[3]) return null;
+
+    const yearEnd = m[4] ?? m[2] ?? null;
+    if (!yearEnd) return null;
+
+    const startStr = `${m[1]} ${yearEnd}`;
+    const endStr = `${m[3]} ${yearEnd}`;
+
+    const start = this.parseFrenchDate(startStr);
+    const end = this.parseFrenchDate(endStr);
+    if (!start || !end) return null;
+    start.setHours(12, 0, 0, 0);
+    end.setHours(23, 59, 0, 0);
+    if (end < start) {
+      end.setFullYear(end.getFullYear() + 1);
+    }
+    return { start, end };
+  }
+
+  private extractEndDateTime(html: string, start: Date | null): Date | null {
+    if (!start) return null;
+
+    const endTime = this.extractTime(html, /à\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)/i);
+    if (!endTime) {
+      const fallback = new Date(start);
+      fallback.setHours(start.getHours() + 2);
+      return fallback;
+    }
+
+    const end = new Date(start);
+    end.setHours(endTime.hh, endTime.mm, 0, 0);
+    if (end <= start) {
+      end.setDate(end.getDate() + 1);
+    }
+    return end;
+  }
+
+  private extractTime(html: string, re: RegExp) {
+    const m = re.exec(html);
+    if (!m?.[1]) return null;
+    const raw = String(m[1]).trim().toLowerCase();
+    let hh: number;
+    let mm: number;
+    if (raw.includes(':')) {
+      const parts = raw.split(':');
+      hh = Number(parts[0]);
+      mm = Number(parts[1]);
+    } else if (raw.includes('h')) {
+      const parts = raw.split('h');
+      hh = Number(parts[0]);
+      mm = parts[1] ? Number(parts[1]) : 0;
+    } else {
+      hh = Number(raw);
+      mm = 0;
+    }
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+    return { hh, mm };
+  }
+
+  private extractHoursRange(text: string) {
+    const t = (text ?? '').replace(/\s+/g, ' ').trim();
+    const re = /de\s*(\d{1,2}(?:h\d{0,2}|:\d{2})?)\s*(?:à|a|-|→)\s*(\d{1,2}(?:h\d{0,2}|:\d{2})?)/i;
+    const m = re.exec(t);
+    if (!m?.[1] || !m?.[2]) return null;
+    const start = this.extractTime(m[1], /(.*)/);
+    const end = this.extractTime(m[2], /(.*)/);
+    if (!start || !end) return null;
+    return { start, end };
+  }
+
+  private parseFrenchDate(s: string) {
+    const re = /(\d{1,2})\s+([a-zàâäçéèêëîïôöùûüÿœ-]+)\s+(\d{4})/i;
+    const m = re.exec(s);
+    if (!m) return null;
+
+    const day = Number(m[1]);
+    const monthName = (m[2] ?? '').toLowerCase();
+    const year = Number(m[3]);
+
+    const monthMap: Record<string, number> = {
+      janvier: 0,
+      février: 1,
+      fevrier: 1,
+      mars: 2,
+      avril: 3,
+      mai: 4,
+      juin: 5,
+      juillet: 6,
+      août: 7,
+      aout: 7,
+      septembre: 8,
+      octobre: 9,
+      novembre: 10,
+      décembre: 11,
+      decembre: 11,
+    };
+
+    const month = monthMap[monthName];
+    if (month === undefined) return null;
+
+    const d = new Date(year, month, day);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  }
+
+  private guessCategory(sourceUrl: string, titre: string): EventCategory {
+    const t = titre.toLowerCase();
+    if (t.includes('exposition')) return EventCategory.EXPOSITION;
+    if (t.includes('concert')) return EventCategory.CONCERT;
+    if (t.includes('danse') || t.includes('salsa')) return EventCategory.DANSE;
+    if (t.includes('artifice') || t.includes('pyro') || t.includes('feux')) return EventCategory.FEUX_D_ARTIFICE;
+
+    if (sourceUrl.includes('/evenements/culture/')) return EventCategory.SPECTACLE;
+
+    return EventCategory.AUTRE;
+  }
+}

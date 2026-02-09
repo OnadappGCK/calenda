@@ -36,6 +36,14 @@ export class CreateEventDto {
   @IsEnum(EventTag, { each: true })
   caracteristiques?: EventTag[];
 
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  tarif?: string;
+
   /** Date/heure de début (ISO). */
   @IsDateString()
   dateDebut!: string;

@@ -170,6 +170,8 @@ export class EventsService {
       lieu: dto.lieu,
       theme: dto.theme ?? null,
       caracteristiques: dto.caracteristiques ? dto.caracteristiques.slice(0, 3) : null,
+      imageUrl: dto.imageUrl ?? null,
+      tarif: dto.tarif ?? 'Non renseigné',
       dateDebut: new Date(dto.dateDebut),
       dateFin: new Date(dto.dateFin),
       couleur: dto.couleur ?? null,
@@ -201,6 +203,12 @@ export class EventsService {
     if (dto.theme !== undefined) event.theme = dto.theme;
     if (dto.caracteristiques !== undefined) {
       event.caracteristiques = dto.caracteristiques ? dto.caracteristiques.slice(0, 3) : null;
+    }
+    if (dto.imageUrl !== undefined) {
+      event.imageUrl = dto.imageUrl;
+    }
+    if (dto.tarif !== undefined) {
+      event.tarif = dto.tarif;
     }
     if (dto.dateDebut !== undefined) event.dateDebut = new Date(dto.dateDebut);
     if (dto.dateFin !== undefined) event.dateFin = new Date(dto.dateFin);

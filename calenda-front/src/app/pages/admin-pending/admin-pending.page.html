@@ -111,12 +111,85 @@
 @if (showMerge()) {
   <div class="modalBackdrop" (click)="closeMerge()"></div>
   <div class="modal">
-    <h2>Merge (stub)</h2>
-    <p>
-      Cette interface servira à sélectionner une source externe et importer des événements en évitant les doublons.
-    </p>
+    <h2>Merge</h2>
+
+    <div class="mergeGrid">
+      <label class="field">
+        Source
+        <select [(ngModel)]="mergeSource">
+          @if (mergeSourcesList.length === 0) {
+            <option value="MARTIGUES_TOURISME">Martigues Tourisme</option>
+            <option value="" disabled>(aucune source)</option>
+          } @else {
+            @for (s of mergeSourcesList; track s.id) {
+              <option [value]="s.id">{{ s.label }}</option>
+            }
+          }
+        </select>
+      </label>
+
+      <div class="mergeHint">
+        {{ mergeSourceDescription() }}
+      </div>
+    </div>
+
+    <div class="mergeGrid">
+      <label class="field">
+        Pages à scanner
+        <input type="number" min="1" max="20" [(ngModel)]="mergePages" />
+      </label>
+    </div>
+
     <div class="actions">
+      <button class="btn btnPrimary" type="button" (click)="runMergePreview()" [disabled]="mergeLoading()">
+        @if (mergeLoading()) { Scan… } @else { Scanner }
+      </button>
+      <button
+        class="btn"
+        type="button"
+        (click)="runMergeApply()"
+        [disabled]="mergeLoading() || !mergePreview() || mergePreview()!.urls.length === 0"
+      >
+        Ajouter
+        @if (mergePreview()) { ({{ mergePreview()!.urls.length }}) }
+      </button>
       <button class="btn" type="button" (click)="closeMerge()">Fermer</button>
     </div>
+
+    @if (mergePreview()) {
+      <div class="mergeResult">
+        <div><strong>Pages scannées:</strong> {{ mergePreview()!.scannedPages }}</div>
+        <div><strong>URLs trouvées:</strong> {{ mergePreview()!.foundUrls }}</div>
+        <div><strong>URLs uniques:</strong> {{ mergePreview()!.dedupedUrls }}</div>
+        <div><strong>Fiches parsées:</strong> {{ mergePreview()!.parsed }}</div>
+        <div><strong>Avec image:</strong> {{ mergePreview()!.withImage }}</div>
+        <div><strong>Avec description:</strong> {{ mergePreview()!.withDescription }}</div>
+        <div><strong>Événements ajoutables:</strong> {{ mergePreview()!.wouldCreate }}</div>
+        <div><strong>Déjà existants:</strong> {{ mergePreview()!.skippedExisting }}</div>
+        <div><strong>Ignorés (passés):</strong> {{ mergePreview()!.skippedPast }}</div>
+        <div><strong>Erreurs:</strong> {{ mergePreview()!.failed }}</div>
+      </div>
+
+      @if ((mergePreview()!.failures?.length ?? 0) > 0) {
+        <div class="mergeResult">
+          <div><strong>Exemples d'erreurs de parsing</strong></div>
+          @for (f of mergePreview()!.failures; track f.url) {
+            <div class="mergeFailure">
+              <div class="mergeFailureUrl">{{ f.url }}</div>
+              <div class="mergeFailureReason">{{ f.reason }}</div>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    @if (mergeApply()) {
+      <div class="mergeResult">
+        <div><strong>Ajoutés:</strong> {{ mergeApply()!.created }}</div>
+        <div><strong>Déjà existants:</strong> {{ mergeApply()!.skippedExisting }}</div>
+        <div><strong>Ignorés (passés):</strong> {{ mergeApply()!.skippedPast }}</div>
+        <div><strong>Erreurs:</strong> {{ mergeApply()!.failed }}</div>
+      </div>
+    }
   </div>
 }

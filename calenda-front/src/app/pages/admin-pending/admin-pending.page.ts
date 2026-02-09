@@ -5,6 +5,17 @@ import { RouterLink } from '@angular/router';
 import { AdminService } from '../../core/admin.service';
 import { EventDto, EventOrigin } from '../../core/events.service';
 
+type MergeSourceId = 'MARTIGUES_TOURISME';
+type MergeSource = { id: MergeSourceId; label: string; description: string };
+
+const MERGE_SOURCES: MergeSource[] = [
+  {
+    id: 'MARTIGUES_TOURISME',
+    label: 'Martigues Tourisme',
+    description: 'Import depuis martigues-tourisme.com (og:image, événements en attente).',
+  },
+];
+
 @Component({
   selector: 'app-admin-pending-page',
   imports: [RouterLink, DatePipe, FormsModule],
@@ -32,6 +43,55 @@ export class AdminPendingPage implements OnInit {
   readonly expanded = signal<Set<string>>(new Set());
   readonly confirm = signal<null | { action: 'validate' | 'delete'; ids: string[]; title: string; count: number }>(null);
   readonly showMerge = signal<boolean>(false);
+
+  readonly mergeSourcesList = MERGE_SOURCES;
+  mergeSource: MergeSourceId = 'MARTIGUES_TOURISME';
+
+  mergePages = 2;
+  readonly mergePreview = signal<
+    null | {
+      scannedPages: number;
+      foundUrls: number;
+      dedupedUrls: number;
+      parsed: number;
+      withImage: number;
+      withDescription: number;
+      wouldCreate: number;
+      skippedExisting: number;
+      skippedPast: number;
+      failed: number;
+      urls: string[];
+      failures: { url: string; reason: string }[];
+      debugSamples: {
+        status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
+        url: string;
+        reason?: string;
+        titre?: string;
+        dateDebut?: string;
+        dateFin?: string;
+        image?: boolean;
+        descLen?: number;
+      }[];
+    }
+  >(null);
+  readonly mergeApply = signal<
+    null | {
+      processed: number;
+      created: number;
+      skippedExisting: number;
+      skippedPast: number;
+      failed: number;
+      debugSamples: {
+        status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
+        url: string;
+        reason?: string;
+        titre?: string;
+        dateDebut?: string;
+        dateFin?: string;
+      }[];
+    }
+  >(null);
+  readonly mergeLoading = signal<boolean>(false);
 
   readonly showFilters = signal<boolean>(false);
   originFilter: '' | EventOrigin | 'NONE' = '';
@@ -71,6 +131,9 @@ export class AdminPendingPage implements OnInit {
 
   /** Hook Angular: charge la liste initiale des événements en attente. */
   async ngOnInit() {
+    if (!this.mergeSourcesList.some((s) => s.id === this.mergeSource) && this.mergeSourcesList[0]) {
+      this.mergeSource = this.mergeSourcesList[0].id;
+    }
     await this.reload();
   }
 
@@ -176,10 +239,57 @@ export class AdminPendingPage implements OnInit {
   /** Ouvre la modale de "merge" (stub UI). */
   openMerge() {
     this.showMerge.set(true);
+    this.mergePreview.set(null);
+    this.mergeApply.set(null);
   }
 
   /** Ferme la modale de "merge". */
   closeMerge() {
     this.showMerge.set(false);
+  }
+
+  async runMergePreview() {
+    if (this.mergeLoading()) return;
+    this.mergeLoading.set(true);
+    try {
+      this.mergeApply.set(null);
+
+      const res =
+        this.mergeSource === 'MARTIGUES_TOURISME'
+          ? await this.adminService.previewMergeMartigues({ pages: this.mergePages }).toPromise()
+          : null;
+
+      console.log('[Merge] preview response', res);
+      console.log('[Merge] preview debugSamples', res?.debugSamples);
+
+      this.mergePreview.set(res ?? null);
+    } finally {
+      this.mergeLoading.set(false);
+    }
+  }
+
+  async runMergeApply() {
+    const preview = this.mergePreview();
+    if (!preview || preview.urls.length === 0) return;
+    if (this.mergeLoading()) return;
+    this.mergeLoading.set(true);
+    try {
+      const res =
+        this.mergeSource === 'MARTIGUES_TOURISME'
+          ? await this.adminService.applyMergeMartigues({ urls: preview.urls }).toPromise()
+          : null;
+
+      console.log('[Merge] apply response', res);
+      console.log('[Merge] apply debugSamples', res?.debugSamples);
+
+      this.mergeApply.set(res ?? null);
+      await this.reload();
+    } finally {
+      this.mergeLoading.set(false);
+    }
+  }
+
+  mergeSourceDescription() {
+    return this.mergeSourcesList.find((s) => s.id === this.mergeSource)?.description ?? '';
   }
 }

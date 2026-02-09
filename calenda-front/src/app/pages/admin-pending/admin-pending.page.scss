@@ -157,3 +157,26 @@
   border: 1px solid $border-2;
   padding: 1rem;
 }
+
+.mergeGrid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin: 0.75rem 0;
+}
+
+.mergeHint {
+  align-self: end;
+  color: $text-muted-4;
+  font-size: 0.9rem;
+}
+
+.mergeResult {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid $border-1;
+  border-radius: 0.75rem;
+  background: $surface-1;
+  display: grid;
+  gap: 0.25rem;
+}

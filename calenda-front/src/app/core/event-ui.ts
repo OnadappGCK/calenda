@@ -1,5 +1,44 @@
 import { EventCategory, EventTag } from './events.service';
 
+function isHttpUrl(url: string) {
+  return /^https?:\/\//i.test(url);
+}
+
+function assetUrl(path: string) {
+  const p = path.trim();
+  if (!p) return '';
+  if (p.startsWith('/')) return p;
+  return `/assets/${p}`;
+}
+
+export function defaultCategoryImageUrl(category: EventCategory): string {
+  switch (category) {
+    case 'Concert':
+    case 'Spectacle':
+      return '/assets/img/categorie/SPECTACLE/spec1.png';
+    case 'Danse':
+      return '/assets/img/categorie/SPECTACLE/spec1.png';
+    case "Feux d’artifice":
+      return '/assets/img/categorie/FESTIVAL/fest1.png';
+    case 'Exposition':
+      return '/assets/img/categorie/EXPOSITION/expo1.png';
+    case 'Autre':
+      return '/assets/img/categorie/AUTRE/autre1.png';
+    default:
+      return '/assets/img/categorie/AUTRE/autre1.png';
+  }
+}
+export function resolveEventImageUrl(category: EventCategory, imageUrl?: string | null): string {
+  const raw = (imageUrl ?? '').trim();
+  if (!raw) {
+    return defaultCategoryImageUrl(category);
+  }
+  if (isHttpUrl(raw)) {
+    return raw;
+  }
+  return assetUrl(raw);
+}
+
 /** Retourne une couleur (hex) associée à une catégorie d'événement. */
 export function categoryColor(category: EventCategory): string {
   switch (category) {

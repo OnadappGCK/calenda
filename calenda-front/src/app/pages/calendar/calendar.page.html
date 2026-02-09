@@ -323,6 +323,7 @@
         } @else {
           @for (e of sideDayEvents(); track e.id) {
             <div class="sideCard" [style.background]="categoryColor(e.categorie)">
+              <img class="sideImg" [src]="eventImageUrl(e)" alt="" loading="lazy" />
               <div class="sideMain">
                 <div class="listName">{{ e.titre }}</div>
                 <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }}</div>
@@ -344,6 +345,7 @@
         } @else {
           @for (e of sideNightEvents(); track e.id) {
             <div class="sideCard" [style.background]="categoryColor(e.categorie)">
+              <img class="sideImg" [src]="eventImageUrl(e)" alt="" loading="lazy" />
               <div class="sideMain">
                 <div class="listName">{{ e.titre }}</div>
                 <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }}</div>
@@ -382,7 +384,7 @@
 
       <label>
         Catégorie
-        <select [(ngModel)]="newCategorie" name="newCategorie">
+        <select [(ngModel)]="newCategorie" name="newCategorie" (ngModelChange)="onNewCategorieChange()">
           <option value="Danse">Danse</option>
           <option value="Concert">Concert</option>
           <option value="Spectacle">Spectacle</option>
@@ -391,6 +393,21 @@
           <option value="Autre">Autre</option>
         </select>
       </label>
+
+      <label>
+        Image
+        <select [(ngModel)]="newImageUrl" name="newImageUrl">
+          <option value="">Auto (par catégorie)</option>
+          @for (opt of newImageOptions(); track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="imgPreview">
+        <div class="imgPreviewLabel">Aperçu</div>
+        <img class="imgPreviewImg" [src]="newImagePreviewUrl()" alt="" loading="lazy" />
+      </div>
 
       <label>
         Ville

@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { resolveEventImageUrl } from '../../core/event-ui';
 import { EventsService, EventDto } from '../../core/events.service';
 import { FavoritesService } from '../../core/favorites.service';
 
@@ -25,6 +26,10 @@ export class EventDetailPage implements OnInit {
   readonly similar = signal<EventDto[]>([]);
 
   readonly canLike = computed(() => this.auth.isLoggedIn());
+
+  imageUrlFor(e: EventDto) {
+    return resolveEventImageUrl(e.categorie, e.imageUrl);
+  }
 
   /** Hook Angular: charge l'événement + la liste "similar" à partir du paramètre `id`. */
   async ngOnInit() {

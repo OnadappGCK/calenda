@@ -23,4 +23,67 @@ export class AdminService {
   deleteEvent(id: string) {
     return this.http.delete(`${this.apiBaseUrl}/admin/events/${id}`);
   }
+
+  mergeMartigues(params?: { pages?: number; dryRun?: boolean }) {
+    const query: Record<string, string> = {};
+    if (params?.pages !== undefined) query['pages'] = String(params.pages);
+    if (params?.dryRun !== undefined) query['dryRun'] = String(params.dryRun);
+
+    return this.http.post<{
+      scannedPages: number;
+      foundUrls: number;
+      dedupedUrls: number;
+      created: number;
+      skippedExisting: number;
+      failed: number;
+    }>(`${this.apiBaseUrl}/admin/merge/martigues`, {}, { params: query });
+  }
+
+  previewMergeMartigues(params?: { pages?: number }) {
+    const query: Record<string, string> = {};
+    if (params?.pages !== undefined) query['pages'] = String(params.pages);
+
+    return this.http.get<{
+      scannedPages: number;
+      foundUrls: number;
+      dedupedUrls: number;
+      parsed: number;
+      withImage: number;
+      withDescription: number;
+      wouldCreate: number;
+      skippedExisting: number;
+      skippedPast: number;
+      failed: number;
+      urls: string[];
+      failures: { url: string; reason: string }[];
+      debugSamples: {
+        status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
+        url: string;
+        reason?: string;
+        titre?: string;
+        dateDebut?: string;
+        dateFin?: string;
+        image?: boolean;
+        descLen?: number;
+      }[];
+    }>(`${this.apiBaseUrl}/admin/merge/martigues/preview`, { params: query });
+  }
+
+  applyMergeMartigues(body: { urls: string[] }) {
+    return this.http.post<{
+      processed: number;
+      created: number;
+      skippedExisting: number;
+      skippedPast: number;
+      failed: number;
+      debugSamples: {
+        status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
+        url: string;
+        reason?: string;
+        titre?: string;
+        dateDebut?: string;
+        dateFin?: string;
+      }[];
+    }>(`${this.apiBaseUrl}/admin/merge/martigues/apply`, body);
+  }
 }

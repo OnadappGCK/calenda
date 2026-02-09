@@ -16,8 +16,19 @@ import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { EventsService, EventCategory, EventDto, EventTag } from '../../core/events.service';
-import { categoryColor, categoryIcon, tagIcon } from '../../core/event-ui';
+import { categoryColor, categoryIcon, resolveEventImageUrl, tagIcon } from '../../core/event-ui';
 import { FavoritesService } from '../../core/favorites.service';
+
+type ImageChoice = { label: string; value: string };
+
+const CATEGORY_IMAGE_CHOICES: Record<EventCategory, ImageChoice[]> = {
+  Concert: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
+  Danse: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
+  Spectacle: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
+  "Feux d’artifice": [{ label: 'Générique', value: 'img/categorie/FESTIVAL/fest1.png' }],
+  Exposition: [{ label: 'Générique', value: 'img/categorie/EXPOSITION/expo1.png' }],
+  Autre: [{ label: 'Générique', value: 'img/categorie/AUTRE/autre1.png' }],
+};
 
 @Component({
   selector: 'app-calendar-page',
@@ -236,12 +247,29 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   newVille = '';
   newLieu = '';
   newCaracteristiques: EventTag[] = [];
+  newImageUrl = '';
   newDateDebut = '';
   newDateFin = '';
 
   protected readonly categoryColor = categoryColor;
   protected readonly categoryIcon = categoryIcon;
   protected readonly tagIcon = tagIcon;
+
+  eventImageUrl(e: EventDto) {
+    return resolveEventImageUrl(e.categorie, e.imageUrl);
+  }
+
+  newImageOptions(): ImageChoice[] {
+    return CATEGORY_IMAGE_CHOICES[this.newCategorie] ?? [];
+  }
+
+  newImagePreviewUrl() {
+    return resolveEventImageUrl(this.newCategorie, this.newImageUrl ? this.newImageUrl : null);
+  }
+
+  onNewCategorieChange() {
+    this.newImageUrl = '';
+  }
 
   readonly availableTags: EventTag[] = [
     'MUSIQUE',
@@ -1156,6 +1184,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       ville: this.newVille,
       lieu: this.newLieu,
       caracteristiques: this.newCaracteristiques.slice(0, 3),
+      imageUrl: this.newImageUrl ? this.newImageUrl : undefined,
       dateDebut: new Date(this.newDateDebut).toISOString(),
       dateFin: new Date(this.newDateFin).toISOString(),
     };
@@ -1168,6 +1197,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.newVille = '';
     this.newLieu = '';
     this.newCaracteristiques = [];
+    this.newImageUrl = '';
     this.newDateDebut = '';
     this.newDateFin = '';
 

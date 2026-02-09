@@ -41,6 +41,14 @@ export class UpdateEventDto {
   @IsEnum(EventTag, { each: true })
   caracteristiques?: EventTag[] | null;
 
+  @IsOptional()
+  @IsString()
+  imageUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  tarif?: string | null;
+
   /** Date/heure de début (ISO, optionnel). */
   @IsOptional()
   @IsDateString()

@@ -51,6 +51,12 @@ export class Event {
   /** Liste de caractéristiques (tags) associées à l'événement (max 3). */
   caracteristiques!: EventTag[] | null;
 
+  @Column({ type: 'text', nullable: true })
+  imageUrl!: string | null;
+
+  @Column({ type: 'text', nullable: true, default: 'Non renseigné' })
+  tarif!: string | null;
+
   @Column({ type: 'datetime' })
   /** Date/heure de début. */
   dateDebut!: Date;

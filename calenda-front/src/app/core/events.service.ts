@@ -19,6 +19,8 @@ export type EventDto = {
   categorie: EventCategory;
   /** Origine (peut être absente pour des événements existants avant ajout de la colonne). */
   origin?: EventOrigin;
+  imageUrl?: string | null;
+  tarif?: string | null;
   ville: string;
   lieu: string;
   theme: string | null;
@@ -66,6 +68,8 @@ export class EventsService {
     lieu: string;
     theme?: string;
     caracteristiques?: EventTag[];
+    imageUrl?: string | null;
+    tarif?: string | null;
     dateDebut: string;
     dateFin: string;
     enAvant?: boolean;
