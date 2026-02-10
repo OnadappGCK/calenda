@@ -1,4 +1,4 @@
-import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { EventCategory } from '../../common/enums/event-category.enum';
 import { EventTag } from '../../common/enums/event-tag.enum';
 
@@ -20,9 +20,22 @@ export class CreateEventDto {
   @IsString()
   ville!: string;
 
-  /** Lieu. */
+  /** Lieu (legacy). */
+  @IsOptional()
   @IsString()
-  lieu!: string;
+  lieu?: string;
+
+  @IsOptional()
+  @IsString()
+  adresse?: string;
+
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
 
   /** Thème (optionnel). */
   @IsOptional()

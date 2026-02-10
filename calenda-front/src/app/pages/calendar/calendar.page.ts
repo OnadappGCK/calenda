@@ -18,6 +18,7 @@ import { AuthService } from '../../core/auth.service';
 import { EventsService, EventCategory, EventDto, EventTag } from '../../core/events.service';
 import { categoryColor, categoryIcon, resolveEventImageUrl, tagIcon } from '../../core/event-ui';
 import { FavoritesService } from '../../core/favorites.service';
+import { PhotonFeature, PhotonService } from '../../core/photon.service';
 
 type ImageChoice = { label: string; value: string };
 
@@ -47,6 +48,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly el = inject(ElementRef);
+  private readonly photon = inject(PhotonService);
 
   /** Indique si le composant a été détruit (évite des requêtes tardives via observers). */
   private destroyed = false;
@@ -112,10 +114,15 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   q = '';
-  ville = '';
-  lieu = '';
+  adresse = '';
   categorie: EventCategory | '' = '';
   favoris = false;
+
+  readonly cities = signal<string[]>([]);
+
+  readonly adresseSuggestions = signal<PhotonFeature[]>([]);
+  readonly adresseSuggestOpen = signal<boolean>(false);
+  private adresseSuggestToken = 0;
 
   caracteristiquesFilter: EventTag[] = [];
 
@@ -245,7 +252,12 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   newDescription = '';
   newCategorie: EventCategory = 'Concert';
   newVille = '';
-  newLieu = '';
+  newAdresse = '';
+  newLatitude: number | null = null;
+  newLongitude: number | null = null;
+  readonly newAdresseSuggestions = signal<PhotonFeature[]>([]);
+  readonly newAdresseSuggestOpen = signal<boolean>(false);
+  private newAdresseSuggestToken = 0;
   newCaracteristiques: EventTag[] = [];
   newImageUrl = '';
   newDateDebut = '';
@@ -257,6 +269,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   eventImageUrl(e: EventDto) {
     return resolveEventImageUrl(e.categorie, e.imageUrl);
+  }
+
+  displayAdresse(e: EventDto) {
+    return (e.adresse ?? e.lieu ?? '').trim();
   }
 
   newImageOptions(): ImageChoice[] {
@@ -545,7 +561,83 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     } catch {
       this.favoriteIds.set(new Set());
     }
+    const c = await this.eventsService.cities().toPromise();
+    this.cities.set(c ?? []);
+
     await this.reload();
+  }
+
+  cityButtons() {
+    return this.cities().slice(0, 12);
+  }
+
+  pickCity(city: string) {
+    this.adresse = city;
+    this.adresseSuggestions.set([]);
+    this.adresseSuggestOpen.set(false);
+  }
+
+  private async refreshAdresseSuggestions(query: string) {
+    const token = ++this.adresseSuggestToken;
+    const q = (query ?? '').trim();
+    if (q.length < 3) {
+      this.adresseSuggestions.set([]);
+      this.adresseSuggestOpen.set(false);
+      return;
+    }
+    const res = await this.photon.search(q, { limit: 6 }).toPromise();
+    if (token !== this.adresseSuggestToken) return;
+    this.adresseSuggestions.set(res ?? []);
+    this.adresseSuggestOpen.set(true);
+  }
+
+  onAdresseInput(v: string) {
+    this.adresse = v;
+    void this.refreshAdresseSuggestions(v);
+  }
+
+  chooseAdresseSuggestion(f: PhotonFeature) {
+    this.adresse = this.photon.label(f);
+    this.adresseSuggestions.set([]);
+    this.adresseSuggestOpen.set(false);
+  }
+
+  adresseSuggestionLabel(f: PhotonFeature) {
+    return this.photon.label(f);
+  }
+
+  private async refreshNewAdresseSuggestions(query: string) {
+    const token = ++this.newAdresseSuggestToken;
+    const q = (query ?? '').trim();
+    if (q.length < 3) {
+      this.newAdresseSuggestions.set([]);
+      this.newAdresseSuggestOpen.set(false);
+      return;
+    }
+    const res = await this.photon.search(q, { limit: 6 }).toPromise();
+    if (token !== this.newAdresseSuggestToken) return;
+    this.newAdresseSuggestions.set(res ?? []);
+    this.newAdresseSuggestOpen.set(true);
+  }
+
+  onNewAdresseInput(v: string) {
+    this.newAdresse = v;
+    void this.refreshNewAdresseSuggestions(v);
+  }
+
+  chooseNewAdresseSuggestion(f: PhotonFeature) {
+    this.newAdresse = this.photon.label(f);
+    const c = this.photon.coords(f);
+    this.newLatitude = c?.lat ?? null;
+    this.newLongitude = c?.lon ?? null;
+    const city = this.photon.city(f);
+    if (city) this.newVille = city;
+    this.newAdresseSuggestions.set([]);
+    this.newAdresseSuggestOpen.set(false);
+  }
+
+  newAdresseSuggestionLabel(f: PhotonFeature) {
+    return this.photon.label(f);
   }
 
   /** Hook Angular: attache l'IntersectionObserver pour le chargement progressif de la liste "à venir". */
@@ -601,8 +693,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       if (fromTo.to) params['to'] = fromTo.to;
 
       if (this.q) params['q'] = this.q;
-      if (this.ville) params['ville'] = this.ville;
-      if (this.lieu) params['lieu'] = this.lieu;
+      if (this.adresse) params['adresse'] = this.adresse;
       if (this.categorie) params['categorie'] = this.categorie as string;
       if (this.favoris) params['favoris'] = 'true';
       if (this.caracteristiquesFilter.length) params['caracteristiques'] = this.caracteristiquesFilter.join(',');
@@ -733,8 +824,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       }
 
       if (this.q) params['q'] = this.q;
-      if (this.ville) params['ville'] = this.ville;
-      if (this.lieu) params['lieu'] = this.lieu;
+      if (this.adresse) params['adresse'] = this.adresse;
       if (this.categorie) params['categorie'] = this.categorie as string;
       if (this.favoris) params['favoris'] = 'true';
       if (this.caracteristiquesFilter.length) params['caracteristiques'] = this.caracteristiquesFilter.join(',');
@@ -768,8 +858,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Réinitialise les filtres puis relance un reload. */
   reset() {
     this.q = '';
-    this.ville = '';
-    this.lieu = '';
+    this.adresse = '';
     this.categorie = '';
     this.favoris = false;
     this.caracteristiquesFilter = [];
@@ -822,8 +911,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   activeChips() {
     const chips: Array<{ key: string; label: string }> = [];
     chips.push({ key: 'date', label: this.viewMode === 'week' ? 'Semaine' : 'Journée' });
-    if (this.ville) chips.push({ key: 'ville', label: this.ville });
-    if (this.lieu) chips.push({ key: 'lieu', label: this.lieu });
+    if (this.adresse) chips.push({ key: 'adresse', label: this.adresse });
     if (this.categorie) chips.push({ key: 'categorie', label: this.categorie });
     if (this.q) chips.push({ key: 'q', label: this.q });
     if (this.caracteristiquesFilter.length) chips.push({ key: 'caracteristiques', label: this.caracteristiquesFilter.join(', ') });
@@ -836,8 +924,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Retire un filtre correspondant à une chip, puis relance un reload (sauf chip date). */
   clearChip(key: string) {
     if (key === 'date') return;
-    if (key === 'ville') this.ville = '';
-    if (key === 'lieu') this.lieu = '';
+    if (key === 'adresse') this.adresse = '';
     if (key === 'categorie') this.categorie = '';
     if (key === 'q') this.q = '';
     if (key === 'caracteristiques') this.caracteristiquesFilter = [];
@@ -1181,8 +1268,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       titre: this.newTitre,
       description: this.newDescription,
       categorie: this.newCategorie,
-      ville: this.newVille,
-      lieu: this.newLieu,
+      ville: (this.newVille || this.newAdresse || 'Non renseigné').trim(),
+      adresse: this.newAdresse,
+      latitude: this.newLatitude,
+      longitude: this.newLongitude,
       caracteristiques: this.newCaracteristiques.slice(0, 3),
       imageUrl: this.newImageUrl ? this.newImageUrl : undefined,
       dateDebut: new Date(this.newDateDebut).toISOString(),
@@ -1195,7 +1284,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.newDescription = '';
     this.newCategorie = 'Concert';
     this.newVille = '';
-    this.newLieu = '';
+    this.newAdresse = '';
+    this.newLatitude = null;
+    this.newLongitude = null;
+    this.newAdresseSuggestions.set([]);
+    this.newAdresseSuggestOpen.set(false);
     this.newCaracteristiques = [];
     this.newImageUrl = '';
     this.newDateDebut = '';

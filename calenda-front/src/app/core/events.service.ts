@@ -23,6 +23,9 @@ export type EventDto = {
   tarif?: string | null;
   ville: string;
   lieu: string;
+  adresse?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   theme: string | null;
   caracteristiques?: EventTag[] | null;
   dateDebut: string;
@@ -49,6 +52,10 @@ export class EventsService {
     return this.http.get<EventDto[]>(`${this.apiBaseUrl}/events/featured`);
   }
 
+  cities() {
+    return this.http.get<string[]>(`${this.apiBaseUrl}/events/cities`);
+  }
+
   /** Récupère le détail d'un événement. */
   getOne(id: string) {
     return this.http.get<EventDto>(`${this.apiBaseUrl}/events/${id}`);
@@ -65,7 +72,9 @@ export class EventsService {
     description: string;
     categorie: EventCategory;
     ville: string;
-    lieu: string;
+    adresse: string;
+    latitude?: number | null;
+    longitude?: number | null;
     theme?: string;
     caracteristiques?: EventTag[];
     imageUrl?: string | null;
@@ -85,7 +94,9 @@ export class EventsService {
       description?: string;
       categorie?: EventCategory;
       ville?: string;
-      lieu?: string;
+      adresse?: string;
+      latitude?: number | null;
+      longitude?: number | null;
       theme?: string | null;
       caracteristiques?: EventTag[] | null;
       imageUrl?: string | null;

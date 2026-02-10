@@ -28,6 +28,25 @@ export class EventsService {
     return user?.role === Role.ADMIN || user?.role === Role.ORGANISATEUR;
   }
 
+  /** Liste des villes distinctes présentes dans les événements (pour UI calendrier). */
+  async listCities(user: RequestUser) {
+    const qb = this.eventsRepo
+      .createQueryBuilder('event')
+      .select('event.ville', 'ville')
+      .distinct(true)
+      .where('event.ville IS NOT NULL')
+      .andWhere("TRIM(event.ville) != ''");
+
+    if (!this.canSeeNonPublic(user)) {
+      qb.andWhere('event.public = :isPublic', { isPublic: true });
+    }
+
+    qb.orderBy('LOWER(event.ville)', 'ASC');
+
+    const rows = await qb.getRawMany<{ ville: string }>();
+    return rows.map((r) => r.ville).filter(Boolean);
+  }
+
   /** Liste les événements selon filtres et contexte utilisateur (favoris, non-public). */
   async findAll(query: ListEventsQueryDto, user: RequestUser) {
     const qb = this.eventsRepo
@@ -54,8 +73,15 @@ export class EventsService {
       qb.andWhere('LOWER(event.ville) = LOWER(:ville)', { ville: query.ville });
     }
 
-    if (query.lieu) {
-      qb.andWhere('LOWER(event.lieu) LIKE LOWER(:lieu)', { lieu: `%${query.lieu}%` });
+    const addr = (query.adresse ?? query.lieu ?? '').trim();
+    if (addr) {
+      qb.andWhere(
+        new Brackets((sub) => {
+          sub.orWhere('LOWER(event.adresse) LIKE LOWER(:addr)', { addr: `%${addr}%` });
+          sub.orWhere('LOWER(event.lieu) LIKE LOWER(:addr)', { addr: `%${addr}%` });
+          sub.orWhere('LOWER(event.ville) = LOWER(:addrExact)', { addrExact: addr });
+        }),
+      );
     }
 
     if (query.q) {
@@ -162,13 +188,18 @@ export class EventsService {
       throw new NotFoundException('user_not_found');
     }
 
+    const adresse = (dto.adresse ?? '').trim() || (dto.lieu ?? '').trim();
+
     const event = this.eventsRepo.create({
       titre: dto.titre,
       description: dto.description,
       categorie: dto.categorie,
       origin: EventOrigin.MANUAL,
       ville: dto.ville,
-      lieu: dto.lieu,
+      lieu: adresse,
+      adresse: adresse || null,
+      latitude: dto.latitude ?? null,
+      longitude: dto.longitude ?? null,
       theme: dto.theme ?? null,
       caracteristiques: dto.caracteristiques ? dto.caracteristiques.slice(0, 3) : null,
       imageUrl: dto.imageUrl ?? null,
@@ -200,7 +231,24 @@ export class EventsService {
     if (dto.description !== undefined) event.description = dto.description;
     if (dto.categorie !== undefined) event.categorie = dto.categorie;
     if (dto.ville !== undefined) event.ville = dto.ville;
-    if (dto.lieu !== undefined) event.lieu = dto.lieu;
+    if (dto.adresse !== undefined) {
+      const adresse = (dto.adresse ?? '').trim();
+      event.adresse = adresse || null;
+      if (adresse) {
+        event.lieu = adresse;
+      }
+    } else if (dto.lieu !== undefined) {
+      const adresse = (dto.lieu ?? '').trim();
+      event.adresse = adresse || null;
+      event.lieu = adresse;
+    }
+
+    if (dto.latitude !== undefined) {
+      event.latitude = dto.latitude;
+    }
+    if (dto.longitude !== undefined) {
+      event.longitude = dto.longitude;
+    }
     if (dto.theme !== undefined) event.theme = dto.theme;
     if (dto.caracteristiques !== undefined) {
       event.caracteristiques = dto.caracteristiques ? dto.caracteristiques.slice(0, 3) : null;

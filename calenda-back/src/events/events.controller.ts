@@ -43,6 +43,13 @@ export class EventsController {
   }
 
   @UseGuards(OptionalJwtAuthGuard)
+  @Get('cities')
+  /** Liste des villes distinctes présentes dans les événements. */
+  async cities(@Req() req: any) {
+    return this.eventsService.listCities(req.user ?? null);
+  }
+
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   /** Retourne le détail d'un événement (non-public masqué si non autorisé). */
   async getOne(@Param('id') id: string, @Req() req: any) {

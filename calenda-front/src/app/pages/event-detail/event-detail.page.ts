@@ -3,18 +3,22 @@ import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angula
 import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AdminService } from '../../core/admin.service';
 import { AuthService } from '../../core/auth.service';
 import { resolveEventImageUrl, tagIcon as tagIconFn } from '../../core/event-ui';
 import { EventCategory, EventsService, EventDto, EventTag } from '../../core/events.service';
 import { FavoritesService } from '../../core/favorites.service';
+import { PhotonFeature, PhotonService } from '../../core/photon.service';
 
 type Draft = {
   titre: string;
   description: string;
   categorie: EventCategory;
   ville: string;
-  lieu: string;
+  adresse: string;
+  latitude: number | null;
+  longitude: number | null;
   theme: string | null;
   caracteristiques: EventTag[] | null;
   imageUrl: string | null;
@@ -44,6 +48,8 @@ export class EventDetailPage implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly adminService = inject(AdminService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly photon = inject(PhotonService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   private loadToken = 0;
 
@@ -77,10 +83,89 @@ export class EventDetailPage implements OnInit {
     return tags.slice(0, 3).map((t) => ({ tag: t, icon: tagIconFn(t) }));
   });
 
+  readonly adresseLabel = computed(() => {
+    const e = this.event();
+    return (e?.adresse ?? e?.lieu ?? '').trim();
+  });
+
+  private embedOsmUrl(lat: number, lon: number) {
+    const delta = 0.01;
+    const left = lon - delta;
+    const right = lon + delta;
+    const top = lat + delta;
+    const bottom = lat - delta;
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
+      `${left},${bottom},${right},${top}`,
+    )}&layer=mapnik&marker=${encodeURIComponent(`${lat},${lon}`)}`;
+  }
+
+  readonly mapUrl = computed<SafeResourceUrl | null>(() => {
+    const e = this.event();
+    const lat = e?.latitude;
+    const lon = e?.longitude;
+    if (typeof lat !== 'number' || typeof lon !== 'number') return null;
+    const url = this.embedOsmUrl(lat, lon);
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
+
+  readonly draftMapUrl = computed<SafeResourceUrl | null>(() => {
+    const d = this.draft();
+    const lat = d?.latitude;
+    const lon = d?.longitude;
+    if (typeof lat !== 'number' || typeof lon !== 'number') return null;
+    const url = this.embedOsmUrl(lat, lon);
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
+
   readonly draft = signal<Draft | null>(null);
+
+  readonly adresseSuggestions = signal<PhotonFeature[]>([]);
+  readonly adresseSuggestOpen = signal<boolean>(false);
+  private adresseSuggestToken = 0;
 
   imageUrlFor(e: EventDto) {
     return resolveEventImageUrl(e.categorie, e.imageUrl);
+  }
+
+  private async refreshAdresseSuggestions(query: string) {
+    const token = ++this.adresseSuggestToken;
+    const q = (query ?? '').trim();
+    if (q.length < 3) {
+      this.adresseSuggestions.set([]);
+      this.adresseSuggestOpen.set(false);
+      return;
+    }
+    const res = await this.photon.search(q, { limit: 6 }).toPromise();
+    if (token !== this.adresseSuggestToken) return;
+    this.adresseSuggestions.set(res ?? []);
+    this.adresseSuggestOpen.set(true);
+  }
+
+  onAdresseInput(v: string) {
+    const cur = this.draft();
+    if (!cur) return;
+    this.setDraft({ adresse: v, latitude: null, longitude: null });
+    void this.refreshAdresseSuggestions(v);
+  }
+
+  chooseAdresseSuggestion(f: PhotonFeature) {
+    const cur = this.draft();
+    if (!cur) return;
+    const addr = this.photon.label(f);
+    const c = this.photon.coords(f);
+    const city = this.photon.city(f);
+    this.setDraft({
+      adresse: addr,
+      latitude: c?.lat ?? null,
+      longitude: c?.lon ?? null,
+      ville: city ? city : cur.ville,
+    });
+    this.adresseSuggestions.set([]);
+    this.adresseSuggestOpen.set(false);
+  }
+
+  adresseSuggestionLabel(f: PhotonFeature) {
+    return this.photon.label(f);
   }
 
   tagIcon(t: EventTag) {
@@ -140,7 +225,9 @@ export class EventDetailPage implements OnInit {
       description: e.description,
       categorie: e.categorie,
       ville: e.ville,
-      lieu: e.lieu,
+      adresse: (e.adresse ?? e.lieu ?? '').trim(),
+      latitude: e.latitude ?? null,
+      longitude: e.longitude ?? null,
       theme: e.theme ?? null,
       caracteristiques: e.caracteristiques ?? null,
       imageUrl: e.imageUrl ?? null,
@@ -187,7 +274,9 @@ export class EventDetailPage implements OnInit {
         description: d.description.trim(),
         categorie: d.categorie,
         ville: d.ville.trim(),
-        lieu: d.lieu.trim(),
+        adresse: d.adresse.trim(),
+        latitude: d.latitude,
+        longitude: d.longitude,
         dateDebut: this.toIsoFromLocal(d.dateDebutLocal),
         dateFin: this.toIsoFromLocal(d.dateFinLocal),
         enAvant: d.enAvant,

@@ -30,6 +30,11 @@ export class ListEventsQueryDto {
   @IsString()
   lieu?: string;
 
+  /** Filtre: adresse (match partiel). */
+  @IsOptional()
+  @IsString()
+  adresse?: string;
+
   /** Filtre: recherche plein texte (titre/description). */
   @IsOptional()
   @IsString()

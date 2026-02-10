@@ -747,15 +747,54 @@
 
 .modal {
   position: fixed;
-  top: 12vh;
+  top: 10vh;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1101;
-  width: min(720px, 92vw);
-  background: $surface-1;
-  border-radius: 0.75rem;
-  border: 1px solid $border-1;
+  width: min(860px, 94vw);
+  max-height: 80vh;
+  overflow: auto;
+  border: 1px solid $border-2;
+  border-radius: 1rem;
+  background: $bg-app;
   padding: 1rem;
+}
+
+.cities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cityBtn {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  color: inherit;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.suggest {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  border-radius: 0.8rem;
+  overflow: hidden;
+}
+
+.suggestItem {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+}
+
+.suggestItem:hover {
+  background: $overlay-1;
 }
 
 .grid {

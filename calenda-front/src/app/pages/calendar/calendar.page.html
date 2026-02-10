@@ -92,7 +92,7 @@
                     >
                       <div class="eventTitle">{{ displayTitle(it.event) }}</div>
                       <div class="eventInfo">
-                        <div class="eventPlace">{{ it.event.lieu }}</div>
+                        <div class="eventPlace">{{ displayAdresse(it.event) }}</div>
                         <div class="eventTime">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
                       </div>
                       <div class="eventActions">
@@ -150,7 +150,7 @@
                     <div class="listMain">
                       <div class="listName">{{ e.titre }}</div>
                       <div class="eventMeta">
-                        {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ e.lieu }}
+                        {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ displayAdresse(e) }}
                       </div>
                     </div>
                     <div class="listRight">
@@ -212,7 +212,7 @@
                     >
                       <div class="eventTitle">{{ displayTitle(it.event) }}</div>
                       <div class="eventInfo">
-                        <div class="eventPlace">{{ it.event.lieu }}</div>
+                        <div class="eventPlace">{{ displayAdresse(it.event) }}</div>
                         <div class="eventTime">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
                       </div>
                       <div class="eventActions">
@@ -269,7 +269,7 @@
                   <div class="listRow" [style.background]="categoryColor(e.categorie)">
                     <div class="listMain">
                       <div class="listName">{{ e.titre }}</div>
-                      <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ e.lieu }}</div>
+                      <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ displayAdresse(e) }}</div>
                     </div>
                     <div class="listRight">
                       <div class="tagsBubbles">
@@ -327,7 +327,7 @@
               <div class="sideMain">
                 <div class="listName">{{ e.titre }}</div>
                 <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }}</div>
-                <div class="eventMeta">{{ e.ville }} · {{ e.lieu }}</div>
+                <div class="eventMeta">{{ e.ville }} · {{ displayAdresse(e) }}</div>
                 @if ((e.caracteristiques ?? []).length > 0) {
                   <div class="tagsBubbles" style="margin-top: 4px;">
                     @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
@@ -356,7 +356,7 @@
               <div class="sideMain">
                 <div class="listName">{{ e.titre }}</div>
                 <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }}</div>
-                <div class="eventMeta">{{ e.ville }} · {{ e.lieu }}</div>
+                <div class="eventMeta">{{ e.ville }} · {{ displayAdresse(e) }}</div>
                 @if ((e.caracteristiques ?? []).length > 0) {
                   <div class="tagsBubbles" style="margin-top: 4px;">
                     @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
@@ -424,14 +424,25 @@
       </div>
 
       <label>
-        Ville
-        <input type="text" [(ngModel)]="newVille" name="newVille" />
+        Adresse
+        <input
+          type="text"
+          [ngModel]="newAdresse"
+          (ngModelChange)="onNewAdresseInput($event)"
+          name="newAdresse"
+          (focus)="newAdresseSuggestOpen.set(true)"
+        />
       </label>
 
-      <label>
-        Lieu
-        <input type="text" [(ngModel)]="newLieu" name="newLieu" />
-      </label>
+      @if (newAdresseSuggestOpen() && newAdresseSuggestions().length > 0) {
+        <div class="suggest">
+          @for (f of newAdresseSuggestions(); track $index) {
+            <button class="suggestItem" type="button" (click)="chooseNewAdresseSuggestion(f)">
+              {{ newAdresseSuggestionLabel(f) }}
+            </button>
+          }
+        </div>
+      }
 
       <label>
         Caractéristiques (max 3)
@@ -493,14 +504,34 @@
       </label>
 
       <label class="field">
-        Ville
-        <input type="text" [(ngModel)]="ville" name="ville" />
+        Adresse
+        <input
+          type="text"
+          [ngModel]="adresse"
+          (ngModelChange)="onAdresseInput($event)"
+          name="adresse"
+          (focus)="adresseSuggestOpen.set(true)"
+        />
       </label>
 
-      <label class="field">
-        Lieu
-        <input type="text" [(ngModel)]="lieu" name="lieu" />
-      </label>
+      <div class="field span2">
+        <div style="font-weight: 700; margin-bottom: 4px;">Villes</div>
+        <div class="cities">
+          @for (c of cityButtons(); track c) {
+            <button class="cityBtn" type="button" (click)="pickCity(c)">{{ c }}</button>
+          }
+        </div>
+      </div>
+
+      @if (adresseSuggestOpen() && adresseSuggestions().length > 0) {
+        <div class="suggest span2">
+          @for (f of adresseSuggestions(); track $index) {
+            <button class="suggestItem" type="button" (click)="chooseAdresseSuggestion(f)">
+              {{ adresseSuggestionLabel(f) }}
+            </button>
+          }
+        </div>
+      }
 
       <label class="field">
         Catégorie

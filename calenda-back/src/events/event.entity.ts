@@ -44,6 +44,15 @@ export class Event {
   lieu!: string;
 
   @Column({ type: 'text', nullable: true })
+  adresse!: string | null;
+
+  @Column({ type: 'real', nullable: true })
+  latitude!: number | null;
+
+  @Column({ type: 'real', nullable: true })
+  longitude!: number | null;
+
+  @Column({ type: 'text', nullable: true })
   /** Thème (optionnel) utilisé pour l'UI. */
   theme!: string | null;
 
