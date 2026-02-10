@@ -4,24 +4,168 @@
   } @else {
     <a class="back" routerLink="/calendar">Retour</a>
 
+    @if (!editing() && canEdit()) {
+      <div class="editTop">
+        <button class="btn" type="button" (click)="startEdit()">Modifier</button>
+      </div>
+    }
+
+    @if (editing()) {
+      <div class="editBar">
+        <div class="editBarLeft">
+          <strong>Mode modification</strong>
+        </div>
+        <div class="editBarActions">
+          <button class="btn" type="button" (click)="cancelEdit()" [disabled]="saving()">Annuler</button>
+          <button class="btn" type="button" (click)="saveEdit()" [disabled]="saving()">
+            @if (saving()) { Enregistrement… } @else { Enregistrer }
+          </button>
+        </div>
+      </div>
+
+      @if (saveError()) {
+        <div class="editError">Erreur: {{ saveError() }}</div>
+      }
+    }
+
     <img class="hero" [src]="imageUrlFor(event()!)" alt="" loading="lazy" />
 
-    <h1>{{ event()!.titre }}</h1>
-    <div class="meta">
-      {{ event()!.categorie }} · {{ event()!.ville }} · {{ event()!.lieu }}
-    </div>
-    <div class="meta">
-      {{ event()!.dateDebut | date: 'short' }} → {{ event()!.dateFin | date: 'short' }}
-    </div>
+    @if (!editing()) {
+      <h1>{{ event()!.titre }}</h1>
+      <div class="meta">
+        {{ event()!.categorie }} · {{ event()!.ville }} · {{ event()!.lieu }}
+      </div>
+      <div class="meta">
+        {{ event()!.dateDebut | date: 'short' }} → {{ event()!.dateFin | date: 'short' }}
+      </div>
 
-    <div class="meta tarif">Tarif: {{ event()!.tarif ?? 'Non renseigné' }}</div>
+      <div class="meta">Organisateur: {{ event()!.organisateur?.pseudo ?? 'Organisateur non mentionné' }}</div>
 
-    <p class="desc">{{ event()!.description }}</p>
+      <div class="meta tarif">Tarif: {{ event()!.tarif ?? 'Non renseigné' }}</div>
 
-    <div class="actions">
-      <button class="btn" type="button" (click)="like()" [disabled]="!canLike()">Like</button>
-      <a class="btn" routerLink="/favorites">Voir mes favoris</a>
-    </div>
+      @if (caracteristiqueBubbles().length > 0) {
+        <div class="tagsBubbles" style="margin-top: 6px;">
+          @for (b of caracteristiqueBubbles(); track b.tag) {
+            <span class="tagBubbleMini" [title]="b.tag">{{ b.icon }} {{ b.tag }}</span>
+          }
+        </div>
+      }
+
+      <p class="desc">{{ event()!.description }}</p>
+
+      <div class="actions">
+        <button class="btn" type="button" (click)="like()" [disabled]="!canLike()">Like</button>
+        <a class="btn" routerLink="/favorites">Voir mes favoris</a>
+      </div>
+    } @else {
+      <div class="editForm">
+        <label class="field">
+          Titre
+          <input type="text" [ngModel]="draft()!.titre" (ngModelChange)="setDraft({ titre: $event })" />
+        </label>
+
+        <label class="field">
+          Catégorie
+          <select [ngModel]="draft()!.categorie" (ngModelChange)="setDraft({ categorie: $event })">
+            @for (c of categories; track c) {
+              <option [ngValue]="c">{{ c }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="row2">
+          <label class="field">
+            Ville
+            <input type="text" [ngModel]="draft()!.ville" (ngModelChange)="setDraft({ ville: $event })" />
+          </label>
+          <label class="field">
+            Lieu / adresse
+            <input type="text" [ngModel]="draft()!.lieu" (ngModelChange)="setDraft({ lieu: $event })" />
+          </label>
+        </div>
+
+        <div class="row2">
+          <label class="field">
+            Début
+            <input
+              type="datetime-local"
+              [ngModel]="draft()!.dateDebutLocal"
+              (ngModelChange)="setDraft({ dateDebutLocal: $event })"
+            />
+          </label>
+          <label class="field">
+            Fin
+            <input
+              type="datetime-local"
+              [ngModel]="draft()!.dateFinLocal"
+              (ngModelChange)="setDraft({ dateFinLocal: $event })"
+            />
+          </label>
+        </div>
+
+        <label class="field">
+          Description
+          <textarea
+            rows="8"
+            [ngModel]="draft()!.description"
+            (ngModelChange)="setDraft({ description: $event })"
+          ></textarea>
+        </label>
+
+        <label class="field">
+          Tarif
+          <textarea rows="3" [ngModel]="draft()!.tarif" (ngModelChange)="setDraft({ tarif: $event })"></textarea>
+        </label>
+
+        @if (isAdmin()) {
+          <label class="field">
+            Compte organisateur (admin)
+            <select [ngModel]="draft()!.organisateurId" (ngModelChange)="onOrganizerSelected($event)">
+              <option value="">(ne pas changer)</option>
+              @for (o of organizers(); track o.id) {
+                <option [value]="o.id">{{ o.pseudo }} ({{ o.email }})</option>
+              }
+            </select>
+          </label>
+
+          <div class="row2">
+            <label class="field inline">
+              <input
+                type="checkbox"
+                [ngModel]="draft()!.public"
+                (ngModelChange)="setDraft({ public: $event })"
+              />
+              Public
+            </label>
+            <label class="field inline">
+              <input
+                type="checkbox"
+                [ngModel]="draft()!.enAvant"
+                (ngModelChange)="setDraft({ enAvant: $event })"
+              />
+              Mis en avant
+            </label>
+          </div>
+        }
+
+        <div class="field">
+          Tags (max 3)
+          <div class="tags">
+            @for (t of tags; track t) {
+              <button
+                class="tag"
+                type="button"
+                [class.active]="(draft()!.caracteristiques ?? []).includes(t)"
+                [disabled]="(draft()!.caracteristiques ?? []).length >= 3 && !(draft()!.caracteristiques ?? []).includes(t)"
+                (click)="toggleTag(t)"
+              >
+                {{ tagIcon(t) }} {{ t }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    }
 
     <h2>Événements similaires</h2>
     @if (similar().length === 0) {

@@ -18,6 +18,17 @@
       <a class="iconBtn" routerLink="/favorites" aria-label="Favoris">♥</a>
 
       @if (isAdmin()) {
+        <a
+          class="iconBtn"
+          routerLink="/admin/accounts"
+          aria-label="Gérer les comptes"
+          title="Gérer les comptes"
+        >
+          👤
+        </a>
+      }
+
+      @if (isAdmin()) {
         <a class="iconBtn" routerLink="/admin/pending-events" aria-label="Admin">
           🔔
           @if (pendingCount() > 0) {

@@ -154,9 +154,9 @@
                       </div>
                     </div>
                     <div class="listRight">
-                      <div class="tagsMini">
+                      <div class="tagsBubbles">
                         @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
-                          <span class="tagMini" [title]="t">{{ tagIcon(t) }}</span>
+                          <span class="tagBubbleMini" [title]="t">{{ tagIcon(t) }} {{ t }}</span>
                         }
                       </div>
                       <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
@@ -272,9 +272,9 @@
                       <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ e.lieu }}</div>
                     </div>
                     <div class="listRight">
-                      <div class="tagsMini">
+                      <div class="tagsBubbles">
                         @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
-                          <span class="tagMini" [title]="t">{{ tagIcon(t) }}</span>
+                          <span class="tagBubbleMini" [title]="t">{{ tagIcon(t) }} {{ t }}</span>
                         }
                       </div>
                       <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
@@ -328,6 +328,13 @@
                 <div class="listName">{{ e.titre }}</div>
                 <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }}</div>
                 <div class="eventMeta">{{ e.ville }} · {{ e.lieu }}</div>
+                @if ((e.caracteristiques ?? []).length > 0) {
+                  <div class="tagsBubbles" style="margin-top: 4px;">
+                    @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
+                      <span class="tagBubbleMini" [title]="t">{{ tagIcon(t) }} {{ t }}</span>
+                    }
+                  </div>
+                }
                 <div class="listText">{{ e.description }}</div>
               </div>
               <div class="sideActions">
@@ -350,6 +357,13 @@
                 <div class="listName">{{ e.titre }}</div>
                 <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }}</div>
                 <div class="eventMeta">{{ e.ville }} · {{ e.lieu }}</div>
+                @if ((e.caracteristiques ?? []).length > 0) {
+                  <div class="tagsBubbles" style="margin-top: 4px;">
+                    @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
+                      <span class="tagBubbleMini" [title]="t">{{ tagIcon(t) }} {{ t }}</span>
+                    }
+                  </div>
+                }
                 <div class="listText">{{ e.description }}</div>
               </div>
               <div class="sideActions">

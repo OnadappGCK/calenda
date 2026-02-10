@@ -117,10 +117,11 @@ export class EventsService {
 
   /** Récupère un événement par id (masque les non-public si non autorisé). */
   async findOne(id: string, user: RequestUser) {
-    const event = await this.eventsRepo.findOne({
-      where: { id },
-      relations: { favoritedBy: false },
-    });
+    const event = await this.eventsRepo
+      .createQueryBuilder('event')
+      .leftJoinAndSelect('event.organisateur', 'organisateur')
+      .where('event.id = :id', { id })
+      .getOne();
 
     if (!event) {
       throw new NotFoundException('event_not_found');
@@ -210,6 +211,21 @@ export class EventsService {
     if (dto.tarif !== undefined) {
       event.tarif = dto.tarif;
     }
+
+    if (dto.organisateurId !== undefined) {
+      if (role !== Role.ADMIN) {
+        throw new ForbiddenException('forbidden');
+      }
+      const newOrg = await this.usersRepo.findOne({ where: { id: dto.organisateurId } });
+      if (!newOrg) {
+        throw new NotFoundException('user_not_found');
+      }
+      if (newOrg.role !== Role.ORGANISATEUR) {
+        throw new ForbiddenException('organisateur_invalid');
+      }
+      event.organisateur = newOrg;
+    }
+
     if (dto.dateDebut !== undefined) event.dateDebut = new Date(dto.dateDebut);
     if (dto.dateFin !== undefined) event.dateFin = new Date(dto.dateFin);
     if (dto.couleur !== undefined) event.couleur = dto.couleur;

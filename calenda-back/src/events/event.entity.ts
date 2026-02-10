@@ -77,9 +77,9 @@ export class Event {
   /** Couleur custom (optionnel). */
   couleur!: string | null;
 
-  @ManyToOne(() => User, (user) => user.organizedEvents, { eager: true })
+  @ManyToOne(() => User, (user) => user.organizedEvents, { eager: true, nullable: true })
   /** Organisateur (relation n-1). */
-  organisateur!: User;
+  organisateur!: User | null;
 
   @ManyToMany(() => User, (user) => user.favorites)
   /** Utilisateurs ayant mis l'événement en favori (relation n-n). */

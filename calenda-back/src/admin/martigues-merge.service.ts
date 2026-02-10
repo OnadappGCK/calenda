@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
-import { Role } from '../common/enums/role.enum';
 import { Event } from '../events/event.entity';
 import { User } from '../users/user.entity';
 
@@ -100,26 +99,6 @@ export class MartiguesMergeService {
 
   async preview(options?: { pages?: number }): Promise<PreviewResult> {
     const pages = Math.max(1, Math.min(20, options?.pages ?? 2));
-
-    const organisateur = await this.usersRepo.findOne({ where: { role: Role.ADMIN } });
-    const fallbackOrganisateur = organisateur ?? (await this.usersRepo.findOne({ where: { role: Role.ORGANISATEUR } }));
-    if (!fallbackOrganisateur) {
-      return {
-        scannedPages: 0,
-        foundUrls: 0,
-        dedupedUrls: 0,
-        parsed: 0,
-        withImage: 0,
-        withDescription: 0,
-        wouldCreate: 0,
-        skippedExisting: 0,
-        skippedPast: 0,
-        failed: 1,
-        urls: [],
-        failures: [{ url: '', reason: 'no_organisateur' }],
-        debugSamples: [{ status: 'exception', url: '', reason: 'no_organisateur' }],
-      };
-    }
 
     let skippedExisting = 0;
     let failed = 0;
@@ -282,19 +261,6 @@ export class MartiguesMergeService {
   }
 
   async apply(payload: { urls: string[] }): Promise<ApplyResult> {
-    const organisateur = await this.usersRepo.findOne({ where: { role: Role.ADMIN } });
-    const fallbackOrganisateur = organisateur ?? (await this.usersRepo.findOne({ where: { role: Role.ORGANISATEUR } }));
-    if (!fallbackOrganisateur) {
-      return {
-        processed: 0,
-        created: 0,
-        skippedExisting: 0,
-        skippedPast: 0,
-        failed: 1,
-        debugSamples: [{ status: 'exception', url: '', reason: 'no_organisateur' }],
-      };
-    }
-
     const uniqueUrls = [...new Set(payload.urls ?? [])];
     let created = 0;
     let skippedExisting = 0;
@@ -374,7 +340,7 @@ export class MartiguesMergeService {
           couleur: null,
           enAvant: false,
           public: false,
-          organisateur: fallbackOrganisateur,
+          organisateur: null,
         });
 
         await this.eventsRepo.save(ev);
@@ -763,6 +729,8 @@ export class MartiguesMergeService {
 
     const tarif = this.extractTarifText(html) ?? 'Non renseigné';
 
+    const pageText = this.htmlToText(html);
+
     const startMicro = this.matchItemPropContent(html, 'startDate');
     const endMicro = this.matchItemPropContent(html, 'endDate');
     const timeStart = this.matchDateTimeAttr(html);
@@ -823,7 +791,7 @@ export class MartiguesMergeService {
     }
 
     const ville = 'Martigues';
-    const localisationText = this.extractLocalisationTextFromPageText(this.htmlToText(html));
+    const localisationText = this.extractLocalisationTextFromPageText(pageText);
     const localisationFirstLine = (localisationText ?? '')
       .split('\n')
       .map((x) => x.trim())

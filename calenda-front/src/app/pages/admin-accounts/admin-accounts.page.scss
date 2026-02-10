@@ -1,0 +1,219 @@
+@use 'palette' as *;
+
+.wrap {
+  padding: 1rem;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  background: $surface-2;
+  border: 1px solid $border-1;
+  border-radius: 1rem;
+  padding: 0.75rem;
+}
+
+.topLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pageTitle {
+  font-weight: 900;
+  font-size: 1.15rem;
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.btnPrimary {
+  background: $text-1;
+  color: $surface-1;
+  border-color: $text-1;
+}
+
+.iconBtn {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.filters {
+  margin: 0.75rem 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field input,
+.field select {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  color: inherit;
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.6rem;
+}
+
+.empty {
+  border: 1px dashed $line-1;
+  border-radius: 1rem;
+  padding: 1rem;
+  background: $overlay-1b;
+  color: $text-muted-2;
+}
+
+.list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.row {
+  border: 1px solid $border-1;
+  border-radius: 1rem;
+  background: $surface-1;
+  padding: 0.75rem;
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid $border-2;
+  background: $overlay-2;
+}
+
+.main {
+  min-width: 0;
+}
+
+.line1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pseudo {
+  font-weight: 900;
+}
+
+.role {
+  font-weight: 900;
+  color: $text-muted-2;
+}
+
+.line2,
+.line3 {
+  color: $text-muted-3;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: $backdrop-1;
+}
+
+.modal {
+  position: fixed;
+  top: 10vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(780px, 94vw);
+  max-height: 80vh;
+  overflow: auto;
+  border: 1px solid $border-2;
+  border-radius: 1rem;
+  background: $bg-app;
+  padding: 1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.imgPreview {
+  border: 1px solid $border-1;
+  border-radius: 1rem;
+  padding: 0.75rem;
+  background: $overlay-1;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: center;
+}
+
+.imgPreviewImg {
+  width: 92px;
+  height: 92px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid $border-2;
+  background: $overlay-2;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media screen and (max-width: 920px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .row {
+    grid-template-columns: 52px 1fr;
+  }
+}

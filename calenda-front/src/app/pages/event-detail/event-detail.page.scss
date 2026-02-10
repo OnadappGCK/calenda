@@ -23,9 +23,86 @@
   color: inherit;
 }
 
+.editTop {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.editBar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid $border-1;
+  border-radius: 0.75rem;
+  background: $surface-1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.editBarActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.editError {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid $border-1;
+  border-radius: 0.75rem;
+  background: $overlay-2;
+}
+
 .meta {
   color: $text-muted-4;
   font-size: 0.9rem;
+}
+
+.tagBubbles {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tagsBubbles {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tagBubbleMini {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  padding: 0.22rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.tagBubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid $border-1;
+  background: $surface-1;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.tagBubbleIcon {
+  width: 18px;
+  display: inline-flex;
+  justify-content: center;
 }
 
 .tarif {
@@ -52,6 +129,78 @@
   cursor: pointer;
   text-decoration: none;
   color: inherit;
+}
+
+.editForm {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border: 1px solid $border-1;
+  background: $surface-1;
+  color: inherit;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.6rem;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.row2 {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 720px) {
+  .row2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.field.inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.tag {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  color: inherit;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.tag.active {
+  background: $text-1;
+  color: $surface-1;
+  border-color: $text-1;
+}
+
+.tag:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .grid {

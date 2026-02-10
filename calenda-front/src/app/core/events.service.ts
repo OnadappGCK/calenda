@@ -30,7 +30,7 @@ export type EventDto = {
   public: boolean;
   enAvant: boolean;
   couleur: string | null;
-  organisateur: { id: string; pseudo: string; email: string; role: string };
+  organisateur: { id: string; pseudo: string; email: string; role: string } | null;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -75,5 +75,29 @@ export class EventsService {
     enAvant?: boolean;
   }) {
     return this.http.post<EventDto>(`${this.apiBaseUrl}/events`, payload);
+  }
+
+  /** Met à jour un événement (admin ou owner). */
+  update(
+    id: string,
+    payload: {
+      titre?: string;
+      description?: string;
+      categorie?: EventCategory;
+      ville?: string;
+      lieu?: string;
+      theme?: string | null;
+      caracteristiques?: EventTag[] | null;
+      imageUrl?: string | null;
+      tarif?: string | null;
+      organisateurId?: string;
+      dateDebut?: string;
+      dateFin?: string;
+      public?: boolean;
+      enAvant?: boolean;
+      couleur?: string | null;
+    },
+  ) {
+    return this.http.patch<EventDto>(`${this.apiBaseUrl}/events/${id}`, payload);
   }
 }

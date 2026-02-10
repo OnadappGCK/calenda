@@ -1,0 +1,220 @@
+<section class="wrap">
+  <div class="topbar">
+    <div class="topLeft">
+      <div class="pageTitle">Admin · Comptes</div>
+      <a class="btn" routerLink="/admin/pending-events">Événements en attente</a>
+    </div>
+
+    <div class="topRight">
+      <button class="btn btnPrimary" type="button" (click)="openCreate()">Créer un compte</button>
+      <button class="iconBtn" type="button" (click)="reload()" aria-label="Rafraîchir">↻</button>
+    </div>
+  </div>
+
+  <div class="filters">
+    <label class="field">
+      Recherche
+      <input type="text" [(ngModel)]="q" placeholder="email ou pseudo" />
+    </label>
+
+    <label class="field">
+      Rôle
+      <select [(ngModel)]="roleFilter">
+        <option value="">Tous</option>
+        <option value="ADMIN">ADMIN</option>
+        <option value="ORGANISATEUR">ORGANISATEUR</option>
+        <option value="UTILISATEUR">UTILISATEUR</option>
+      </select>
+    </label>
+
+    <label class="field">
+      Trier par
+      <select [(ngModel)]="sortKey">
+        <option value="pseudo">Pseudo</option>
+        <option value="email">Email</option>
+        <option value="role">Rôle</option>
+        <option value="createdAt">Création</option>
+      </select>
+    </label>
+
+    <label class="field">
+      Sens
+      <select [(ngModel)]="sortDir">
+        <option value="asc">A → Z</option>
+        <option value="desc">Z → A</option>
+      </select>
+    </label>
+  </div>
+
+  @if (loading()) {
+    <div class="empty">Chargement…</div>
+  } @else if (error()) {
+    <div class="empty">Erreur: {{ error() }}</div>
+  } @else {
+    @if (filteredSorted().length === 0) {
+      <div class="empty">Aucun compte.</div>
+    } @else {
+      <div class="list">
+        @for (u of filteredSorted(); track u.id) {
+          <div class="row">
+            <img class="avatar" [src]="profileImageUrl(u.profileImage)" alt="" />
+            <div class="main">
+              <div class="line1">
+                <span class="pseudo">{{ u.pseudo }}</span>
+                <span class="role">{{ u.role }}</span>
+              </div>
+              <div class="line2">{{ u.email }}</div>
+              <div class="line3">{{ u.ville }} · {{ u.lieu }}</div>
+            </div>
+            <div class="actions">
+              <button class="btn" type="button" (click)="openEdit(u)">Modifier</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+</section>
+
+@if (showCreate()) {
+  <div class="modalBackdrop" (click)="closeCreate()"></div>
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h2>Créer un compte</h2>
+
+    <div class="grid">
+      <label class="field">
+        Rôle
+        <select [ngModel]="create().role" (ngModelChange)="onCreateRoleChange($event)">
+          <option value="ORGANISATEUR">ORGANISATEUR</option>
+          <option value="ADMIN">ADMIN</option>
+          <option value="UTILISATEUR">UTILISATEUR</option>
+        </select>
+      </label>
+
+      <label class="field">
+        Email
+        <input type="email" [ngModel]="create().email" (ngModelChange)="create.set({ ...create(), email: $event })" />
+      </label>
+
+      <label class="field">
+        Pseudo
+        <input type="text" [ngModel]="create().pseudo" (ngModelChange)="create.set({ ...create(), pseudo: $event })" />
+      </label>
+
+      <label class="field">
+        Ville
+        <input type="text" [ngModel]="create().ville" (ngModelChange)="create.set({ ...create(), ville: $event })" />
+      </label>
+
+      <label class="field">
+        Lieu
+        <input type="text" [ngModel]="create().lieu" (ngModelChange)="create.set({ ...create(), lieu: $event })" />
+      </label>
+
+      <label class="field">
+        Photo de profil
+        <select [ngModel]="create().profileImage" (ngModelChange)="create.set({ ...create(), profileImage: $event })">
+          @for (img of allowedImagesFor(create().role); track img) {
+            <option [value]="img">{{ img }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="imgPreview">
+        <div class="imgPreviewLabel">Aperçu</div>
+        <img class="imgPreviewImg" [src]="profileImageUrl(create().profileImage)" alt="" />
+      </div>
+
+      <label class="field">
+        Mot de passe
+        <input type="password" [ngModel]="create().password" (ngModelChange)="create.set({ ...create(), password: $event })" />
+      </label>
+
+      <label class="field">
+        Confirmation
+        <input
+          type="password"
+          [ngModel]="create().passwordConfirmation"
+          (ngModelChange)="create.set({ ...create(), passwordConfirmation: $event })"
+        />
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="btn btnPrimary" type="button" (click)="submitCreate()">Créer</button>
+      <button class="btn" type="button" (click)="closeCreate()">Annuler</button>
+    </div>
+  </div>
+}
+
+@if (showEdit() && edit()) {
+  <div class="modalBackdrop" (click)="closeEdit()"></div>
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h2>Modifier un compte</h2>
+
+    <div class="grid">
+      <label class="field">
+        Rôle
+        <select [ngModel]="edit()!.role" (ngModelChange)="onEditRoleChange($event)">
+          <option value="ORGANISATEUR">ORGANISATEUR</option>
+          <option value="ADMIN">ADMIN</option>
+          <option value="UTILISATEUR">UTILISATEUR</option>
+        </select>
+      </label>
+
+      <label class="field">
+        Email
+        <input type="email" [ngModel]="edit()!.email" (ngModelChange)="edit.set({ ...edit()!, email: $event })" />
+      </label>
+
+      <label class="field">
+        Pseudo
+        <input type="text" [ngModel]="edit()!.pseudo" (ngModelChange)="edit.set({ ...edit()!, pseudo: $event })" />
+      </label>
+
+      <label class="field">
+        Ville
+        <input type="text" [ngModel]="edit()!.ville" (ngModelChange)="edit.set({ ...edit()!, ville: $event })" />
+      </label>
+
+      <label class="field">
+        Lieu
+        <input type="text" [ngModel]="edit()!.lieu" (ngModelChange)="edit.set({ ...edit()!, lieu: $event })" />
+      </label>
+
+      <label class="field">
+        Photo de profil
+        <select [ngModel]="edit()!.profileImage" (ngModelChange)="edit.set({ ...edit()!, profileImage: $event })">
+          <option value="">(aucune)</option>
+          @for (img of allowedImagesFor(edit()!.role); track img) {
+            <option [value]="img">{{ img }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="imgPreview">
+        <div class="imgPreviewLabel">Aperçu</div>
+        <img class="imgPreviewImg" [src]="profileImageUrl(edit()!.profileImage)" alt="" />
+      </div>
+
+      <label class="field">
+        Nouveau mot de passe
+        <input type="password" [ngModel]="edit()!.password" (ngModelChange)="edit.set({ ...edit()!, password: $event })" />
+      </label>
+
+      <label class="field">
+        Confirmation
+        <input
+          type="password"
+          [ngModel]="edit()!.passwordConfirmation"
+          (ngModelChange)="edit.set({ ...edit()!, passwordConfirmation: $event })"
+        />
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="btn btnPrimary" type="button" (click)="submitEdit()">Enregistrer</button>
+      <button class="btn" type="button" (click)="closeEdit()">Annuler</button>
+    </div>
+  </div>
+}

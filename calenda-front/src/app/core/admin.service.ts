@@ -9,6 +9,56 @@ export class AdminService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = inject(API_BASE_URL);
 
+  users(params?: { q?: string; role?: string }) {
+    const query: Record<string, string> = {};
+    const q = (params?.q ?? '').trim();
+    const role = (params?.role ?? '').trim();
+    if (q) query['q'] = q;
+    if (role) query['role'] = role;
+    return this.http.get<
+      {
+        id: string;
+        email: string;
+        pseudo: string;
+        ville: string;
+        lieu: string;
+        role: string;
+        profileImage: string | null;
+        createdAt: string;
+        updatedAt: string;
+      }[]
+    >(`${this.apiBaseUrl}/admin/users`, { params: query });
+  }
+
+  createUser(payload: {
+    email: string;
+    pseudo: string;
+    ville: string;
+    lieu: string;
+    role?: string;
+    profileImage?: string;
+    password: string;
+    passwordConfirmation: string;
+  }) {
+    return this.http.post(`${this.apiBaseUrl}/admin/users`, payload);
+  }
+
+  updateUser(
+    id: string,
+    payload: {
+      email?: string;
+      pseudo?: string;
+      ville?: string;
+      lieu?: string;
+      role?: string;
+      profileImage?: string | null;
+      password?: string;
+      passwordConfirmation?: string;
+    },
+  ) {
+    return this.http.patch(`${this.apiBaseUrl}/admin/users/${id}`, payload);
+  }
+
   /** Liste les événements en attente de validation (admin). */
   pendingEvents() {
     return this.http.get<EventDto[]>(`${this.apiBaseUrl}/admin/pending-events`);
@@ -22,6 +72,13 @@ export class AdminService {
   /** Supprime un événement (admin). */
   deleteEvent(id: string) {
     return this.http.delete(`${this.apiBaseUrl}/admin/events/${id}`);
+  }
+
+  /** Liste les profils organisateurs (admin). */
+  organizers() {
+    return this.http.get<{ id: string; pseudo: string; email: string; role: string }[]>(
+      `${this.apiBaseUrl}/admin/organizers`,
+    );
   }
 
   mergeMartigues(params?: { pages?: number; dryRun?: boolean }) {

@@ -461,6 +461,14 @@
   gap: 2px;
 }
 
+.tagsBubbles {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .eventBlock .tagsMini {
   gap: 1px;
 }
@@ -475,6 +483,16 @@
   justify-content: center;
   font-weight: 900;
   font-size: 0.85rem;
+}
+
+.tagBubbleMini {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  padding: 0.22rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 0.75rem;
+  line-height: 1;
 }
 
 .eventBlock .tagMini {
@@ -712,14 +730,6 @@
 
 .sideMain {
   min-width: 0;
-}
-
-.sideActions {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .dayStack {

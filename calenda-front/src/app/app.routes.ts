@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { requireAdminGuard, requireAuthGuard } from './core/auth.guards';
 import { AdminPendingPage } from './pages/admin-pending/admin-pending.page';
+import { AdminAccountsPage } from './pages/admin-accounts/admin-accounts.page';
 import { CalendarPage } from './pages/calendar/calendar.page';
 import { EventDetailPage } from './pages/event-detail/event-detail.page';
 import { FavoritesPage } from './pages/favorites/favorites.page';
@@ -23,5 +24,6 @@ export const routes: Routes = [
   { path: 'favorites', component: FavoritesPage, canActivate: [requireAuthGuard] },
   { path: 'profile', component: ProfilePage, canActivate: [requireAuthGuard] },
   { path: 'admin/pending-events', component: AdminPendingPage, canActivate: [requireAdminGuard] },
+  { path: 'admin/accounts', component: AdminAccountsPage, canActivate: [requireAdminGuard] },
   { path: '**', redirectTo: '' },
 ];
