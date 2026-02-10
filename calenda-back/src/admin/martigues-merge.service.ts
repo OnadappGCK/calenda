@@ -331,6 +331,9 @@ export class MartiguesMergeService {
           origin: EventOrigin.MARTIGUES_SITE,
           ville: detail.ville,
           lieu: detail.lieu,
+          adresse: detail.adresse,
+          latitude: detail.latitude,
+          longitude: detail.longitude,
           theme: null,
           caracteristiques: null,
           imageUrl: detail.imageUrl,
@@ -701,6 +704,9 @@ export class MartiguesMergeService {
       dateFin: Date;
       ville: string;
       lieu: string;
+      adresse: string | null;
+      latitude: number | null;
+      longitude: number | null;
       categorie: EventCategory;
     };
     reason: string;
@@ -792,16 +798,39 @@ export class MartiguesMergeService {
 
     const ville = 'Martigues';
     const localisationText = this.extractLocalisationTextFromPageText(pageText);
+    const localisationLines = (localisationText ?? '')
+      .split('\n')
+      .map((x) => x.trim())
+      .filter(Boolean);
     const localisationFirstLine = (localisationText ?? '')
       .split('\n')
       .map((x) => x.trim())
       .filter(Boolean)[0];
+
     const lieu =
       this.decodeHtml(jsonLd?.locationName ?? '') ||
       localisationFirstLine ||
       this.extractLieu(html) ||
       this.decodeHtml(jsonLd?.addressLocality ?? '') ||
       'Martigues';
+
+    const street = this.decodeHtml(jsonLd?.streetAddress ?? '') || '';
+    const postal = this.decodeHtml(jsonLd?.postalCode ?? '') || '';
+    const locality = this.decodeHtml(jsonLd?.addressLocality ?? '') || '';
+    const addrCityLine = [postal, locality].filter(Boolean).join(' ').trim();
+    const adresseFromJsonLd = [street, addrCityLine].filter(Boolean).join(', ').trim();
+
+    const geoFromHtml = this.extractGeoFromHtml(html);
+    const latitude = jsonLd?.latitude ?? geoFromHtml?.lat ?? null;
+    const longitude = jsonLd?.longitude ?? geoFromHtml?.lon ?? null;
+
+    const adresseFallback =
+      localisationLines.length > 1
+        ? localisationLines.slice(1).join(', ').trim()
+        : localisationLines.length === 1
+          ? localisationLines[0]
+          : '';
+    const adresse = (adresseFromJsonLd || adresseFallback || lieu || 'Martigues').trim() || null;
 
     const categorie = this.guessCategory(sourceUrl, titre);
 
@@ -827,6 +856,9 @@ export class MartiguesMergeService {
         dateFin,
         ville,
         lieu,
+        adresse,
+        latitude: typeof latitude === 'number' ? latitude : null,
+        longitude: typeof longitude === 'number' ? longitude : null,
         categorie,
       },
       reason: 'ok',
@@ -845,6 +877,60 @@ export class MartiguesMergeService {
       if (typeof anyV.url === 'string') return anyV.url;
     }
     return null;
+  }
+
+  private parseNumberLike(v: unknown): number | null {
+    if (typeof v === 'number') {
+      return Number.isFinite(v) ? v : null;
+    }
+    if (typeof v === 'string') {
+      const n = Number(String(v).trim().replace(',', '.'));
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  }
+
+  private extractGeoFromHtml(html: string): { lat: number; lon: number } | null {
+    const src = html ?? '';
+
+    const markerRe = /[?&]marker=([-\d.]+)[,%2C]+([-\d.]+)/i;
+    const mm = markerRe.exec(src);
+    if (mm?.[1] && mm?.[2]) {
+      const lat = this.parseNumberLike(mm[1]);
+      const lon = this.parseNumberLike(mm[2]);
+      if (typeof lat === 'number' && typeof lon === 'number' && this.isPlausibleLatLon(lat, lon)) {
+        return { lat, lon };
+      }
+    }
+
+    const dataRe = /data-(?:lat|latitude)=["']([-\d.]+)["'][^>]{0,200}data-(?:lon|lng|longitude)=["']([-\d.]+)["']/i;
+    const dm = dataRe.exec(src);
+    if (dm?.[1] && dm?.[2]) {
+      const lat = this.parseNumberLike(dm[1]);
+      const lon = this.parseNumberLike(dm[2]);
+      if (typeof lat === 'number' && typeof lon === 'number' && this.isPlausibleLatLon(lat, lon)) {
+        return { lat, lon };
+      }
+    }
+
+    const leafRe = /\[\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\]/g;
+    let m: RegExpExecArray | null;
+    while ((m = leafRe.exec(src))) {
+      const lat = this.parseNumberLike(m[1]);
+      const lon = this.parseNumberLike(m[2]);
+      if (typeof lat === 'number' && typeof lon === 'number' && this.isPlausibleLatLon(lat, lon)) {
+        return { lat, lon };
+      }
+    }
+
+    return null;
+  }
+
+  private isPlausibleLatLon(lat: number, lon: number) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
+    if (lat < -90 || lat > 90) return false;
+    if (lon < -180 || lon > 180) return false;
+    return true;
   }
 
   private parseAnyDateTime(v: unknown): Date | null {
@@ -1060,6 +1146,10 @@ export class MartiguesMergeService {
     endDate?: string;
     locationName?: string;
     addressLocality?: string;
+    streetAddress?: string;
+    postalCode?: string;
+    latitude?: number;
+    longitude?: number;
   } | null {
     const blocks = this.extractJsonLdBlocks(html);
     for (const block of blocks) {
@@ -1068,6 +1158,7 @@ export class MartiguesMergeService {
 
       const loc = (ev.location ?? null) as any;
       const addr = (loc?.address ?? null) as any;
+      const geo = (loc?.geo ?? loc?.hasGeo ?? null) as any;
 
       const locationName = typeof loc?.name === 'string' ? loc.name : undefined;
       const addressLocality =
@@ -1077,6 +1168,12 @@ export class MartiguesMergeService {
             ? addr.addressRegion
             : undefined;
 
+      const streetAddress = typeof addr?.streetAddress === 'string' ? addr.streetAddress : undefined;
+      const postalCode = typeof addr?.postalCode === 'string' ? addr.postalCode : undefined;
+
+      const latitude = this.parseNumberLike(geo?.latitude ?? geo?.lat);
+      const longitude = this.parseNumberLike(geo?.longitude ?? geo?.lon ?? geo?.lng);
+
       return {
         name: typeof ev.name === 'string' ? ev.name : undefined,
         description: typeof ev.description === 'string' ? ev.description : undefined,
@@ -1085,6 +1182,10 @@ export class MartiguesMergeService {
         endDate: typeof ev.endDate === 'string' ? ev.endDate : undefined,
         locationName,
         addressLocality,
+        streetAddress,
+        postalCode,
+        latitude: typeof latitude === 'number' ? latitude : undefined,
+        longitude: typeof longitude === 'number' ? longitude : undefined,
       };
     }
     return null;
