@@ -70,9 +70,9 @@ export class Event {
   /** Date/heure de début. */
   dateDebut!: Date;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'datetime', nullable: true })
   /** Date/heure de fin. */
-  dateFin!: Date;
+  dateFin!: Date | null;
 
   @Column({ default: false })
   /** Indique si l'événement est public (visible pour tous). */

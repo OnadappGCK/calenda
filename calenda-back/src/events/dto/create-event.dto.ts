@@ -62,8 +62,9 @@ export class CreateEventDto {
   dateDebut!: string;
 
   /** Date/heure de fin (ISO). */
+  @IsOptional()
   @IsDateString()
-  dateFin!: string;
+  dateFin?: string | null;
 
   /** Public (réservé à l'admin côté service). */
   @IsOptional()

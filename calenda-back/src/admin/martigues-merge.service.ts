@@ -39,7 +39,7 @@ type PreviewResult = {
     reason?: string;
     titre?: string;
     dateDebut?: string;
-    dateFin?: string;
+    dateFin?: string | null;
     image?: boolean;
     descLen?: number;
   }[];
@@ -57,7 +57,7 @@ type ApplyResult = {
     reason?: string;
     titre?: string;
     dateDebut?: string;
-    dateFin?: string;
+    dateFin?: string | null;
   }[];
 };
 
@@ -141,7 +141,8 @@ export class MartiguesMergeService {
 
         parsed++;
 
-        if (detail.dateFin < now) {
+        const endForPast = this.effectiveEndForPastCheck(detail.dateDebut, detail.dateFin);
+        if (endForPast < now) {
           skippedPast++;
 
           if (debugSamples.length < 20) {
@@ -150,7 +151,7 @@ export class MartiguesMergeService {
               url: sourceUrl,
               titre: detail.titre,
               dateDebut: detail.dateDebut.toISOString(),
-              dateFin: detail.dateFin.toISOString(),
+              dateFin: detail.dateFin ? detail.dateFin.toISOString() : null,
               image: !!detail.imageUrl,
               descLen: (detail.description ?? '').length,
             });
@@ -159,7 +160,7 @@ export class MartiguesMergeService {
           if (sampleLogged < 10) {
             sampleLogged++;
             this.logger.log(
-              `martigues_detail_sample status=past url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()}`,
+              `martigues_detail_sample status=past url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin ? detail.dateFin.toISOString() : 'null'}`,
             );
           }
           continue;
@@ -192,7 +193,7 @@ export class MartiguesMergeService {
               url: sourceUrl,
               titre: detail.titre,
               dateDebut: detail.dateDebut.toISOString(),
-              dateFin: detail.dateFin.toISOString(),
+              dateFin: detail.dateFin ? detail.dateFin.toISOString() : null,
               image: !!detail.imageUrl,
               descLen: (detail.description ?? '').length,
             });
@@ -201,7 +202,7 @@ export class MartiguesMergeService {
           if (sampleLogged < 10) {
             sampleLogged++;
             this.logger.log(
-              `martigues_detail_sample status=existing url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()}`,
+              `martigues_detail_sample status=existing url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin ? detail.dateFin.toISOString() : 'null'}`,
             );
           }
           continue;
@@ -216,7 +217,7 @@ export class MartiguesMergeService {
             url: sourceUrl,
             titre: detail.titre,
             dateDebut: detail.dateDebut.toISOString(),
-            dateFin: detail.dateFin.toISOString(),
+            dateFin: detail.dateFin ? detail.dateFin.toISOString() : null,
             image: !!detail.imageUrl,
             descLen: (detail.description ?? '').length,
           });
@@ -225,7 +226,7 @@ export class MartiguesMergeService {
         if (sampleLogged < 10) {
           sampleLogged++;
           this.logger.log(
-            `martigues_detail_sample status=addable url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()} image=${detail.imageUrl ? 1 : 0} descLen=${(detail.description ?? '').length}`,
+            `martigues_detail_sample status=addable url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin ? detail.dateFin.toISOString() : 'null'} image=${detail.imageUrl ? 1 : 0} descLen=${(detail.description ?? '').length}`,
           );
         }
       } catch {
@@ -287,13 +288,14 @@ export class MartiguesMergeService {
           continue;
         }
 
-        if (detail.dateFin < now) {
+        const endForPast = this.effectiveEndForPastCheck(detail.dateDebut, detail.dateFin);
+        if (endForPast < now) {
           skippedPast++;
 
           if (sampleLogged < 10) {
             sampleLogged++;
             this.logger.log(
-              `martigues_apply_sample status=past url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()}`,
+              `martigues_apply_sample status=past url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin ? detail.dateFin.toISOString() : 'null'}`,
             );
           }
           continue;
@@ -318,7 +320,7 @@ export class MartiguesMergeService {
           if (sampleLogged < 10) {
             sampleLogged++;
             this.logger.log(
-              `martigues_apply_sample status=existing url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()}`,
+              `martigues_apply_sample status=existing url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin ? detail.dateFin.toISOString() : 'null'}`,
             );
           }
           continue;
@@ -355,14 +357,14 @@ export class MartiguesMergeService {
             url: sourceUrl,
             titre: detail.titre,
             dateDebut: detail.dateDebut.toISOString(),
-            dateFin: detail.dateFin.toISOString(),
+            dateFin: detail.dateFin ? detail.dateFin.toISOString() : null,
           });
         }
 
         if (sampleLogged < 10) {
           sampleLogged++;
           this.logger.log(
-            `martigues_apply_sample status=created url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin.toISOString()}`,
+            `martigues_apply_sample status=created url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin ? detail.dateFin.toISOString() : 'null'}`,
           );
         }
       } catch {
@@ -616,6 +618,50 @@ export class MartiguesMergeService {
     return null;
   }
 
+  private matchFirstGroup(html: string, re: RegExp) {
+    const m = re.exec(html ?? '');
+    return m?.[1] ? this.decodeHtml(m[1]).trim() : null;
+  }
+
+  private extractAddressFromHtml(html: string): {
+    salle: string | null;
+    ligne1: string | null;
+    codePostal: string | null;
+    ville: string | null;
+  } | null {
+    const src = html ?? '';
+
+    const salle = this.matchFirstGroup(
+      src,
+      /<div[^>]+class=['"][^'"]*\bsalle\b[^'"]*['"][\s\S]*?<span[^>]+class=['"][^'"]*\blibelle-salle\b[^'"]*['"][^>]*>([^<]+)<\/span>/i,
+    );
+
+    const ligne1 = this.matchFirstGroup(
+      src,
+      /<div[^>]+class=['"][^'"]*\bAdresse-LigneAdresse1\b[^'"]*['"][\s\S]*?<span[^>]+class=['"][^'"]*\bvaleur\b[^'"]*['"][^>]*>([^<]+)<\/span>/i,
+    );
+
+    const codePostal = this.matchFirstGroup(
+      src,
+      /<div[^>]+class=['"][^'"]*\bAdresse-CodePostal\b[^'"]*['"][\s\S]*?<span[^>]+class=['"][^'"]*\bvaleur\b[^'"]*['"][^>]*>([^<]+)<\/span>/i,
+    );
+
+    const ville = this.matchFirstGroup(
+      src,
+      /<div[^>]+class=['"][^'"]*\bAdresse-Ville\b[^'"]*['"][\s\S]*?<span[^>]+class=['"][^'"]*\bvaleur\b[^'"]*['"][^>]*>([^<]+)<\/span>/i,
+    );
+
+    const cleaned = {
+      salle: salle && !this.isNoiseLine(salle) ? salle : null,
+      ligne1: ligne1 && !this.isNoiseLine(ligne1) ? ligne1 : null,
+      codePostal: codePostal ? codePostal.replace(/\s+/g, '').trim() : null,
+      ville: ville && !this.isNoiseLine(ville) ? ville : null,
+    };
+
+    if (!cleaned.salle && !cleaned.ligne1 && !cleaned.codePostal && !cleaned.ville) return null;
+    return cleaned;
+  }
+
   private extractPresentationTextFromPageText(pageText: string) {
     return this.extractTextBetweenHeadings(pageText, 'Présentation', [
       "Période(s) d'ouverture",
@@ -701,7 +747,7 @@ export class MartiguesMergeService {
       imageUrl: string | null;
       tarif: string | null;
       dateDebut: Date;
-      dateFin: Date;
+      dateFin: Date | null;
       ville: string;
       lieu: string;
       adresse: string | null;
@@ -733,7 +779,7 @@ export class MartiguesMergeService {
     const ogImage = this.matchMeta(html, 'og:image');
     const imageUrl = (this.firstString(jsonLd?.image) ?? ogImage ?? null)?.trim() || null;
 
-    const tarif = this.extractTarifText(html) ?? 'Non renseigné';
+    const tarif = this.cleanTarifText(this.extractTarifText(html)) ?? 'Non renseigné';
 
     const pageText = this.htmlToText(html);
 
@@ -768,13 +814,14 @@ export class MartiguesMergeService {
       plausible(this.extractFrenchSlashDate(html)) ??
       plausible(bestStart);
 
-    const dateFin =
+    let dateFin: Date | null =
       plausible(this.parseAnyDateTime(jsonLd?.endDate)) ??
       plausible(this.parseAnyDateTime(endMicro)) ??
       plausible(range?.end ?? null) ??
       plausible(this.extractEndDateTime(html, dateDebut)) ??
-      (dateDebut ? new Date(dateDebut.getTime() + 2 * 60 * 60 * 1000) : null);
-    if (!dateDebut || !dateFin) {
+      null;
+
+    if (!dateDebut) {
       const jsonldTypes = this.extractJsonLdTypes(html).join(',') || 'none';
       const startRaw = String(jsonLd?.startDate ?? '').slice(0, 80);
       const endRaw = String(jsonLd?.endDate ?? '').slice(0, 80);
@@ -798,21 +845,25 @@ export class MartiguesMergeService {
 
     const ville = 'Martigues';
     const localisationText = this.extractLocalisationTextFromPageText(pageText);
-    const localisationLines = (localisationText ?? '')
+    const localisationLinesRaw = (localisationText ?? '')
       .split('\n')
       .map((x) => x.trim())
       .filter(Boolean);
-    const localisationFirstLine = (localisationText ?? '')
-      .split('\n')
-      .map((x) => x.trim())
-      .filter(Boolean)[0];
+    const localisationLines = localisationLinesRaw.filter((l) => !this.isNoiseLine(l));
+    const localisationFirstLine = localisationLines[0] ?? null;
 
-    const lieu =
-      this.decodeHtml(jsonLd?.locationName ?? '') ||
-      localisationFirstLine ||
-      this.extractLieu(html) ||
+    const htmlAddress = this.extractAddressFromHtml(html);
+
+    const jsonLdPlaceName = this.decodeHtml(jsonLd?.locationName ?? '') || '';
+    const lieuFromHtml = this.extractLieu(html) ?? '';
+    const lieuCandidate =
+      (htmlAddress?.salle && !this.isNoiseLine(htmlAddress.salle) ? htmlAddress.salle : '') ||
+      (jsonLdPlaceName && !this.isNoiseLine(jsonLdPlaceName) ? jsonLdPlaceName : '') ||
+      (localisationFirstLine && !this.looksLikeAddressLine(localisationFirstLine) ? localisationFirstLine : '') ||
+      (lieuFromHtml && !this.isNoiseLine(lieuFromHtml) ? lieuFromHtml : '') ||
       this.decodeHtml(jsonLd?.addressLocality ?? '') ||
       'Martigues';
+    const lieu = (lieuCandidate || 'Martigues').trim();
 
     const street = this.decodeHtml(jsonLd?.streetAddress ?? '') || '';
     const postal = this.decodeHtml(jsonLd?.postalCode ?? '') || '';
@@ -820,21 +871,34 @@ export class MartiguesMergeService {
     const addrCityLine = [postal, locality].filter(Boolean).join(' ').trim();
     const adresseFromJsonLd = [street, addrCityLine].filter(Boolean).join(', ').trim();
 
+    const adresseFromHtml =
+      htmlAddress
+        ? [
+            htmlAddress.salle,
+            htmlAddress.ligne1,
+            [htmlAddress.codePostal, htmlAddress.ville].filter(Boolean).join(' ').trim(),
+          ]
+            .map((x) => (x ?? '').trim())
+            .filter(Boolean)
+            .join(', ')
+            .trim()
+        : '';
+
     const geoFromHtml = this.extractGeoFromHtml(html);
     const latitude = jsonLd?.latitude ?? geoFromHtml?.lat ?? null;
     const longitude = jsonLd?.longitude ?? geoFromHtml?.lon ?? null;
 
-    const adresseFallback =
-      localisationLines.length > 1
-        ? localisationLines.slice(1).join(', ').trim()
-        : localisationLines.length === 1
-          ? localisationLines[0]
-          : '';
-    const adresse = (adresseFromJsonLd || adresseFallback || lieu || 'Martigues').trim() || null;
+    const adresseLines =
+      localisationLines.length > 1 && !this.looksLikeAddressLine(localisationLines[0])
+        ? localisationLines.slice(1)
+        : localisationLines;
+
+    const adresseFallback = adresseLines.join(', ').trim();
+    const adresse = (adresseFromHtml || adresseFromJsonLd || adresseFallback || lieu || 'Martigues').trim() || null;
 
     const categorie = this.guessCategory(sourceUrl, titre);
 
-    if (!range && dateDebut && dateFin) {
+    if (!range && dateDebut) {
       const opening = this.extractOpeningHoursText(html);
       const hr = opening ? this.extractHoursRange(opening) : null;
       if (hr) {
@@ -842,7 +906,14 @@ export class MartiguesMergeService {
         const end = new Date(dateDebut);
         end.setHours(hr.end.hh, hr.end.mm, 0, 0);
         if (end <= dateDebut) end.setDate(end.getDate() + 1);
-        dateFin.setTime(end.getTime());
+        dateFin = end;
+      } else if (opening) {
+        const startOnly = this.extractTime(opening, /à\s*partir\s*de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)/i);
+        if (startOnly) {
+          dateDebut.setHours(startOnly.hh, startOnly.mm, 0, 0);
+          // no end time mentioned => keep dateFin null
+          dateFin = null;
+        }
       }
     }
 
@@ -863,6 +934,13 @@ export class MartiguesMergeService {
       },
       reason: 'ok',
     };
+  }
+
+  private effectiveEndForPastCheck(dateDebut: Date, dateFin: Date | null) {
+    if (dateFin) return dateFin;
+    const d = new Date(dateDebut);
+    d.setHours(23, 59, 59, 999);
+    return d;
   }
 
   private firstString(v: unknown): string | null {
@@ -888,6 +966,72 @@ export class MartiguesMergeService {
       return Number.isFinite(n) ? n : null;
     }
     return null;
+  }
+
+  private looksLikeAddressLine(line: string) {
+    const s = (line ?? '').trim();
+    if (!s) return false;
+    if (/\b\d{5}\b/.test(s)) return true;
+    if (/\b\d+\b/.test(s) && /(rue|avenue|av\.?|boulevard|bd\.?|place|chemin|route|impasse|all[ée]e)/i.test(s)) {
+      return true;
+    }
+    if (/(martigues|saint|st\.?)/i.test(s) && /\b\d{5}\b/.test(s)) return true;
+    return false;
+  }
+
+  private isNoiseLine(line: string) {
+    const s = (line ?? '').trim();
+    if (!s) return true;
+
+    const lower = s.toLowerCase();
+    if (lower === 'photos') return true;
+    if (lower === 'carte' || lower.startsWith('destination')) return true;
+    if (lower.startsWith('coordonnées gps') || lower.startsWith('coordonnees gps')) return true;
+    if (lower.startsWith('latitude') || lower.startsWith('longitude')) return true;
+    if (lower.startsWith('calculer') || lower.startsWith('voir ')) return true;
+    if (lower.startsWith('ajouter ') || lower.startsWith('supprimer ')) return true;
+    if (lower.includes('newsletter') || lower.includes('bons plans')) return true;
+    if (lower.startsWith('#')) return true;
+
+    if (lower === 'facebook' || lower === 'instagram' || lower === 'youtube' || lower === 'google +' || lower === 'tripadvisor') {
+      return true;
+    }
+
+    if (lower.includes('offices de tourisme') || lower.includes("office de tourisme") || lower.includes('martigues-tourisme')) {
+      return true;
+    }
+
+    if (/^https?:\/\//i.test(s)) return true;
+    if (/(^|\s)(e-mail|email)\b/i.test(s)) return true;
+    if (/(^|\s)(t[ée]l|tel)\b/i.test(s)) return true;
+
+    return false;
+  }
+
+  private cleanTarifText(raw: string | null) {
+    const s = (raw ?? '').trim();
+    if (!s) return null;
+
+    const lines = s
+      .replace(/\r/g, '')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const out: string[] = [];
+    for (const l of lines) {
+      if (this.isNoiseLine(l)) {
+        if (out.length > 0) break;
+        continue;
+      }
+      if (/^(localisation|contact|modes de paiement|carte)\b/i.test(l)) break;
+      out.push(l);
+      if (out.length >= 3) break;
+    }
+
+    const joined = out.join(' ').replace(/\s+/g, ' ').trim();
+    if (!joined) return null;
+    return joined;
   }
 
   private extractGeoFromHtml(html: string): { lat: number; lon: number } | null {

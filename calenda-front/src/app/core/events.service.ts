@@ -29,7 +29,7 @@ export type EventDto = {
   theme: string | null;
   caracteristiques?: EventTag[] | null;
   dateDebut: string;
-  dateFin: string;
+  dateFin: string | null;
   public: boolean;
   enAvant: boolean;
   couleur: string | null;
@@ -80,7 +80,7 @@ export class EventsService {
     imageUrl?: string | null;
     tarif?: string | null;
     dateDebut: string;
-    dateFin: string;
+    dateFin?: string | null;
     enAvant?: boolean;
   }) {
     return this.http.post<EventDto>(`${this.apiBaseUrl}/events`, payload);
@@ -103,7 +103,7 @@ export class EventsService {
       tarif?: string | null;
       organisateurId?: string;
       dateDebut?: string;
-      dateFin?: string;
+      dateFin?: string | null;
       public?: boolean;
       enAvant?: boolean;
       couleur?: string | null;

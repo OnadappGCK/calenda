@@ -190,6 +190,8 @@ export class EventsService {
 
     const adresse = (dto.adresse ?? '').trim() || (dto.lieu ?? '').trim();
 
+    const rawEnd = (dto.dateFin ?? '').trim();
+
     const event = this.eventsRepo.create({
       titre: dto.titre,
       description: dto.description,
@@ -205,7 +207,7 @@ export class EventsService {
       imageUrl: dto.imageUrl ?? null,
       tarif: dto.tarif ?? 'Non renseigné',
       dateDebut: new Date(dto.dateDebut),
-      dateFin: new Date(dto.dateFin),
+      dateFin: rawEnd ? new Date(rawEnd) : null,
       couleur: dto.couleur ?? null,
       enAvant: dto.enAvant ?? false,
       public: role === Role.ADMIN ? (dto.public ?? true) : false,
@@ -275,7 +277,10 @@ export class EventsService {
     }
 
     if (dto.dateDebut !== undefined) event.dateDebut = new Date(dto.dateDebut);
-    if (dto.dateFin !== undefined) event.dateFin = new Date(dto.dateFin);
+    if (dto.dateFin !== undefined) {
+      const raw = (dto.dateFin ?? '').trim();
+      event.dateFin = raw ? new Date(raw) : null;
+    }
     if (dto.couleur !== undefined) event.couleur = dto.couleur;
     if (dto.enAvant !== undefined) event.enAvant = dto.enAvant;
 

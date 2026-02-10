@@ -68,7 +68,7 @@ export class AdminPendingPage implements OnInit {
         reason?: string;
         titre?: string;
         dateDebut?: string;
-        dateFin?: string;
+        dateFin?: string | null;
         image?: boolean;
         descLen?: number;
       }[];
@@ -87,7 +87,7 @@ export class AdminPendingPage implements OnInit {
         reason?: string;
         titre?: string;
         dateDebut?: string;
-        dateFin?: string;
+        dateFin?: string | null;
       }[];
     }
   >(null);

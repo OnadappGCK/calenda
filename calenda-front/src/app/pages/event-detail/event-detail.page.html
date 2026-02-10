@@ -36,7 +36,7 @@
         {{ event()!.categorie }} · {{ event()!.ville }}
       </div>
       <div class="meta">
-        {{ event()!.dateDebut | date: 'short' }} → {{ event()!.dateFin | date: 'short' }}
+        {{ event()!.dateDebut | date: 'short' }} → {{ event()!.dateFin ? (event()!.dateFin | date: 'short') : 'non mentionnée' }}
       </div>
 
       <div class="meta">Organisateur: {{ event()!.organisateur?.pseudo ?? 'Organisateur non mentionné' }}</div>

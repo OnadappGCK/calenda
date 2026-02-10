@@ -74,7 +74,7 @@ export class UpdateEventDto {
   /** Date/heure de fin (ISO, optionnel). */
   @IsOptional()
   @IsDateString()
-  dateFin?: string;
+  dateFin?: string | null;
 
   /** Public (réservé à l'admin). */
   @IsOptional()

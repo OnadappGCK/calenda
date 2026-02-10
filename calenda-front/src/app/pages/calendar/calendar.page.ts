@@ -189,6 +189,9 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Détermine si un événement est « nocturne » (00:00-05:59, fin avant 06:00, même jour). */
   private isNocturne(e: EventDto) {
+    if (!e.dateFin) {
+      return false;
+    }
     if (this.localKeyFromIso(e.dateDebut) !== this.localKeyFromIso(e.dateFin)) {
       return false;
     }
@@ -1147,7 +1150,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     const normalized = items
       .map((e) => {
         const s = this.minutesFromWindowStart(dayKey, e.dateDebut);
-        let end = this.minutesFromWindowStart(dayKey, e.dateFin);
+        let end = e.dateFin ? this.minutesFromWindowStart(dayKey, e.dateFin) : total;
         if (end < s) end = s + 30;
 
         // Display events that overlap the window (clipped), excluding pure nocturne events.
@@ -1264,6 +1267,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Soumet un événement proposé via l'API puis réinitialise le formulaire et recharge. */
   async submitPropose() {
+    const rawEnd = (this.newDateFin ?? '').trim();
     const payload = {
       titre: this.newTitre,
       description: this.newDescription,
@@ -1275,7 +1279,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       caracteristiques: this.newCaracteristiques.slice(0, 3),
       imageUrl: this.newImageUrl ? this.newImageUrl : undefined,
       dateDebut: new Date(this.newDateDebut).toISOString(),
-      dateFin: new Date(this.newDateFin).toISOString(),
+      dateFin: rawEnd ? new Date(rawEnd).toISOString() : null,
     };
 
     await this.eventsService.create(payload).toPromise();

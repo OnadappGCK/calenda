@@ -172,7 +172,8 @@ export class EventDetailPage implements OnInit {
     return tagIconFn(t);
   }
 
-  private formatDateTimeLocal(iso: string) {
+  private formatDateTimeLocal(iso: string | null | undefined) {
+    if (!iso) return '';
     const d = new Date(iso);
     const pad = (n: number) => String(n).padStart(2, '0');
     const yyyy = d.getFullYear();
@@ -269,6 +270,7 @@ export class EventDetailPage implements OnInit {
     this.saveError.set(null);
 
     try {
+      const rawEnd = (d.dateFinLocal ?? '').trim();
       const payload: any = {
         titre: d.titre.trim(),
         description: d.description.trim(),
@@ -278,7 +280,7 @@ export class EventDetailPage implements OnInit {
         latitude: d.latitude,
         longitude: d.longitude,
         dateDebut: this.toIsoFromLocal(d.dateDebutLocal),
-        dateFin: this.toIsoFromLocal(d.dateFinLocal),
+        dateFin: rawEnd ? this.toIsoFromLocal(rawEnd) : null,
         enAvant: d.enAvant,
       };
 

@@ -39,7 +39,10 @@
             <div class="listRow" [style.background]="categoryColor(e.categorie)">
               <div class="listMain">
                 <div class="listName">{{ e.titre }}</div>
-                <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ e.lieu }}</div>
+                <div class="eventMeta">
+                  {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin ? (e.dateFin | date: 'HH:mm') : 'non mentionnée' }} ·
+                  {{ e.lieu }}
+                </div>
               </div>
               <div class="listRight">
                 <div class="tagsBubbles">

@@ -93,7 +93,9 @@
                       <div class="eventTitle">{{ displayTitle(it.event) }}</div>
                       <div class="eventInfo">
                         <div class="eventPlace">{{ displayAdresse(it.event) }}</div>
-                        <div class="eventTime">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
+                        <div class="eventTime">
+                          {{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin ? (it.event.dateFin | date: 'HH:mm') : 'non mentionnée' }}
+                        </div>
                       </div>
                       <div class="eventActions">
                         <span class="catMini" [title]="it.event.categorie">{{ categoryIcon(it.event.categorie) }}</span>
@@ -150,7 +152,8 @@
                     <div class="listMain">
                       <div class="listName">{{ e.titre }}</div>
                       <div class="eventMeta">
-                        {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ displayAdresse(e) }}
+                        {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin ? (e.dateFin | date: 'HH:mm') : 'non mentionnée' }} ·
+                        {{ displayAdresse(e) }}
                       </div>
                     </div>
                     <div class="listRight">
@@ -213,7 +216,9 @@
                       <div class="eventTitle">{{ displayTitle(it.event) }}</div>
                       <div class="eventInfo">
                         <div class="eventPlace">{{ displayAdresse(it.event) }}</div>
-                        <div class="eventTime">{{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin | date: 'HH:mm' }}</div>
+                        <div class="eventTime">
+                          {{ it.event.dateDebut | date: 'HH:mm' }}–{{ it.event.dateFin ? (it.event.dateFin | date: 'HH:mm') : 'non mentionnée' }}
+                        </div>
                       </div>
                       <div class="eventActions">
                         <span class="catMini" [title]="it.event.categorie">{{ categoryIcon(it.event.categorie) }}</span>
@@ -269,7 +274,10 @@
                   <div class="listRow" [style.background]="categoryColor(e.categorie)">
                     <div class="listMain">
                       <div class="listName">{{ e.titre }}</div>
-                      <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }} · {{ displayAdresse(e) }}</div>
+                      <div class="eventMeta">
+                        {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin ? (e.dateFin | date: 'HH:mm') : 'non mentionnée' }} ·
+                        {{ displayAdresse(e) }}
+                      </div>
                     </div>
                     <div class="listRight">
                       <div class="tagsBubbles">
@@ -326,7 +334,9 @@
               <img class="sideImg" [src]="eventImageUrl(e)" alt="" loading="lazy" />
               <div class="sideMain">
                 <div class="listName">{{ e.titre }}</div>
-                <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }}</div>
+                <div class="eventMeta">
+                  {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin ? (e.dateFin | date: 'HH:mm') : 'non mentionnée' }}
+                </div>
                 <div class="eventMeta">{{ e.ville }} · {{ displayAdresse(e) }}</div>
                 @if ((e.caracteristiques ?? []).length > 0) {
                   <div class="tagsBubbles" style="margin-top: 4px;">
@@ -355,7 +365,9 @@
               <img class="sideImg" [src]="eventImageUrl(e)" alt="" loading="lazy" />
               <div class="sideMain">
                 <div class="listName">{{ e.titre }}</div>
-                <div class="eventMeta">{{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin | date: 'HH:mm' }}</div>
+                <div class="eventMeta">
+                  {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin ? (e.dateFin | date: 'HH:mm') : 'non mentionnée' }}
+                </div>
                 <div class="eventMeta">{{ e.ville }} · {{ displayAdresse(e) }}</div>
                 @if ((e.caracteristiques ?? []).length > 0) {
                   <div class="tagsBubbles" style="margin-top: 4px;">
