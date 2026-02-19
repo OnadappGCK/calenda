@@ -95,3 +95,11 @@ export function tagIcon(tag: EventTag): string {
       return '🏠';
   }
 }
+
+export function tagIconUrl(tag: EventTag): string {
+  const emoji = tagIcon(tag);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <text x="16" y="22" font-size="20" text-anchor="middle" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji">${emoji}</text>
+  </svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}

@@ -23,7 +23,7 @@ export const serverRoutes: ServerRoute[] = [
   },
   {
     path: 'calendar',
-    renderMode: RenderMode.Prerender,
+    renderMode: RenderMode.Server,
   },
   {
     path: 'events/:id',

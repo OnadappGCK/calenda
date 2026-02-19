@@ -21,6 +21,7 @@ export type EventDto = {
   origin?: EventOrigin;
   imageUrl?: string | null;
   tarif?: string | null;
+  contact?: string | null;
   ville: string;
   lieu: string;
   adresse?: string | null;
@@ -79,6 +80,7 @@ export class EventsService {
     caracteristiques?: EventTag[];
     imageUrl?: string | null;
     tarif?: string | null;
+    contact?: string | null;
     dateDebut: string;
     dateFin?: string | null;
     enAvant?: boolean;
@@ -101,6 +103,7 @@ export class EventsService {
       caracteristiques?: EventTag[] | null;
       imageUrl?: string | null;
       tarif?: string | null;
+      contact?: string | null;
       organisateurId?: string;
       dateDebut?: string;
       dateFin?: string | null;
@@ -110,5 +113,10 @@ export class EventsService {
     },
   ) {
     return this.http.patch<EventDto>(`${this.apiBaseUrl}/events/${id}`, payload);
+  }
+
+  /** Supprime un événement (admin ou owner, contrôlé côté backend). */
+  remove(id: string) {
+    return this.http.delete<{ ok: true }>(`${this.apiBaseUrl}/events/${id}`);
   }
 }

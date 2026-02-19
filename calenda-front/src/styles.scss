@@ -11,11 +11,52 @@ body {
   height: 100%;
 }
 
+html {
+  overflow-y: hidden;
+}
+
 body {
+  overflow: hidden;
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color: $text-1;
   background: $bg-app;
+}
+
+app-root {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+main.page {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+main.page > router-outlet {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+main.page > router-outlet > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+main.page > router-outlet + * {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
@@ -60,6 +101,102 @@ a {
   text-decoration: none;
   color: inherit;
   position: relative;
+}
+
+app-calendar-page {
+  /*
+   * Calendar sizing variables (used by calendar.page.scss)
+   * Responsive behavior is implemented by overriding these values with breakpoints.
+   */
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  --cal-topbar-gap: 0.35rem;
+  --cal-topbar-padding: 0.35rem;
+  --cal-topbar-radius: 0.75rem;
+
+  --cal-week-main-size: 0.68rem;
+  --cal-week-sub-size: 0.58rem;
+
+  --cal-icon-size: 28px;
+  --cal-btn-font: 0.74rem;
+  --cal-btn-pad-y: 0.22rem;
+  --cal-btn-pad-x: 0.4rem;
+  --cal-date-height: 28px;
+  --cal-date-font: 0.74rem;
+  --cal-date-width: 135px;
+
+  --cal-toggle-font: 0.66rem;
+  --cal-toggle-pad-y: 0.16rem;
+  --cal-toggle-pad-x: 0.4rem;
+
+  --cal-chips-gap: 0.25rem;
+  --cal-chips-margin-y: 0.22rem;
+  --cal-chip-font: 0.62rem;
+  --cal-chip-pad-y: 0.1rem;
+  --cal-chip-pad-x: 0.32rem;
+  --cal-chip-gap: 0.22rem;
+
+  --cal-dayhead-height: 40px;
+  --cal-dayhead-padding: 0.16rem;
+  --cal-daylabel-font: 0.6rem;
+}
+
+@media screen and (max-width: 900px) {
+  app-calendar-page {
+    --cal-icon-size: 26px;
+    --cal-btn-font: 0.7rem;
+    --cal-date-width: 125px;
+    --cal-week-main-size: 0.66rem;
+    --cal-week-sub-size: 0.56rem;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  app-calendar-page {
+    --cal-topbar-gap: 0.25rem;
+    --cal-topbar-padding: 0.28rem;
+    --cal-btn-font: 0.68rem;
+    --cal-date-font: 0.68rem;
+    --cal-toggle-font: 0.64rem;
+    --cal-chip-font: 0.6rem;
+    --cal-daylabel-font: 0.56rem;
+    --cal-dayhead-height: 36px;
+    --cal-dayhead-padding: 0.12rem;
+  }
+}
+
+app-calendar-page .calendarContainer {
+  max-width: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 0.6rem;
+}
+
+app-calendar-page .calendarViewport {
+  flex: 0 0 100%;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+app-calendar-page .scheduler {
+  margin-top: 0.25rem;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+app-calendar-page .schedScroll {
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 @media screen and (max-width: 600px) {

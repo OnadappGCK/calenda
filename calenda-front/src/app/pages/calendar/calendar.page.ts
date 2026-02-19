@@ -16,7 +16,7 @@ import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { EventsService, EventCategory, EventDto, EventTag } from '../../core/events.service';
-import { categoryColor, categoryIcon, resolveEventImageUrl, tagIcon } from '../../core/event-ui';
+import { categoryColor, categoryIcon, resolveEventImageUrl, tagIcon, tagIconUrl } from '../../core/event-ui';
 import { FavoritesService } from '../../core/favorites.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
 
@@ -151,6 +151,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
    */
   readonly slotPx = signal<number>(26);
 
+  private readonly autoFitSlotPx = true;
+
   /** Indique si les logs de layout sont activés via `localStorage.CALENDA_DEBUG_CALENDAR=1`. */
   private readonly isDebugCalendar = () => {
     if (typeof window === 'undefined') return false;
@@ -206,8 +208,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   readonly nightEventsByDay = computed(() => {
     const map = new Map<string, EventDto[]>();
     for (const e of this.events()) {
-      const key = this.localKeyFromIso(e.dateDebut);
       if (!this.isNocturne(e)) continue;
+
+      // Nocturne events are displayed as belonging to the "night of" the previous day.
+      // Example: 10 Jan 01:00 -> shown under 9 Jan (night events).
+      const key = this.prevDayKey(this.localKeyFromIso(e.dateDebut));
       const arr = map.get(key) ?? [];
       arr.push(e);
       map.set(key, arr);
@@ -223,6 +228,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   nightCount(dayKey: string) {
     return this.nightEventsByDay().get(dayKey)?.length ?? 0;
   }
+
+  readonly sideTitleKey = computed(() => {
+    const k = this.sideDayKey();
+    return this.sideTab() === 'night' ? this.nextDayKey(k) : k;
+  });
 
   readonly timeSlots = computed(() => {
     const totalMinutes = this.windowMinutes();
@@ -263,12 +273,14 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   private newAdresseSuggestToken = 0;
   newCaracteristiques: EventTag[] = [];
   newImageUrl = '';
+  newContact = '';
   newDateDebut = '';
   newDateFin = '';
 
   protected readonly categoryColor = categoryColor;
   protected readonly categoryIcon = categoryIcon;
   protected readonly tagIcon = tagIcon;
+  protected readonly tagIconUrl = tagIconUrl;
 
   eventImageUrl(e: EventDto) {
     return resolveEventImageUrl(e.categorie, e.imageUrl);
@@ -349,6 +361,18 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Transforme un ISO datetime en clé locale `YYYY-MM-DD`. */
   private localKeyFromIso(iso: string) {
     return this.localKeyFromDate(new Date(iso));
+  }
+
+  private prevDayKey(dayKey: string) {
+    const d = new Date(`${dayKey}T00:00:00`);
+    d.setDate(d.getDate() - 1);
+    return this.localKeyFromDate(d);
+  }
+
+  private nextDayKey(dayKey: string) {
+    const d = new Date(`${dayKey}T00:00:00`);
+    d.setDate(d.getDate() + 1);
+    return this.localKeyFromDate(d);
   }
 
   readonly eventsByDay = computed(() => {
@@ -1026,6 +1050,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
    * un retry sur la frame suivante.
    */
   private recomputeSlotPx(ctx?: { reason?: string; attempt?: number }) {
+    if (!this.autoFitSlotPx) {
+      return true;
+    }
+
     const totalMinutes = this.windowMinutes();
     const slots = Math.floor(totalMinutes / this.minutesPerSlot);
 
@@ -1041,16 +1069,16 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     const heads = Array.from(schedulerEl?.querySelectorAll('.dayHead') ?? []) as HTMLElement[];
-    const headH = Math.max(48, ...heads.map((h) => h.clientHeight));
+    const headH = Math.max(40, ...heads.map((h) => h.clientHeight));
     const spacers = Array.from(schedulerEl?.querySelectorAll('.nightSpacer') ?? []) as HTMLElement[];
-    const spacerH = Math.max(48, ...spacers.map((s) => s.clientHeight));
+    const spacerH = Math.max(32, ...spacers.map((s) => s.clientHeight));
     const nights = Array.from(schedulerEl?.querySelectorAll('.nightBtn') ?? []) as HTMLElement[];
-    const nightH = Math.max(48, ...nights.map((n) => n.clientHeight));
+    const nightH = Math.max(32, ...nights.map((n) => n.clientHeight));
 
     const available = Math.max(0, schedulerHeight - headH - spacerH - nightH);
     const px = Math.floor(available / slots);
     // Fit-first: never force a minimum that would make the timeline overflow.
-    const fitted = Math.min(30, Math.max(6, px));
+    const fitted = Math.min(42, Math.max(6, px));
 
     const prev = this.slotPx();
     this.slotPx.set(fitted);
@@ -1077,6 +1105,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
    * des headers peut changer la hauteur du grid sans forcément toucher le container.
    */
   private ensureSchedulerObserved() {
+    if (!this.autoFitSlotPx) {
+      return;
+    }
+
     const schedulerEl = this.el.nativeElement.querySelector('.scheduler') as Element | null;
     if (!schedulerEl || typeof ResizeObserver === 'undefined') {
       return;
@@ -1101,6 +1133,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
    * et on retente quelques frames jusqu'à obtenir une hauteur non nulle.
    */
   private scheduleRecomputeSlotPx(reason: string) {
+    if (!this.autoFitSlotPx) {
+      return;
+    }
+
     const maxAttempts = 6;
     let attempts = 0;
 
@@ -1256,8 +1292,20 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** Ouvre la modale de proposition d'événement. */
-  openPropose() {
+  async openPropose() {
     this.showPropose = true;
+
+    // Make sure user is loaded so we can prefill contact.
+    await this.auth.ensureLoaded();
+
+    if (!this.newContact.trim()) {
+      const u = this.auth.user();
+      const email = (u?.email ?? '').trim();
+      const phone = (u?.numero ?? '').trim() || 'non mentionné';
+      if (email) {
+        this.newContact = `email : ${email} Téléphone : ${phone}`;
+      }
+    }
   }
 
   /** Ferme la modale de proposition d'événement. */
@@ -1268,7 +1316,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Soumet un événement proposé via l'API puis réinitialise le formulaire et recharge. */
   async submitPropose() {
     const rawEnd = (this.newDateFin ?? '').trim();
-    const payload = {
+    const rawContact = (this.newContact ?? '').trim();
+    const payload: any = {
       titre: this.newTitre,
       description: this.newDescription,
       categorie: this.newCategorie,
@@ -1281,6 +1330,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       dateDebut: new Date(this.newDateDebut).toISOString(),
       dateFin: rawEnd ? new Date(rawEnd).toISOString() : null,
     };
+
+    // Only send contact if the user typed something.
+    // If omitted, backend will generate default (email + téléphone) automatically.
+    if (rawContact) payload.contact = rawContact;
 
     await this.eventsService.create(payload).toPromise();
 
@@ -1295,6 +1348,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.newAdresseSuggestOpen.set(false);
     this.newCaracteristiques = [];
     this.newImageUrl = '';
+    this.newContact = '';
     this.newDateDebut = '';
     this.newDateFin = '';
 

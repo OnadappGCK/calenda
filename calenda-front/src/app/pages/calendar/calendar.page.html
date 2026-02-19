@@ -1,69 +1,82 @@
-<section class="container">
-  <div class="topbar">
-    <div class="topLeft">
-      @if (viewMode === 'week') {
-        <button class="iconBtn" type="button" (click)="prevPeriod()" aria-label="Précédent">‹</button>
-      }
-      <div class="weekTitle">
-        <div class="weekMain">{{ weekLabel() }}</div>
-        <div class="weekSub">{{ selectedDateObj() | date: 'EEEE d MMMM' }}</div>
+<section class="calendarContainer">
+  <div class="calendarViewport">
+    <div class="topbar">
+      <div class="topLeft">
+        @if (viewMode === 'week') {
+          <button class="iconBtn" type="button" (click)="prevPeriod()" aria-label="Précédent">‹</button>
+        }
+        <div class="weekTitle">
+          <div class="weekMain">{{ weekLabel() }}</div>
+          <div class="weekSub">{{ selectedDateObj() | date: 'EEEE d MMMM' }}</div>
+        </div>
+        @if (viewMode === 'week') {
+          <button class="iconBtn" type="button" (click)="nextPeriod()" aria-label="Suivant">›</button>
+        }
       </div>
-      @if (viewMode === 'week') {
-        <button class="iconBtn" type="button" (click)="nextPeriod()" aria-label="Suivant">›</button>
+
+      <div class="topRight">
+        <label class="field datePick">
+          <input type="date" [(ngModel)]="selectedDate" name="selectedDate" (change)="onDateChange()" />
+        </label>
+
+        <button class="btn" type="button" (click)="toggleFilters()">Filtres</button>
+
+        <button class="iconBtn" type="button" (click)="reload()" aria-label="Rafraîchir">↻</button>
+        @if (viewMode === 'week') {
+          <button class="iconBtn" type="button" (click)="toggleFavoris()" aria-label="Favoris">♥</button>
+        }
+
+        <div class="toggle">
+          <button class="toggleBtn" type="button" [class.active]="viewMode==='week'" (click)="setViewMode('week')">
+            Semaine
+          </button>
+          <button class="toggleBtn" type="button" [class.active]="viewMode==='day'" (click)="setViewMode('day')">
+            Journée
+          </button>
+        </div>
+
+        <button
+          class="btn btnPrimary proposeBtn"
+          type="button"
+          [class.proposeHidden]="!canPropose()"
+          [disabled]="!canPropose()"
+          (click)="canPropose() && openPropose()"
+        >
+          Proposer un événement
+        </button>
+      </div>
+    </div>
+
+    <div class="chips">
+      @for (c of activeChips(); track c.key) {
+        @if (c.key === 'date') {
+          <span class="chip chipFixed">{{ c.label }}</span>
+        } @else {
+          <button class="chip" type="button" (click)="clearChip(c.key)">
+            {{ c.label }}
+            <span class="x">×</span>
+          </button>
+        }
       }
     </div>
 
-    <div class="topRight">
-      <label class="field datePick">
-        <input type="date" [(ngModel)]="selectedDate" name="selectedDate" (change)="onDateChange()" />
-      </label>
-
-      <button class="btn" type="button" (click)="toggleFilters()">Filtres</button>
-
-      <button class="iconBtn" type="button" (click)="reload()" aria-label="Rafraîchir">↻</button>
-      @if (viewMode === 'week') {
-        <button class="iconBtn" type="button" (click)="toggleFavoris()" aria-label="Favoris">♥</button>
-      }
-
-      <div class="toggle">
-        <button class="toggleBtn" type="button" [class.active]="viewMode==='week'" (click)="setViewMode('week')">
-          Semaine
-        </button>
-        <button class="toggleBtn" type="button" [class.active]="viewMode==='day'" (click)="setViewMode('day')">
-          Journée
-        </button>
-      </div>
-
-      @if (canPropose()) {
-        <button class="btn btnPrimary" type="button" (click)="openPropose()">Proposer un événement</button>
-      }
-    </div>
-  </div>
-
-  <div class="chips">
-    @for (c of activeChips(); track c.key) {
-      @if (c.key === 'date') {
-        <span class="chip chipFixed">{{ c.label }}</span>
-      } @else {
-        <button class="chip" type="button" (click)="clearChip(c.key)">
-          {{ c.label }}
-          <span class="x">×</span>
-        </button>
-      }
+    @if (loading()) {
+      <div class="loadingOverlay">Chargement…</div>
     }
-  </div>
 
-  @if (loading()) {
-    <p>Chargement…</p>
-  } @else {
     @if (viewMode === 'week') {
-      <div class="scheduler">
-        <div class="schedScroll">
-          <div class="schedGrid" [style.--slot-px.px]="slotPx()">
-            <div class="corner"></div>
+        <div class="scheduler">
+          <div class="schedScroll">
+            <div class="schedGrid" [style.--slot-px.px]="slotPx()">
+              <div class="corner"></div>
 
             @for (d of weekDays(); track dateKey(d)) {
-              <button class="dayHead" type="button" (click)="selectedDate = dateKey(d); onDateChange()">
+              <button
+                class="dayHead"
+                type="button"
+                [class.selected]="isSelectedDay(d)"
+                (click)="selectedDate = dateKey(d); onDateChange()"
+              >
                 <div class="dayLabel">{{ d | date: 'EEEE d MMMM' }}</div>
               </button>
             }
@@ -98,7 +111,17 @@
                         </div>
                       </div>
                       <div class="eventActions">
-                        <span class="catMini" [title]="it.event.categorie">{{ categoryIcon(it.event.categorie) }}</span>
+                        @if ((it.event.caracteristiques ?? []).length > 0) {
+                          <span class="tagsMini">
+                            @for (t of (it.event.caracteristiques ?? []).slice(0, 3); track t) {
+                              <span class="tagMini" [title]="t">
+                                <img class="tagMiniImg" [src]="tagIconUrl(t)" alt="" />
+                              </span>
+                            }
+                          </span>
+                        } @else {
+                          <span class="catMini" [title]="it.event.categorie">{{ categoryIcon(it.event.categorie) }}</span>
+                        }
                       </div>
                     </button>
                   } @else {
@@ -124,66 +147,14 @@
                 Événements nocturnes ({{ nightCount(dateKey(d)) }})
               </button>
             }
+            </div>
           </div>
         </div>
-      </div>
-
-      <div class="weekSummary">
-        <div class="listTitle">Événements à venir</div>
-
-        <div class="weekList">
-          @if (upcomingWeeks().length === 0) {
-            <div class="empty">Aucun événement à venir.</div>
-          } @else {
-            @for (w of upcomingWeeks(); track w.weekStartKey) {
-              <div class="daySep">
-                <div class="sepTitle">{{ w.label }}</div>
-                <div class="sepLine"></div>
-              </div>
-
-              @for (g of w.days; track g.dayKey) {
-                <div class="daySep">
-                  <div class="sepTitle">{{ dayKeyToDate(g.dayKey) | date: 'EEEE d MMMM' }}</div>
-                  <div class="sepLine"></div>
-                </div>
-
-                @for (e of g.items; track e.id) {
-                  <div class="listRow" [style.background]="categoryColor(e.categorie)">
-                    <div class="listMain">
-                      <div class="listName">{{ e.titre }}</div>
-                      <div class="eventMeta">
-                        {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin ? (e.dateFin | date: 'HH:mm') : 'non mentionnée' }} ·
-                        {{ displayAdresse(e) }}
-                      </div>
-                    </div>
-                    <div class="listRight">
-                      <div class="tagsBubbles">
-                        @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
-                          <span class="tagBubbleMini" [title]="t">{{ tagIcon(t) }} {{ t }}</span>
-                        }
-                      </div>
-                      <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
-                    </div>
-                  </div>
-                }
-              }
-            }
-
-            @if (upcomingLoading()) {
-              <div class="empty">Chargement…</div>
-            }
-
-            @if (upcomingHasMore()) {
-              <div #upcomingSentinel style="height: 1px;"></div>
-            }
-          }
-        </div>
-      </div>
     } @else {
-      <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0.5rem; align-items: start;">
-        <button class="iconBtn" style="margin-top: 0.75rem" type="button" (click)="prevPeriod()" aria-label="Jour précédent">‹</button>
+        <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0.5rem; align-items: start; flex: 1 1 auto; min-height: 0;">
+          <button class="iconBtn" style="margin-top: 0.75rem" type="button" (click)="prevPeriod()" aria-label="Jour précédent">‹</button>
 
-        <div class="scheduler" style="margin-top: 0; min-width: 0;">
+        <div class="scheduler" style="margin-top: 0; min-width: 0; height: 100%;">
           <div class="schedScroll">
             <div class="schedGrid dayOnly" [style.--slot-px.px]="slotPx()">
               <div class="corner"></div>
@@ -221,7 +192,17 @@
                         </div>
                       </div>
                       <div class="eventActions">
-                        <span class="catMini" [title]="it.event.categorie">{{ categoryIcon(it.event.categorie) }}</span>
+                        @if ((it.event.caracteristiques ?? []).length > 0) {
+                          <span class="tagsMini">
+                            @for (t of (it.event.caracteristiques ?? []).slice(0, 3); track t) {
+                              <span class="tagMini" [title]="t">
+                                <img class="tagMiniImg" [src]="tagIconUrl(t)" alt="" />
+                              </span>
+                            }
+                          </span>
+                        } @else {
+                          <span class="catMini" [title]="it.event.categorie">{{ categoryIcon(it.event.categorie) }}</span>
+                        }
                       </div>
                     </button>
                   } @else {
@@ -248,62 +229,62 @@
           </div>
         </div>
 
-        <button class="iconBtn" style="margin-top: 0.75rem" type="button" (click)="nextPeriod()" aria-label="Jour suivant">›</button>
-      </div>
+          <button class="iconBtn" style="margin-top: 0.75rem" type="button" (click)="nextPeriod()" aria-label="Jour suivant">›</button>
+        </div>
+    }
+  </div>
 
-      <div class="weekSummary">
-        <div class="listTitle">Événements à venir</div>
+  <div class="weekSummary">
+    <div class="listTitle">Événements à venir</div>
 
-        <div class="weekList">
-          @if (upcomingWeeks().length === 0) {
-            <div class="empty">Aucun événement à venir.</div>
-          } @else {
-            @for (w of upcomingWeeks(); track w.weekStartKey) {
-              <div class="daySep">
-                <div class="sepTitle">{{ w.label }}</div>
-                <div class="sepLine"></div>
-              </div>
+    <div class="weekList">
+      @if (upcomingWeeks().length === 0) {
+        <div class="empty">Aucun événement à venir.</div>
+      } @else {
+        @for (w of upcomingWeeks(); track w.weekStartKey) {
+          <div class="daySep">
+            <div class="sepTitle">{{ w.label }}</div>
+            <div class="sepLine"></div>
+          </div>
 
-              @for (g of w.days; track g.dayKey) {
-                <div class="daySep">
-                  <div class="sepTitle">{{ dayKeyToDate(g.dayKey) | date: 'EEEE d MMMM' }}</div>
-                  <div class="sepLine"></div>
-                </div>
+          @for (g of w.days; track g.dayKey) {
+            <div class="daySep">
+              <div class="sepTitle">{{ dayKeyToDate(g.dayKey) | date: 'EEEE d MMMM' }}</div>
+              <div class="sepLine"></div>
+            </div>
 
-                @for (e of g.items; track e.id) {
-                  <div class="listRow" [style.background]="categoryColor(e.categorie)">
-                    <div class="listMain">
-                      <div class="listName">{{ e.titre }}</div>
-                      <div class="eventMeta">
-                        {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin ? (e.dateFin | date: 'HH:mm') : 'non mentionnée' }} ·
-                        {{ displayAdresse(e) }}
-                      </div>
-                    </div>
-                    <div class="listRight">
-                      <div class="tagsBubbles">
-                        @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
-                          <span class="tagBubbleMini" [title]="t">{{ tagIcon(t) }} {{ t }}</span>
-                        }
-                      </div>
-                      <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
-                    </div>
+            @for (e of g.items; track e.id) {
+              <div class="listRow" [style.background]="categoryColor(e.categorie)">
+                <div class="listMain">
+                  <div class="listName">{{ e.titre }}</div>
+                  <div class="eventMeta">
+                    {{ e.dateDebut | date: 'HH:mm' }} - {{ e.dateFin ? (e.dateFin | date: 'HH:mm') : 'non mentionnée' }} ·
+                    {{ displayAdresse(e) }}
                   </div>
-                }
-              }
-            }
-
-            @if (upcomingLoading()) {
-              <div class="empty">Chargement…</div>
-            }
-
-            @if (upcomingHasMore()) {
-              <div #upcomingSentinel style="height: 1px;"></div>
+                </div>
+                <div class="listRight">
+                  <div class="tagsBubbles">
+                    @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
+                      <span class="tagBubbleMini" [title]="t">{{ tagIcon(t) }} {{ t }}</span>
+                    }
+                  </div>
+                  <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
+                </div>
+              </div>
             }
           }
-        </div>
-      </div>
-    }
-  }
+        }
+
+        @if (upcomingLoading()) {
+          <div class="empty">Chargement…</div>
+        }
+
+        @if (upcomingHasMore()) {
+          <div #upcomingSentinel style="height: 1px;"></div>
+        }
+      }
+    </div>
+  </div>
 </section>
 
 @if (sideOpen()) {
@@ -311,7 +292,7 @@
   <aside class="side">
     <div class="sideHead">
       <div>
-        <div class="sideTitle">{{ dayKeyToDate(sideDayKey()) | date: 'fullDate' }}</div>
+        <div class="sideTitle">{{ dayKeyToDate(sideTitleKey()) | date: 'fullDate' }}</div>
         <div class="sideTabs">
           <button class="tab" type="button" [class.active]="sideTab()==='day'" (click)="sideTab.set('day')">
             Jour
@@ -406,6 +387,11 @@
       <label>
         Description
         <textarea rows="3" [(ngModel)]="newDescription" name="newDescription"></textarea>
+      </label>
+
+      <label>
+        Contact
+        <textarea rows="2" [(ngModel)]="newContact" name="newContact"></textarea>
       </label>
 
       <label>

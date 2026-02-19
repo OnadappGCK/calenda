@@ -15,6 +15,7 @@ export type AuthUser = {
   pseudo: string;
   role: Role;
   profileImage?: string | null;
+  numero?: string | null;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -95,6 +96,7 @@ export class AuthService {
     email: string;
     ville: string;
     lieu: string;
+    numero?: string | null;
     password: string;
     passwordConfirmation: string;
     profileImage?: string | null;

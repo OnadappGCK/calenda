@@ -11,7 +11,7 @@ export class UsersService {
 
   /** Récupère le profil complet de l'utilisateur courant. */
   me() {
-    return this.http.get<AuthUser & { ville: string; lieu: string }>(`${this.apiBaseUrl}/users/me`);
+    return this.http.get<AuthUser & { ville: string; lieu: string; numero?: string | null }>(`${this.apiBaseUrl}/users/me`);
   }
 
   /** Met à jour le profil courant (pseudo/ville/lieu et éventuellement password). */
@@ -20,6 +20,7 @@ export class UsersService {
     ville?: string;
     lieu?: string;
     profileImage?: string | null;
+    numero?: string | null;
     password?: string;
     passwordConfirmation?: string;
   }) {
