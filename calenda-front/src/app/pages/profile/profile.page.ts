@@ -26,6 +26,7 @@ export class ProfilePage implements OnInit {
   pseudo = '';
   ville = '';
   lieu = '';
+  numero = '';
   password = '';
   passwordConfirmation = '';
   profileImage: string | null = null;
@@ -52,6 +53,7 @@ export class ProfilePage implements OnInit {
         this.pseudo = me.pseudo;
         this.ville = me.ville;
         this.lieu = me.lieu;
+        this.numero = me.numero ?? '';
         this.profileImage = me.profileImage ?? null;
       }
     } finally {
@@ -98,6 +100,7 @@ export class ProfilePage implements OnInit {
           pseudo: this.pseudo,
           ville: this.ville,
           lieu: this.lieu,
+          numero: this.numero.trim() || null,
           profileImage: this.profileImage,
           password: this.password || undefined,
           passwordConfirmation: this.passwordConfirmation || undefined,

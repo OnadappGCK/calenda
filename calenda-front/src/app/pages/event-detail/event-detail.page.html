@@ -17,6 +17,9 @@
         </div>
         <div class="editBarActions">
           <button class="btn" type="button" (click)="cancelEdit()" [disabled]="saving()">Annuler</button>
+          <button class="btn" type="button" (click)="openDeleteConfirm()" [disabled]="saving() || deleting()">
+            Supprimer
+          </button>
           <button class="btn" type="button" (click)="saveEdit()" [disabled]="saving()">
             @if (saving()) { Enregistrement… } @else { Enregistrer }
           </button>
@@ -40,6 +43,8 @@
       </div>
 
       <div class="meta">Organisateur: {{ event()!.organisateur?.pseudo ?? 'Organisateur non mentionné' }}</div>
+
+      <div class="meta">Contact: {{ (event()!.contact ?? '').trim() || 'non mentionné' }}</div>
 
       <div class="meta tarif">Tarif: {{ event()!.tarif ?? 'Non renseigné' }}</div>
 
@@ -158,6 +163,11 @@
           <textarea rows="3" [ngModel]="draft()!.tarif" (ngModelChange)="setDraft({ tarif: $event })"></textarea>
         </label>
 
+        <label class="field">
+          Contact
+          <textarea rows="2" [ngModel]="draft()!.contact" (ngModelChange)="setDraft({ contact: $event })"></textarea>
+        </label>
+
         @if (isAdmin()) {
           <label class="field">
             Compte organisateur (admin)
@@ -224,3 +234,22 @@
     }
   }
 </section>
+
+@if (showDeleteConfirm()) {
+  <div class="modalBackdrop" (click)="closeDeleteConfirm()"></div>
+  <div class="modal">
+    <h2>Confirmation</h2>
+    <p>Supprimer cet événement : <strong>{{ event()!.titre }}</strong> ?</p>
+
+    @if (deleteError()) {
+      <div class="editError">Erreur: {{ deleteError() }}</div>
+    }
+
+    <div class="actions">
+      <button class="btn" type="button" (click)="confirmDelete()" [disabled]="deleting()">
+        @if (deleting()) { Suppression… } @else { Oui, supprimer }
+      </button>
+      <button class="btn" type="button" (click)="closeDeleteConfirm()" [disabled]="deleting()">Annuler</button>
+    </div>
+  </div>
+}

@@ -1,5 +1,11 @@
 @use 'palette' as *;
 
+.adminBar {
+  margin: 0.75rem 0 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .list {
   display: grid;
   gap: 0.75rem;
@@ -12,9 +18,24 @@
   padding: 1rem;
 }
 
+.itemImg {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 0.9rem;
+  border: 1px solid $border-1;
+  margin-bottom: 0.6rem;
+}
+
 .meta {
   color: $text-muted-5;
   font-size: 0.9rem;
+}
+
+.itemActions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
 }
 
 .pager {
@@ -26,4 +47,67 @@
 
 .page {
   font-weight: 700;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 90;
+}
+
+.modal {
+  position: fixed;
+  z-index: 100;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  background: $surface-1;
+  border: 1px solid $border-1;
+  border-radius: 1.25rem;
+  padding: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.65rem 0;
+  font-weight: 700;
+}
+
+.field input,
+.field textarea {
+  font: inherit;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.85rem;
+  border: 1px solid $border-1;
+  background: $surface-1;
+  color: $text-1;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.65rem 0;
+  font-weight: 700;
+}
+
+.imgPreview {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 0.9rem;
+  border: 1px solid $border-1;
+  margin: 0.5rem 0;
+}
+
+.actions {
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }

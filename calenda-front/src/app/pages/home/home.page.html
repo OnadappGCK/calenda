@@ -19,10 +19,9 @@
       <button class="navBtn" type="button" (click)="prevFeatured()" aria-label="Précédent">‹</button>
 
       <div class="slide">
-        <div
-          class="media"
-          [style.background]="'linear-gradient(120deg, ' + categoryColor(currentFeatured()!.categorie) + ', #111827)'"
-        ></div>
+        <div class="media">
+          <img class="mediaImg" [src]="featuredImageUrl(currentFeatured()!)" alt="" loading="lazy" />
+        </div>
 
         <div class="panel">
           <div class="panelHeader">

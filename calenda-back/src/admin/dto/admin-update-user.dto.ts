@@ -28,6 +28,10 @@ export class AdminUpdateUserDto {
 
   @IsOptional()
   @IsString()
+  numero?: string | null;
+
+  @IsOptional()
+  @IsString()
   @MinLength(8)
   password?: string;
 

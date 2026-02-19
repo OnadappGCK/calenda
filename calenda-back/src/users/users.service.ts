@@ -38,6 +38,7 @@ export class UsersService {
       lieu: user.lieu,
       role: user.role,
       profileImage: user.profileImage,
+      numero: user.numero,
     };
   }
 
@@ -142,6 +143,11 @@ export class UsersService {
     if (dto.profileImage !== undefined) {
       this.validateProfileImageForRole(user.role, dto.profileImage);
       user.profileImage = dto.profileImage.trim();
+    }
+
+    if (dto.numero !== undefined) {
+      const raw = (dto.numero ?? '').trim();
+      user.numero = raw ? raw : null;
     }
 
     if (dto.password !== undefined || dto.passwordConfirmation !== undefined) {

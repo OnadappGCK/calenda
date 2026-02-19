@@ -23,6 +23,11 @@ export class EventsService {
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
   ) {}
 
+  private defaultContactForUser(u: User) {
+    const phone = (u.numero ?? '').trim();
+    return `email : ${u.email} Téléphone : ${phone || 'non mentionné'}`;
+  }
+
   /** Indique si le user peut voir les événements non-public (admin/organisateur). */
   private canSeeNonPublic(user: RequestUser) {
     return user?.role === Role.ADMIN || user?.role === Role.ORGANISATEUR;
@@ -188,9 +193,18 @@ export class EventsService {
       throw new NotFoundException('user_not_found');
     }
 
+    if (dto.enAvant !== undefined && role !== Role.ADMIN) {
+      throw new ForbiddenException('forbidden');
+    }
+
     const adresse = (dto.adresse ?? '').trim() || (dto.lieu ?? '').trim();
 
     const rawEnd = (dto.dateFin ?? '').trim();
+
+    const contact =
+      dto.contact === undefined
+        ? this.defaultContactForUser(organisateur)
+        : ((dto.contact ?? '').trim() ? (dto.contact ?? '').trim() : null);
 
     const event = this.eventsRepo.create({
       titre: dto.titre,
@@ -206,10 +220,11 @@ export class EventsService {
       caracteristiques: dto.caracteristiques ? dto.caracteristiques.slice(0, 3) : null,
       imageUrl: dto.imageUrl ?? null,
       tarif: dto.tarif ?? 'Non renseigné',
+      contact,
       dateDebut: new Date(dto.dateDebut),
       dateFin: rawEnd ? new Date(rawEnd) : null,
       couleur: dto.couleur ?? null,
-      enAvant: dto.enAvant ?? false,
+      enAvant: role === Role.ADMIN ? (dto.enAvant ?? false) : false,
       public: role === Role.ADMIN ? (dto.public ?? true) : false,
       organisateur,
     });
@@ -262,6 +277,11 @@ export class EventsService {
       event.tarif = dto.tarif;
     }
 
+    if (dto.contact !== undefined) {
+      const raw = (dto.contact ?? '').trim();
+      event.contact = raw ? raw : null;
+    }
+
     if (dto.organisateurId !== undefined) {
       if (role !== Role.ADMIN) {
         throw new ForbiddenException('forbidden');
@@ -282,7 +302,13 @@ export class EventsService {
       event.dateFin = raw ? new Date(raw) : null;
     }
     if (dto.couleur !== undefined) event.couleur = dto.couleur;
-    if (dto.enAvant !== undefined) event.enAvant = dto.enAvant;
+
+    if (dto.enAvant !== undefined) {
+      if (role !== Role.ADMIN) {
+        throw new ForbiddenException('forbidden');
+      }
+      event.enAvant = dto.enAvant;
+    }
 
     if (dto.public !== undefined) {
       if (role !== Role.ADMIN) {

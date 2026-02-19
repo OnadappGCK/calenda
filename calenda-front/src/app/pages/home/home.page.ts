@@ -4,7 +4,7 @@ import { Component, OnDestroy, OnInit, PLATFORM_ID, computed, inject, signal } f
 import { RouterLink } from '@angular/router';
 import { EventsService, EventDto } from '../../core/events.service';
 import { NewsService, NewsDto } from '../../core/news.service';
-import { categoryColor, tagIcon } from '../../core/event-ui';
+import { categoryColor, resolveEventImageUrl, tagIcon } from '../../core/event-ui';
 
 @Component({
   selector: 'app-home-page',
@@ -36,6 +36,10 @@ export class HomePage implements OnInit, OnDestroy {
 
   protected readonly categoryColor = categoryColor;
   protected readonly tagIcon = tagIcon;
+
+  featuredImageUrl(e: EventDto) {
+    return resolveEventImageUrl(e.categorie, e.imageUrl);
+  }
 
   private autoTimer: any = null;
 

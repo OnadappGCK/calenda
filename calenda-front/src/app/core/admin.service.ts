@@ -22,6 +22,7 @@ export class AdminService {
         pseudo: string;
         ville: string;
         lieu: string;
+        numero?: string | null;
         role: string;
         profileImage: string | null;
         createdAt: string;
@@ -35,6 +36,7 @@ export class AdminService {
     pseudo: string;
     ville: string;
     lieu: string;
+    numero?: string | null;
     role?: string;
     profileImage?: string;
     password: string;
@@ -50,6 +52,7 @@ export class AdminService {
       pseudo?: string;
       ville?: string;
       lieu?: string;
+      numero?: string | null;
       role?: string;
       profileImage?: string | null;
       password?: string;
@@ -119,7 +122,7 @@ export class AdminService {
         reason?: string;
         titre?: string;
         dateDebut?: string;
-        dateFin?: string;
+        dateFin?: string | null;
         image?: boolean;
         descLen?: number;
       }[];
@@ -139,7 +142,7 @@ export class AdminService {
         reason?: string;
         titre?: string;
         dateDebut?: string;
-        dateFin?: string;
+        dateFin?: string | null;
       }[];
     }>(`${this.apiBaseUrl}/admin/merge/martigues/apply`, body);
   }

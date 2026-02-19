@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AdminService } from '../../core/admin.service';
@@ -23,6 +23,7 @@ type Draft = {
   caracteristiques: EventTag[] | null;
   imageUrl: string | null;
   tarif: string | null;
+  contact: string;
   organisateurId: string;
   dateDebutLocal: string;
   dateFinLocal: string;
@@ -43,6 +44,7 @@ type Draft = {
  */
 export class EventDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly eventsService = inject(EventsService);
   private readonly favoritesService = inject(FavoritesService);
   private readonly auth = inject(AuthService);
@@ -59,6 +61,10 @@ export class EventDetailPage implements OnInit {
   readonly editing = signal(false);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
+
+  readonly showDeleteConfirm = signal(false);
+  readonly deleting = signal(false);
+  readonly deleteError = signal<string | null>(null);
 
   readonly organizers = signal<{ id: string; pseudo: string; email: string; role: string }[]>([]);
 
@@ -233,6 +239,7 @@ export class EventDetailPage implements OnInit {
       caracteristiques: e.caracteristiques ?? null,
       imageUrl: e.imageUrl ?? null,
       tarif: e.tarif ?? null,
+      contact: (e.contact ?? '').trim(),
       organisateurId: '',
       dateDebutLocal: this.formatDateTimeLocal(e.dateDebut),
       dateFinLocal: this.formatDateTimeLocal(e.dateFin),
@@ -253,6 +260,39 @@ export class EventDetailPage implements OnInit {
     this.saving.set(false);
     this.saveError.set(null);
     this.draft.set(null);
+    this.showDeleteConfirm.set(false);
+    this.deleting.set(false);
+    this.deleteError.set(null);
+  }
+
+  openDeleteConfirm() {
+    if (!this.editing() || !this.canEdit()) return;
+    this.deleteError.set(null);
+    this.showDeleteConfirm.set(true);
+  }
+
+  closeDeleteConfirm() {
+    if (this.deleting()) return;
+    this.showDeleteConfirm.set(false);
+  }
+
+  async confirmDelete() {
+    const e = this.event();
+    if (!e || !this.canEdit()) return;
+
+    this.deleting.set(true);
+    this.deleteError.set(null);
+    try {
+      await this.eventsService.remove(e.id).toPromise();
+      this.showDeleteConfirm.set(false);
+      this.editing.set(false);
+      this.draft.set(null);
+      await this.router.navigateByUrl('/calendar');
+    } catch {
+      this.deleteError.set('delete_failed');
+    } finally {
+      this.deleting.set(false);
+    }
   }
 
   onOrganizerSelected(id: string) {
@@ -271,6 +311,7 @@ export class EventDetailPage implements OnInit {
 
     try {
       const rawEnd = (d.dateFinLocal ?? '').trim();
+      const rawContact = (d.contact ?? '').trim();
       const payload: any = {
         titre: d.titre.trim(),
         description: d.description.trim(),
@@ -281,7 +322,6 @@ export class EventDetailPage implements OnInit {
         longitude: d.longitude,
         dateDebut: this.toIsoFromLocal(d.dateDebutLocal),
         dateFin: rawEnd ? this.toIsoFromLocal(rawEnd) : null,
-        enAvant: d.enAvant,
       };
 
       const theme = this.cleanText(d.theme);
@@ -296,6 +336,8 @@ export class EventDetailPage implements OnInit {
       const tarif = this.cleanText(d.tarif) ?? 'Non renseigné';
       payload.tarif = tarif;
 
+      payload.contact = rawContact ? rawContact : null;
+
       if ((d.caracteristiques ?? []).length > 0) {
         payload.caracteristiques = (d.caracteristiques ?? []).slice(0, 3);
       } else {
@@ -304,6 +346,7 @@ export class EventDetailPage implements OnInit {
 
       if (this.isAdmin()) {
         payload.public = d.public;
+        payload.enAvant = d.enAvant;
         if (d.organisateurId) {
           payload.organisateurId = d.organisateurId;
         }

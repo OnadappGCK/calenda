@@ -22,6 +22,10 @@ export class AdminCreateUserDto {
   @IsString()
   profileImage?: string;
 
+  @IsOptional()
+  @IsString()
+  numero?: string;
+
   @IsString()
   @MinLength(8)
   password!: string;

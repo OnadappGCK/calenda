@@ -57,6 +57,7 @@ export class AuthService {
       passwordHash,
       role: Role.UTILISATEUR,
       profileImage: profileImage || null,
+      numero: (dto.numero ?? '').trim() || null,
       emailVerified: true,
       emailVerificationToken: null,
     });
@@ -69,6 +70,7 @@ export class AuthService {
       pseudo: user.pseudo,
       role: user.role,
       profileImage: user.profileImage,
+      numero: user.numero,
     };
   }
 
@@ -102,6 +104,7 @@ export class AuthService {
         pseudo: user.pseudo,
         role: user.role,
         profileImage: user.profileImage,
+        numero: user.numero,
       },
     };
   }

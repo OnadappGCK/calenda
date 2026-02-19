@@ -11,6 +11,7 @@ type UserDto = {
   pseudo: string;
   ville: string;
   lieu: string;
+  numero?: string | null;
   role: Role;
   profileImage: string | null;
   createdAt: string;
@@ -25,6 +26,7 @@ type EditModel = {
   pseudo: string;
   ville: string;
   lieu: string;
+  numero: string;
   role: Role;
   profileImage: string | null;
   password: string;
@@ -36,6 +38,7 @@ type CreateModel = {
   pseudo: string;
   ville: string;
   lieu: string;
+  numero: string;
   role: Role;
   profileImage: string;
   password: string;
@@ -69,6 +72,7 @@ export class AdminAccountsPage implements OnInit {
     pseudo: '',
     ville: 'Dev',
     lieu: 'Dev',
+    numero: '',
     role: 'ORGANISATEUR',
     profileImage: allowedProfileImagesForRole('ORGANISATEUR')[0] ?? 'img/profil/picture/dog-pp.png',
     password: '',
@@ -137,6 +141,7 @@ export class AdminAccountsPage implements OnInit {
       pseudo: '',
       ville: 'Dev',
       lieu: 'Dev',
+      numero: '',
       role,
       profileImage: this.ensureProfileImageAllowed(role, null),
       password: '',
@@ -166,6 +171,7 @@ export class AdminAccountsPage implements OnInit {
         pseudo: c.pseudo.trim(),
         ville: c.ville.trim(),
         lieu: c.lieu.trim(),
+        numero: c.numero.trim() || null,
         role: c.role,
         profileImage: c.profileImage,
         password: c.password,
@@ -184,6 +190,7 @@ export class AdminAccountsPage implements OnInit {
       pseudo: u.pseudo,
       ville: u.ville,
       lieu: u.lieu,
+      numero: (u.numero ?? '').trim(),
       role: u.role,
       profileImage: u.profileImage,
       password: '',
@@ -216,6 +223,7 @@ export class AdminAccountsPage implements OnInit {
       pseudo: e.pseudo.trim(),
       ville: e.ville.trim(),
       lieu: e.lieu.trim(),
+      numero: e.numero.trim() || null,
       role: e.role,
       profileImage: e.profileImage,
     };

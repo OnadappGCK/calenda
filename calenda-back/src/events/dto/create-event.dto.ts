@@ -57,6 +57,10 @@ export class CreateEventDto {
   @IsString()
   tarif?: string;
 
+  @IsOptional()
+  @IsString()
+  contact?: string | null;
+
   /** Date/heure de début (ISO). */
   @IsDateString()
   dateDebut!: string;

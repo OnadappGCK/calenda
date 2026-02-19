@@ -22,6 +22,7 @@ export class RegisterPage {
   email = '';
   ville = '';
   lieu = '';
+  numero = '';
   password = '';
   passwordConfirmation = '';
   profileImage: string | null = null;
@@ -57,6 +58,7 @@ export class RegisterPage {
         email: this.email,
         ville: this.ville,
         lieu: this.lieu,
+        numero: this.numero.trim() || undefined,
         password: this.password,
         passwordConfirmation: this.passwordConfirmation,
         profileImage: this.profileImage,

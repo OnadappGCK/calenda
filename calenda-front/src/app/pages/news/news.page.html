@@ -1,15 +1,31 @@
 <section class="container">
   <h1>Actualités</h1>
 
+  @if (isAdmin()) {
+    <div class="adminBar">
+      <button class="btn btnPrimary" type="button" (click)="openCreate()">Créer une actualité</button>
+    </div>
+  }
+
   @if (items().length === 0) {
     <p>Aucune actualité.</p>
   } @else {
     <div class="list">
       @for (n of items(); track n.id) {
         <article class="item">
+          @if (newsImageUrl(n.image)) {
+            <img class="itemImg" [src]="newsImageUrl(n.image)" alt="" />
+          }
           <h2>{{ n.titre }}</h2>
           <div class="meta">{{ n.datePublication | date }}</div>
           <p>{{ n.texte }}</p>
+
+          @if (isAdmin()) {
+            <div class="itemActions">
+              <button class="btn" type="button" (click)="openEdit(n)">Modifier</button>
+              <button class="btn btnDanger" type="button" (click)="requestDelete(n.id)">Supprimer</button>
+            </div>
+          }
         </article>
       }
     </div>
@@ -18,6 +34,111 @@
       <button class="btn" type="button" (click)="prev()">Précédent</button>
       <div class="page">Page {{ page() }}</div>
       <button class="btn" type="button" (click)="next()">Suivant</button>
+    </div>
+  }
+
+  @if (showCreate()) {
+    <div class="modalBackdrop" (click)="closeCreate()"></div>
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>Créer une actualité</h2>
+
+      <label class="field">
+        Titre
+        <input type="text" [ngModel]="create().titre" (ngModelChange)="create.set({ ...create(), titre: $event })" />
+      </label>
+
+      <label class="field">
+        Date
+        <input
+          type="date"
+          [ngModel]="create().datePublication"
+          (ngModelChange)="create.set({ ...create(), datePublication: $event })"
+        />
+      </label>
+
+      <label class="field">
+        Texte
+        <textarea rows="6" [ngModel]="create().texte" (ngModelChange)="create.set({ ...create(), texte: $event })"></textarea>
+      </label>
+
+      <label class="field">
+        Photo
+        <input type="file" accept="image/*" (change)="onCreateFileChange($event)" />
+      </label>
+
+      @if (createPreviewUrl()) {
+        <img class="imgPreview" [src]="createPreviewUrl()" alt="" />
+      }
+
+      <div class="actions">
+        <button class="btn btnPrimary" type="button" (click)="submitCreate()">Créer</button>
+        <button class="btn" type="button" (click)="closeCreate()">Annuler</button>
+      </div>
+    </div>
+  }
+
+  @if (showEdit() && edit()) {
+    <div class="modalBackdrop" (click)="closeEdit()"></div>
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>Modifier une actualité</h2>
+
+      <label class="field">
+        Titre
+        <input type="text" [ngModel]="edit()!.titre" (ngModelChange)="edit.set({ ...edit()!, titre: $event })" />
+      </label>
+
+      <label class="field">
+        Date
+        <input
+          type="date"
+          [ngModel]="edit()!.datePublication"
+          (ngModelChange)="edit.set({ ...edit()!, datePublication: $event })"
+        />
+      </label>
+
+      <label class="field">
+        Texte
+        <textarea rows="6" [ngModel]="edit()!.texte" (ngModelChange)="edit.set({ ...edit()!, texte: $event })"></textarea>
+      </label>
+
+      @if (edit()!.image && !edit()!.removeImage && !editPreviewUrl()) {
+        <img class="imgPreview" [src]="newsImageUrl(edit()!.image)" alt="" />
+      }
+
+      @if (editPreviewUrl()) {
+        <img class="imgPreview" [src]="editPreviewUrl()" alt="" />
+      }
+
+      <label class="field">
+        Nouvelle photo
+        <input type="file" accept="image/*" (change)="onEditFileChange($event)" />
+      </label>
+
+      <label class="check">
+        <input
+          type="checkbox"
+          [ngModel]="edit()!.removeImage"
+          (ngModelChange)="edit.set({ ...edit()!, removeImage: $event })"
+        />
+        Supprimer la photo
+      </label>
+
+      <div class="actions">
+        <button class="btn btnPrimary" type="button" (click)="submitEdit()">Enregistrer</button>
+        <button class="btn" type="button" (click)="closeEdit()">Annuler</button>
+      </div>
+    </div>
+  }
+
+  @if (deleteId()) {
+    <div class="modalBackdrop" (click)="cancelDelete()"></div>
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>Supprimer l’actualité</h2>
+      <p>Confirmer la suppression ?</p>
+      <div class="actions">
+        <button class="btn btnDanger" type="button" (click)="confirmDelete()">Supprimer</button>
+        <button class="btn" type="button" (click)="cancelDelete()">Annuler</button>
+      </div>
     </div>
   }
 </section>

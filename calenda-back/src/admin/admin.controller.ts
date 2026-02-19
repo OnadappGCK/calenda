@@ -57,6 +57,7 @@ export class AdminController {
       lieu: u.lieu,
       role: u.role,
       profileImage: u.profileImage,
+      numero: u.numero,
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
     };
@@ -130,6 +131,7 @@ export class AdminController {
       lieu: dto.lieu.trim(),
       role,
       profileImage: profileImage || null,
+      numero: (dto.numero ?? '').trim() || null,
       passwordHash,
       emailVerified: true,
       emailVerificationToken: null,
@@ -180,6 +182,11 @@ export class AdminController {
       } else {
         user.profileImage = null;
       }
+    }
+
+    if (dto.numero !== undefined) {
+      const raw = (dto.numero ?? '').trim();
+      user.numero = raw ? raw : null;
     }
 
     if (dto.password !== undefined || dto.passwordConfirmation !== undefined) {

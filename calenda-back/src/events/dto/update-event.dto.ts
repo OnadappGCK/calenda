@@ -63,6 +63,10 @@ export class UpdateEventDto {
   tarif?: string | null;
 
   @IsOptional()
+  @IsString()
+  contact?: string | null;
+
+  @IsOptional()
   @IsUUID()
   organisateurId?: string;
 

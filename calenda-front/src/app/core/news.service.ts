@@ -29,4 +29,33 @@ export class NewsService {
       },
     );
   }
+
+  create(payload: { titre: string; datePublication: string; texte: string }, image?: File | null) {
+    const fd = new FormData();
+    fd.append('titre', payload.titre);
+    fd.append('datePublication', payload.datePublication);
+    fd.append('texte', payload.texte);
+    if (image) {
+      fd.append('image', image);
+    }
+    return this.http.post<NewsDto>(`${this.apiBaseUrl}/news`, fd);
+  }
+
+  update(
+    id: string,
+    payload: { titre?: string; datePublication?: string; texte?: string; removeImage?: boolean },
+    image?: File | null,
+  ) {
+    const fd = new FormData();
+    if (payload.titre !== undefined) fd.append('titre', payload.titre);
+    if (payload.datePublication !== undefined) fd.append('datePublication', payload.datePublication);
+    if (payload.texte !== undefined) fd.append('texte', payload.texte);
+    if (payload.removeImage) fd.append('removeImage', 'true');
+    if (image) fd.append('image', image);
+    return this.http.patch<NewsDto>(`${this.apiBaseUrl}/news/${id}`, fd);
+  }
+
+  remove(id: string) {
+    return this.http.delete<{ ok: true }>(`${this.apiBaseUrl}/news/${id}`);
+  }
 }

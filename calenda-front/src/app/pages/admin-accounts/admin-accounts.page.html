@@ -112,6 +112,11 @@
       </label>
 
       <label class="field">
+        Téléphone
+        <input type="tel" [ngModel]="create().numero" (ngModelChange)="create.set({ ...create(), numero: $event })" />
+      </label>
+
+      <label class="field">
         Photo de profil
         <select [ngModel]="create().profileImage" (ngModelChange)="create.set({ ...create(), profileImage: $event })">
           @for (img of allowedImagesFor(create().role); track img) {
@@ -180,6 +185,11 @@
       <label class="field">
         Lieu
         <input type="text" [ngModel]="edit()!.lieu" (ngModelChange)="edit.set({ ...edit()!, lieu: $event })" />
+      </label>
+
+      <label class="field">
+        Téléphone
+        <input type="tel" [ngModel]="edit()!.numero" (ngModelChange)="edit.set({ ...edit()!, numero: $event })" />
       </label>
 
       <label class="field">

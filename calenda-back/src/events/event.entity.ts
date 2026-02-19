@@ -66,6 +66,9 @@ export class Event {
   @Column({ type: 'text', nullable: true, default: 'Non renseigné' })
   tarif!: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  contact!: string | null;
+
   @Column({ type: 'datetime' })
   /** Date/heure de début. */
   dateDebut!: Date;

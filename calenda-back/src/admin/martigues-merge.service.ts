@@ -185,6 +185,10 @@ export class MartiguesMergeService {
         });
 
         if (existing) {
+          if (!existing.contact && detail.contact) {
+            existing.contact = detail.contact;
+            await this.eventsRepo.save(existing);
+          }
           skippedExisting++;
 
           if (debugSamples.length < 20) {
@@ -340,6 +344,7 @@ export class MartiguesMergeService {
           caracteristiques: null,
           imageUrl: detail.imageUrl,
           tarif: detail.tarif ?? 'Non renseigné',
+          contact: detail.contact,
           dateDebut: detail.dateDebut,
           dateFin: detail.dateFin,
           couleur: null,
@@ -699,6 +704,37 @@ export class MartiguesMergeService {
     ]);
   }
 
+  private extractContactText(html: string) {
+    const sectionHtml =
+      this.extractSectionHtml(html, 'Contact', [
+        'Localisation',
+        'Tarifs',
+        'Modes de paiement',
+        "Période(s) d'ouverture",
+        'Informations pratiques',
+        'Carte',
+      ]) ?? html;
+
+    const emailFromHref = this.matchFirstGroup(sectionHtml, /href=['"]mailto:([^'"\s>]+)/i);
+    const telFromHref = this.matchFirstGroup(sectionHtml, /href=['"]tel:([^'"\s>]+)/i);
+
+    const sectionText = this.htmlToText(sectionHtml);
+    const emailFromText = this.matchFirstGroup(
+      sectionText,
+      /([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i,
+    );
+    const telFromText = this.matchFirstGroup(sectionText, /((?:\+33|0)\s*[1-9](?:[\s.\-]*\d{2}){4})/i);
+
+    const emailRaw = (emailFromHref ?? emailFromText ?? '').trim();
+    const email = emailRaw ? emailRaw.split('?')[0]?.trim() || '' : '';
+
+    const phoneRaw = (telFromHref ?? telFromText ?? '').trim();
+    const phone = phoneRaw ? phoneRaw.split('?')[0]?.trim() || '' : '';
+
+    if (!email && !phone) return null;
+    return `email : ${email || 'non mentionné'} Téléphone : ${phone || 'non mentionné'}`;
+  }
+
   private extractSectionHtml(html: string, title: string, stopTitles?: string[]) {
     const t = this.escapeRegExp(title);
     const headingRe = new RegExp(`<h[1-6][^>]*>[\\s\\S]*?${t}[\\s\\S]*?<\\/h[1-6]>`, 'i');
@@ -746,6 +782,7 @@ export class MartiguesMergeService {
       description: string;
       imageUrl: string | null;
       tarif: string | null;
+      contact: string | null;
       dateDebut: Date;
       dateFin: Date | null;
       ville: string;
@@ -780,6 +817,8 @@ export class MartiguesMergeService {
     const imageUrl = (this.firstString(jsonLd?.image) ?? ogImage ?? null)?.trim() || null;
 
     const tarif = this.cleanTarifText(this.extractTarifText(html)) ?? 'Non renseigné';
+
+    const contact = this.extractContactText(html);
 
     const pageText = this.htmlToText(html);
 
@@ -923,6 +962,7 @@ export class MartiguesMergeService {
         description: description || titre,
         imageUrl,
         tarif,
+        contact,
         dateDebut,
         dateFin,
         ville,
