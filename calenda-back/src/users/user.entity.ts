@@ -8,7 +8,6 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Role } from '../common/enums/role.enum';
 import { Event } from '../events/event.entity';
 
 @Entity('users')
@@ -44,9 +43,8 @@ export class User {
   /** Hash bcrypt du mot de passe (jamais exposé au front). */
   passwordHash!: string;
 
-  @Column({ type: 'text', default: Role.UTILISATEUR })
-  /** Rôle applicatif. */
-  role!: Role;
+  @Column({ default: false })
+  isAdmin!: boolean;
 
   @Column({ default: false })
   /** Indique si l'email est vérifié. */

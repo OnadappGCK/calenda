@@ -12,11 +12,20 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { EventsService, EventCategory, EventDto, EventTag } from '../../core/events.service';
-import { categoryColor, categoryIcon, resolveEventImageUrl, tagIcon, tagIconUrl } from '../../core/event-ui';
+import {
+  categoryColor,
+  categoryForegroundColor,
+  categoryGradient,
+  categoryIcon,
+  resolveEventImageUrl,
+  tagIcon,
+  tagIconUrl,
+} from '../../core/event-ui';
 import { FavoritesService } from '../../core/favorites.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
 
@@ -46,9 +55,13 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly favoritesService = inject(FavoritesService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly el = inject(ElementRef);
   private readonly photon = inject(PhotonService);
+
+  @ViewChild('schedScroll')
+  private schedScroll?: ElementRef<HTMLElement>;
 
   /** Indique si le composant a été détruit (évite des requêtes tardives via observers). */
   private destroyed = false;
@@ -62,6 +75,43 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Point d'ancrage DOM en bas de liste, observé pour déclencher le chargement de la page suivante. */
   @ViewChild('upcomingSentinel')
   private upcomingSentinel?: ElementRef<HTMLElement>;
+
+  private swipeHost?: HTMLElement;
+  private swipeStartX = 0;
+  private swipeStartY = 0;
+  private swipeStartTs = 0;
+  private swipeStartScrollLeft = 0;
+  private readonly onSwipeTouchStart = (ev: TouchEvent) => {
+    if (ev.touches.length !== 1) return;
+    const t = ev.touches[0];
+    this.swipeStartX = t.clientX;
+    this.swipeStartY = t.clientY;
+    this.swipeStartTs = Date.now();
+    this.swipeStartScrollLeft = this.swipeHost?.scrollLeft ?? 0;
+  };
+  private readonly onSwipeTouchEnd = (ev: TouchEvent) => {
+    if (!this.swipeStartTs) return;
+    const t = ev.changedTouches[0];
+    if (!t) return;
+
+    const dx = t.clientX - this.swipeStartX;
+    const dy = t.clientY - this.swipeStartY;
+    const dt = Date.now() - this.swipeStartTs;
+    this.swipeStartTs = 0;
+
+    if (dt > 900) return;
+    if (Math.abs(dx) < 70) return;
+    if (Math.abs(dx) < Math.abs(dy) * 1.2) return;
+
+    const host = this.swipeHost;
+    if (host && Math.abs((host.scrollLeft ?? 0) - this.swipeStartScrollLeft) > 6) return;
+
+    if (dx > 0) {
+      this.prevPeriod();
+    } else {
+      this.nextPeriod();
+    }
+  };
 
   /**
    * Avoid concurrent reload() calls (e.g. user clicking refresh multiple times):
@@ -117,6 +167,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   adresse = '';
   categorie: EventCategory | '' = '';
   favoris = false;
+  includePending = false;
 
   readonly cities = signal<string[]>([]);
 
@@ -130,6 +181,95 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   dateFinFilter = '';
 
   showFilters = false;
+
+  private syncingFromUrl = false;
+  private syncingToUrl = false;
+  private lastQueryKey: string | null = null;
+
+  private isDayKey(v: string) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(v);
+  }
+
+  private currentQueryKey(pm: { keys: string[]; get: (k: string) => string | null }) {
+    const keys = pm.keys.slice().sort();
+    return keys.map((k) => `${k}=${pm.get(k) ?? ''}`).join('&');
+  }
+
+  private applyQueryParams(pm: { get: (k: string) => string | null }) {
+    const view = pm.get('view');
+    if (view === 'week' || view === 'day') {
+      this.viewMode = view;
+    }
+
+    const date = pm.get('date');
+    if (date && this.isDayKey(date)) {
+      this.selectedDate = date;
+    }
+
+    const dateDebut = pm.get('dateDebut');
+    this.dateDebutFilter = dateDebut && this.isDayKey(dateDebut) ? dateDebut : '';
+
+    const dateFin = pm.get('dateFin');
+    this.dateFinFilter = dateFin && this.isDayKey(dateFin) ? dateFin : '';
+
+    this.q = (pm.get('q') ?? '').trim();
+    this.adresse = (pm.get('adresse') ?? '').trim();
+
+    const cat = (pm.get('categorie') ?? '').trim();
+    this.categorie = (cat as any) || '';
+
+    const fav = (pm.get('favoris') ?? '').trim();
+    const favEnabled = fav === '1' || fav.toLowerCase() === 'true';
+    this.favoris = favEnabled && this.auth.isLoggedIn();
+
+    const inc = (pm.get('includePending') ?? '').trim();
+    const incEnabled = inc === '1' || inc.toLowerCase() === 'true';
+    this.includePending = incEnabled;
+
+    const tagsRaw = (pm.get('tags') ?? '').trim();
+    if (tagsRaw) {
+      const allowed = new Set(this.availableTags);
+      const tags = tagsRaw
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => !!t)
+        .filter((t) => allowed.has(t as EventTag))
+        .slice(0, 3) as EventTag[];
+      this.caracteristiquesFilter = tags;
+    } else {
+      this.caracteristiquesFilter = [];
+    }
+  }
+
+  private buildQueryParams() {
+    const qp: Record<string, string> = {};
+    qp['view'] = this.viewMode;
+    qp['date'] = this.selectedDate;
+    if (this.dateDebutFilter) qp['dateDebut'] = this.dateDebutFilter;
+    if (this.dateFinFilter) qp['dateFin'] = this.dateFinFilter;
+    if (this.adresse) qp['adresse'] = this.adresse;
+    if (this.categorie) qp['categorie'] = this.categorie as string;
+    if (this.q) qp['q'] = this.q;
+    if (this.favoris) qp['favoris'] = '1';
+    if (this.includePending) qp['includePending'] = '1';
+    if (this.caracteristiquesFilter.length) qp['tags'] = this.caracteristiquesFilter.join(',');
+    return qp;
+  }
+
+  private syncUrl() {
+    if (this.syncingFromUrl) return;
+    if (this.syncingToUrl) return;
+    this.syncingToUrl = true;
+    const qp = this.buildQueryParams();
+    const nav = this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: qp,
+      replaceUrl: true,
+    });
+    Promise.resolve(nav).finally(() => {
+      this.syncingToUrl = false;
+    });
+  }
 
   readonly sideOpen = signal<boolean>(false);
   readonly sideDayKey = signal<string>(this.selectedDate);
@@ -178,10 +318,12 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.scheduleRecomputeSlotPx('resize');
   };
 
-  readonly canPropose = computed(() => {
-    const role = this.auth.user()?.role;
-    return role === 'ADMIN' || role === 'ORGANISATEUR';
-  });
+  readonly canPropose = computed(() => this.auth.isLoggedIn());
+  protected readonly isAdmin = computed(() => !!this.auth.user()?.isAdmin);
+
+  proposeGateOpen = false;
+  proposeGateMessage = 'Vous devez être connecté pour proposer un événement.';
+  proposeGateKind: 'login_required' = 'login_required';
 
   /** Convertit un ISO datetime en minutes depuis minuit (heure locale). */
   private minutesOfDay(iso: string) {
@@ -277,7 +419,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   newDateDebut = '';
   newDateFin = '';
 
+  newHoneypot = '';
+
   protected readonly categoryColor = categoryColor;
+  protected readonly categoryGradient = categoryGradient;
+  protected readonly categoryForegroundColor = categoryForegroundColor;
   protected readonly categoryIcon = categoryIcon;
   protected readonly tagIcon = tagIcon;
   protected readonly tagIconUrl = tagIconUrl;
@@ -572,6 +718,21 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
     this.scheduleRecomputeSlotPx('init');
 
+    const qpSub = this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((pm) => {
+      const key = this.currentQueryKey(pm);
+      if (this.lastQueryKey === key) return;
+      if (this.syncingToUrl) {
+        this.lastQueryKey = key;
+        return;
+      }
+      this.lastQueryKey = key;
+      this.syncingFromUrl = true;
+      this.applyQueryParams(pm);
+      this.syncingFromUrl = false;
+      this.scheduleRecomputeSlotPx('queryParams');
+      void this.reload();
+    });
+
     /**
      * Charge l'utilisateur si un token est présent.
      * Tolère les erreurs (token expiré/invalidé) pour ne pas bloquer le chargement des événements publics.
@@ -590,6 +751,12 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     }
     const c = await this.eventsService.cities().toPromise();
     this.cities.set(c ?? []);
+
+    this.lastQueryKey = this.currentQueryKey(this.route.snapshot.queryParamMap);
+    this.syncingFromUrl = true;
+    this.applyQueryParams(this.route.snapshot.queryParamMap);
+    this.syncingFromUrl = false;
+    this.syncUrl();
 
     await this.reload();
   }
@@ -670,11 +837,14 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Hook Angular: attache l'IntersectionObserver pour le chargement progressif de la liste "à venir". */
   ngAfterViewInit() {
     this.scheduleObserveUpcomingSentinel();
+    this.attachSwipeNav();
   }
 
   /** Hook Angular: nettoyage des listeners + observers. */
   ngOnDestroy() {
     this.destroyed = true;
+
+    this.detachSwipeNav();
 
     /** Invalide les requêtes "à venir" en cours pour éviter l'application de réponses tardives. */
     this.upcomingToken += 1;
@@ -723,6 +893,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       if (this.adresse) params['adresse'] = this.adresse;
       if (this.categorie) params['categorie'] = this.categorie as string;
       if (this.favoris) params['favoris'] = 'true';
+      if (this.includePending && !!this.auth.user()?.isAdmin) params['includePending'] = '1';
       if (this.caracteristiquesFilter.length) params['caracteristiques'] = this.caracteristiquesFilter.join(',');
 
       this.dbg('reload start', {
@@ -854,6 +1025,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       if (this.adresse) params['adresse'] = this.adresse;
       if (this.categorie) params['categorie'] = this.categorie as string;
       if (this.favoris) params['favoris'] = 'true';
+      if (this.includePending && !!this.auth.user()?.isAdmin) params['includePending'] = '1';
       if (this.caracteristiquesFilter.length) params['caracteristiques'] = this.caracteristiquesFilter.join(',');
 
       params['limit'] = String(this.upcomingPageSize);
@@ -888,9 +1060,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.adresse = '';
     this.categorie = '';
     this.favoris = false;
+    this.includePending = false;
     this.caracteristiquesFilter = [];
     this.dateDebutFilter = '';
     this.dateFinFilter = '';
+    this.syncUrl();
     void this.reload();
   }
 
@@ -907,6 +1081,17 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     }
     this.favoris = !this.favoris;
     await this.reloadFavorites();
+    await this.reload();
+  }
+
+  async toggleIncludePending() {
+    if (!this.isAdmin()) {
+      this.includePending = false;
+      this.syncUrl();
+      return;
+    }
+    this.includePending = !this.includePending;
+    this.syncUrl();
     await this.reload();
   }
 
@@ -937,7 +1122,6 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Construit la liste de chips (tags) affichés pour représenter les filtres actifs. */
   activeChips() {
     const chips: Array<{ key: string; label: string }> = [];
-    chips.push({ key: 'date', label: this.viewMode === 'week' ? 'Semaine' : 'Journée' });
     if (this.adresse) chips.push({ key: 'adresse', label: this.adresse });
     if (this.categorie) chips.push({ key: 'categorie', label: this.categorie });
     if (this.q) chips.push({ key: 'q', label: this.q });
@@ -945,6 +1129,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.dateDebutFilter) chips.push({ key: 'dateDebut', label: `Du ${this.dateDebutFilter}` });
     if (this.dateFinFilter) chips.push({ key: 'dateFin', label: `Au ${this.dateFinFilter}` });
     if (this.favoris) chips.push({ key: 'favoris', label: 'Favoris' });
+    if (this.includePending && this.isAdmin()) chips.push({ key: 'includePending', label: 'En attente' });
     return chips;
   }
 
@@ -958,6 +1143,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     if (key === 'dateDebut') this.dateDebutFilter = '';
     if (key === 'dateFin') this.dateFinFilter = '';
     if (key === 'favoris') this.favoris = false;
+    if (key === 'includePending') this.includePending = false;
+    this.syncUrl();
     void this.reload();
   }
 
@@ -967,7 +1154,39 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     // Switching view mode changes the DOM structure and header sizes.
     // Schedule recompute after the DOM has updated.
     this.scheduleRecomputeSlotPx('viewMode');
+    this.scheduleAttachSwipeNav();
+    this.syncUrl();
     void this.reload();
+  }
+
+  private scheduleAttachSwipeNav() {
+    if (typeof window === 'undefined') return;
+    window.setTimeout(() => {
+      this.attachSwipeNav();
+    }, 0);
+  }
+
+  private attachSwipeNav() {
+    if (typeof window === 'undefined') return;
+
+    const host = this.schedScroll?.nativeElement ?? (this.el.nativeElement as HTMLElement).querySelector('.schedScroll');
+    if (!(host instanceof HTMLElement)) return;
+    if (this.swipeHost === host) return;
+
+    this.detachSwipeNav();
+    this.swipeHost = host;
+
+    host.addEventListener('touchstart', this.onSwipeTouchStart, { passive: true });
+    host.addEventListener('touchend', this.onSwipeTouchEnd, { passive: true });
+    host.addEventListener('touchcancel', this.onSwipeTouchEnd, { passive: true });
+  }
+
+  private detachSwipeNav() {
+    if (!this.swipeHost) return;
+    this.swipeHost.removeEventListener('touchstart', this.onSwipeTouchStart);
+    this.swipeHost.removeEventListener('touchend', this.onSwipeTouchEnd);
+    this.swipeHost.removeEventListener('touchcancel', this.onSwipeTouchEnd);
+    this.swipeHost = undefined;
   }
 
   /** Navigation vers la période précédente (semaine -7 jours / journée -1 jour). */
@@ -976,6 +1195,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     const delta = this.viewMode === 'week' ? -7 : -1;
     d.setDate(d.getDate() + delta);
     this.selectedDate = this.localKeyFromDate(d);
+    this.syncUrl();
     void this.reload();
   }
 
@@ -985,6 +1205,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     const delta = this.viewMode === 'week' ? 7 : 1;
     d.setDate(d.getDate() + delta);
     this.selectedDate = this.localKeyFromDate(d);
+    this.syncUrl();
     void this.reload();
   }
 
@@ -992,6 +1213,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   onDateChange() {
     // Changing date often changes labels (and can wrap), impacting measured heights.
     this.scheduleRecomputeSlotPx('dateChange');
+    this.syncUrl();
     void this.reload();
   }
 
@@ -1273,6 +1495,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Applique les filtres (ferme la modale) puis recharge les événements. */
   applyFilters() {
     this.showFilters = false;
+    this.syncUrl();
     void this.reload();
   }
 
@@ -1293,10 +1516,16 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Ouvre la modale de proposition d'événement. */
   async openPropose() {
-    this.showPropose = true;
+    if (!this.auth.isLoggedIn()) {
+      this.proposeGateMessage = 'Vous devez être connecté pour proposer un événement.';
+      this.proposeGateKind = 'login_required';
+      this.proposeGateOpen = true;
+      return;
+    }
 
-    // Make sure user is loaded so we can prefill contact.
     await this.auth.ensureLoaded();
+
+    this.showPropose = true;
 
     if (!this.newContact.trim()) {
       const u = this.auth.user();
@@ -1311,6 +1540,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Ferme la modale de proposition d'événement. */
   closePropose() {
     this.showPropose = false;
+  }
+
+  closeProposeGate() {
+    this.proposeGateOpen = false;
   }
 
   /** Soumet un événement proposé via l'API puis réinitialise le formulaire et recharge. */
@@ -1329,6 +1562,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       imageUrl: this.newImageUrl ? this.newImageUrl : undefined,
       dateDebut: new Date(this.newDateDebut).toISOString(),
       dateFin: rawEnd ? new Date(rawEnd).toISOString() : null,
+      honeypot: this.newHoneypot,
     };
 
     // Only send contact if the user typed something.
@@ -1351,6 +1585,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.newContact = '';
     this.newDateDebut = '';
     this.newDateFin = '';
+    this.newHoneypot = '';
 
     this.closePropose();
     await this.reload();

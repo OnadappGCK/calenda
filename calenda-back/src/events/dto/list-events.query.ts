@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { EventCategory } from '../../common/enums/event-category.enum';
 import { EventTag } from '../../common/enums/event-tag.enum';
 
@@ -56,6 +56,12 @@ export class ListEventsQueryDto {
   @IsOptional()
   @Transform(({ value }) => value === 'true')
   favoris?: boolean;
+
+  /** Admin: inclure les événements non-public (en attente) dans le listing. */
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === '1')
+  @IsBoolean()
+  includePending?: boolean;
 
   /** Pagination: nombre max d'items à retourner (optionnel). */
   @IsOptional()

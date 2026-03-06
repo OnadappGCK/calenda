@@ -84,4 +84,8 @@ export class CreateEventDto {
   @IsOptional()
   @IsString()
   couleur?: string;
+
+  @IsOptional()
+  @IsString()
+  honeypot?: string;
 }

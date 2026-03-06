@@ -20,13 +20,13 @@ export class NavbarComponent implements OnInit {
 
   protected readonly profileImageUrl = profileImageUrl;
 
-  protected readonly isAdmin = computed(() => this.auth.user()?.role === 'ADMIN');
+  protected readonly isAdmin = computed(() => !!this.auth.user()?.isAdmin);
 
   protected readonly pendingCount = signal<number>(0);
 
   /** Hook Angular: charge l'utilisateur puis, si admin, récupère le compteur d'événements en attente. */
   async ngOnInit() {
-    await this.auth.ensureLoaded();
+    await this.auth.refreshMe();
 
     if (!this.isAdmin()) {
       return;

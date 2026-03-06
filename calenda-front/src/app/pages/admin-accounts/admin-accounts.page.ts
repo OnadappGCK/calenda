@@ -2,7 +2,6 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AdminService } from '../../core/admin.service';
-import { Role } from '../../core/auth.service';
 import { allowedProfileImagesForRole, profileImageUrl } from '../../core/profile-images';
 
 type UserDto = {
@@ -12,13 +11,14 @@ type UserDto = {
   ville: string;
   lieu: string;
   numero?: string | null;
-  role: Role;
+  isAdmin: boolean;
+  emailVerified: boolean;
   profileImage: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
-type SortKey = 'pseudo' | 'email' | 'role' | 'createdAt';
+type SortKey = 'pseudo' | 'email' | 'isAdmin' | 'createdAt';
 
 type EditModel = {
   id: string;
@@ -27,7 +27,8 @@ type EditModel = {
   ville: string;
   lieu: string;
   numero: string;
-  role: Role;
+  isAdmin: boolean;
+  emailVerified: boolean;
   profileImage: string | null;
   password: string;
   passwordConfirmation: string;
@@ -39,7 +40,7 @@ type CreateModel = {
   ville: string;
   lieu: string;
   numero: string;
-  role: Role;
+  isAdmin: boolean;
   profileImage: string;
   password: string;
   passwordConfirmation: string;
@@ -59,7 +60,7 @@ export class AdminAccountsPage implements OnInit {
   readonly error = signal<string | null>(null);
 
   q = '';
-  roleFilter: '' | Role = '';
+  isAdminFilter: '' | 'true' | 'false' = '';
 
   sortKey: SortKey = 'pseudo';
   sortDir: 'asc' | 'desc' = 'asc';
@@ -73,8 +74,8 @@ export class AdminAccountsPage implements OnInit {
     ville: 'Dev',
     lieu: 'Dev',
     numero: '',
-    role: 'ORGANISATEUR',
-    profileImage: allowedProfileImagesForRole('ORGANISATEUR')[0] ?? 'img/profil/picture/dog-pp.png',
+    isAdmin: false,
+    profileImage: allowedProfileImagesForRole(false)[0] ?? 'img/profil/picture/dog-pp.png',
     password: '',
     passwordConfirmation: '',
   });
@@ -84,10 +85,11 @@ export class AdminAccountsPage implements OnInit {
   readonly filteredSorted = computed(() => {
     const list = this.items();
     const q = (this.q ?? '').trim().toLowerCase();
-    const role = this.roleFilter;
+    const isAdminFilter = this.isAdminFilter;
 
     const filtered = list.filter((u) => {
-      if (role && u.role !== role) return false;
+      if (isAdminFilter === 'true' && !u.isAdmin) return false;
+      if (isAdminFilter === 'false' && u.isAdmin) return false;
       if (!q) return true;
       return u.email.toLowerCase().includes(q) || u.pseudo.toLowerCase().includes(q);
     });
@@ -104,12 +106,12 @@ export class AdminAccountsPage implements OnInit {
 
   protected readonly profileImageUrl = profileImageUrl;
 
-  allowedImagesFor(role: Role) {
-    return allowedProfileImagesForRole(role);
+  allowedImagesFor(isAdmin: boolean) {
+    return allowedProfileImagesForRole(isAdmin);
   }
 
-  private ensureProfileImageAllowed(role: Role, current: string | null | undefined) {
-    const allowed = allowedProfileImagesForRole(role);
+  private ensureProfileImageAllowed(isAdmin: boolean, current: string | null | undefined) {
+    const allowed = allowedProfileImagesForRole(isAdmin);
     const cur = (current ?? '').trim();
     if (cur && allowed.includes(cur as any)) {
       return cur;
@@ -135,15 +137,15 @@ export class AdminAccountsPage implements OnInit {
   }
 
   openCreate() {
-    const role: Role = 'ORGANISATEUR';
+    const isAdmin = false;
     this.create.set({
       email: '',
       pseudo: '',
       ville: 'Dev',
       lieu: 'Dev',
       numero: '',
-      role,
-      profileImage: this.ensureProfileImageAllowed(role, null),
+      isAdmin,
+      profileImage: this.ensureProfileImageAllowed(isAdmin, null),
       password: '',
       passwordConfirmation: '',
     });
@@ -154,12 +156,12 @@ export class AdminAccountsPage implements OnInit {
     this.showCreate.set(false);
   }
 
-  onCreateRoleChange(role: Role) {
+  onCreateIsAdminChange(isAdmin: boolean) {
     const c = this.create();
     this.create.set({
       ...c,
-      role,
-      profileImage: this.ensureProfileImageAllowed(role, c.profileImage),
+      isAdmin,
+      profileImage: this.ensureProfileImageAllowed(isAdmin, c.profileImage),
     });
   }
 
@@ -172,7 +174,7 @@ export class AdminAccountsPage implements OnInit {
         ville: c.ville.trim(),
         lieu: c.lieu.trim(),
         numero: c.numero.trim() || null,
-        role: c.role,
+        isAdmin: c.isAdmin,
         profileImage: c.profileImage,
         password: c.password,
         passwordConfirmation: c.passwordConfirmation,
@@ -191,7 +193,8 @@ export class AdminAccountsPage implements OnInit {
       ville: u.ville,
       lieu: u.lieu,
       numero: (u.numero ?? '').trim(),
-      role: u.role,
+      isAdmin: u.isAdmin,
+      emailVerified: u.emailVerified,
       profileImage: u.profileImage,
       password: '',
       passwordConfirmation: '',
@@ -204,13 +207,13 @@ export class AdminAccountsPage implements OnInit {
     this.edit.set(null);
   }
 
-  onEditRoleChange(role: Role) {
+  onEditIsAdminChange(isAdmin: boolean) {
     const e = this.edit();
     if (!e) return;
     this.edit.set({
       ...e,
-      role,
-      profileImage: this.ensureProfileImageAllowed(role, e.profileImage),
+      isAdmin,
+      profileImage: this.ensureProfileImageAllowed(isAdmin, e.profileImage),
     });
   }
 
@@ -224,7 +227,7 @@ export class AdminAccountsPage implements OnInit {
       ville: e.ville.trim(),
       lieu: e.lieu.trim(),
       numero: e.numero.trim() || null,
-      role: e.role,
+      isAdmin: e.isAdmin,
       profileImage: e.profileImage,
     };
 

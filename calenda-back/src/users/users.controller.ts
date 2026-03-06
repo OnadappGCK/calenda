@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
 import { UpdateMeDto } from './dto/update-me.dto';
@@ -23,6 +23,17 @@ export class UsersController {
   /** Met à jour le profil courant (pseudo/ville/lieu/password). */
   async updateMe(@Req() req: any, @Body() dto: UpdateMeDto) {
     return this.usersService.updateMe(req.user.id, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/request-email-verification')
+  async requestEmailVerification(@Req() req: any) {
+    return this.usersService.requestEmailVerification(req.user.id);
+  }
+
+  @Get('verify-email')
+  async verifyEmail(@Query('token') token: string) {
+    return this.usersService.verifyEmail(token);
   }
 
   @UseGuards(JwtAuthGuard)

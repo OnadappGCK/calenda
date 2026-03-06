@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
-import { Role } from '../common/enums/role.enum';
 import { Event } from '../events/event.entity';
 import { User } from './user.entity';
 import { UpdateMeDto } from './dto/update-me.dto';
@@ -36,13 +36,47 @@ export class UsersService {
       pseudo: user.pseudo,
       ville: user.ville,
       lieu: user.lieu,
-      role: user.role,
+      isAdmin: user.isAdmin,
+      emailVerified: user.emailVerified,
       profileImage: user.profileImage,
       numero: user.numero,
     };
   }
 
-  private validateProfileImageForRole(role: Role, profileImage: string) {
+  async requestEmailVerification(userId: string) {
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('user_not_found');
+    }
+
+    if (user.emailVerified) {
+      return { ok: true };
+    }
+
+    const token = randomUUID();
+    user.emailVerificationToken = token;
+    await this.usersRepo.save(user);
+    return { ok: true, token };
+  }
+
+  async verifyEmail(token: string) {
+    const t = (token ?? '').trim();
+    if (!t) {
+      throw new BadRequestException('invalid_token');
+    }
+
+    const user = await this.usersRepo.findOne({ where: { emailVerificationToken: t } });
+    if (!user) {
+      throw new BadRequestException('invalid_token');
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    await this.usersRepo.save(user);
+    return { ok: true };
+  }
+
+  private validateProfileImageForRole(isAdmin: boolean, profileImage: string) {
     const img = (profileImage ?? '').trim();
     if (!img) {
       throw new BadRequestException('profile_image_invalid');
@@ -52,12 +86,8 @@ export class UsersService {
       throw new BadRequestException('profile_image_invalid');
     }
 
-    if (role === Role.UTILISATEUR) {
+    if (!isAdmin) {
       if (!/\-pp\.png$/i.test(img)) {
-        throw new BadRequestException('profile_image_forbidden');
-      }
-    } else if (role === Role.ORGANISATEUR) {
-      if (!/(\-pp|\-ppa)\.png$/i.test(img)) {
         throw new BadRequestException('profile_image_forbidden');
       }
     }
@@ -141,7 +171,7 @@ export class UsersService {
     if (dto.lieu !== undefined) user.lieu = dto.lieu;
 
     if (dto.profileImage !== undefined) {
-      this.validateProfileImageForRole(user.role, dto.profileImage);
+      this.validateProfileImageForRole(user.isAdmin, dto.profileImage);
       user.profileImage = dto.profileImage.trim();
     }
 

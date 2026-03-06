@@ -26,4 +26,12 @@ export class UsersService {
   }) {
     return this.http.patch(`${this.apiBaseUrl}/users/me`, payload);
   }
+
+  requestEmailVerification() {
+    return this.http.post<{ ok: true; token?: string }>(`${this.apiBaseUrl}/users/me/request-email-verification`, {});
+  }
+
+  verifyEmail(token: string) {
+    return this.http.get<{ ok: true }>(`${this.apiBaseUrl}/users/verify-email`, { params: { token } });
+  }
 }

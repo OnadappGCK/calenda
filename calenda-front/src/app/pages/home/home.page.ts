@@ -25,13 +25,20 @@ export class HomePage implements OnInit, OnDestroy {
   readonly news = signal<NewsDto[]>([]);
 
   readonly featuredIndex = signal<number>(0);
+  readonly normalizedFeaturedIndex = computed(() => {
+    const items = this.featured();
+    if (items.length === 0) {
+      return 0;
+    }
+    const idx = this.featuredIndex();
+    return ((idx % items.length) + items.length) % items.length;
+  });
   readonly currentFeatured = computed(() => {
     const items = this.featured();
     if (items.length === 0) {
       return null;
     }
-    const idx = ((this.featuredIndex() % items.length) + items.length) % items.length;
-    return items[idx] ?? null;
+    return items[this.normalizedFeaturedIndex()] ?? null;
   });
 
   protected readonly categoryColor = categoryColor;

@@ -10,11 +10,9 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Role } from '../common/enums/role.enum';
 import { CreateEventDto } from './dto/create-event.dto';
 import { ListEventsQueryDto } from './dto/list-events.query';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -63,27 +61,25 @@ export class EventsController {
     return this.eventsService.findSimilar(id, req.user ?? null);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.ORGANISATEUR)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseGuards(JwtAuthGuard)
   @Post()
-  /** Crée un événement (JWT + rôle ADMIN/ORGANISATEUR requis). */
+  /** Crée un événement (JWT requis). */
   async create(@Body() dto: CreateEventDto, @Req() req: any) {
-    return this.eventsService.create(dto, req.user.id, req.user.role);
+    return this.eventsService.create(dto, req.user.id, req.user);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.ORGANISATEUR)
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   /** Met à jour un événement (owner ou admin). */
   async update(@Param('id') id: string, @Body() dto: UpdateEventDto, @Req() req: any) {
-    return this.eventsService.update(id, dto, req.user.id, req.user.role);
+    return this.eventsService.update(id, dto, req.user.id, req.user);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN, Role.ORGANISATEUR)
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   /** Supprime un événement (owner ou admin). */
   async remove(@Param('id') id: string, @Req() req: any) {
-    return this.eventsService.remove(id, req.user.id, req.user.role);
+    return this.eventsService.remove(id, req.user.id, req.user);
   }
 }

@@ -39,22 +39,73 @@ export function resolveEventImageUrl(category: EventCategory, imageUrl?: string 
   return assetUrl(raw);
 }
 
+function clampByte(n: number) {
+  return Math.max(0, Math.min(255, Math.round(n)));
+}
+
+function hexToRgb(hex: string) {
+  const h = hex.replace('#', '').trim();
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return { r, g, b };
+}
+
+function rgbToHex(rgb: { r: number; g: number; b: number }) {
+  const r = clampByte(rgb.r).toString(16).padStart(2, '0');
+  const g = clampByte(rgb.g).toString(16).padStart(2, '0');
+  const b = clampByte(rgb.b).toString(16).padStart(2, '0');
+  return `#${r}${g}${b}`;
+}
+
+function mixHex(a: string, b: string, t: number) {
+  const ar = hexToRgb(a);
+  const br = hexToRgb(b);
+  const clampedT = Math.max(0, Math.min(1, t));
+  return rgbToHex({
+    r: ar.r + (br.r - ar.r) * clampedT,
+    g: ar.g + (br.g - ar.g) * clampedT,
+    b: ar.b + (br.b - ar.b) * clampedT,
+  });
+}
+
+function relativeLuminance(hex: string) {
+  const { r, g, b } = hexToRgb(hex);
+  const srgb = [r, g, b].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+}
+
 /** Retourne une couleur (hex) associée à une catégorie d'événement. */
 export function categoryColor(category: EventCategory): string {
   switch (category) {
     case 'Spectacle':
-      return '#3b82f6';
+      return '#4A90E2';
     case 'Exposition':
-      return '#ef4444';
+      return '#E85D5D';
     case 'Concert':
-      return '#06b6d4';
+      return '#4A90E2';
     case 'Danse':
-      return '#22c55e';
+      return '#2FBF71';
     case "Feux d’artifice":
-      return '#f59e0b';
+      return '#F5B841';
     default:
-      return '#8b5cf6';
+      return '#8E6AD8';
   }
+}
+
+export function categoryForegroundColor(category: EventCategory): string {
+  const base = categoryColor(category);
+  return relativeLuminance(base) > 0.58 ? '#0f172a' : '#ffffff';
+}
+
+export function categoryGradient(category: EventCategory): string {
+  const base = categoryColor(category);
+  const light = mixHex(base, '#ffffff', 0.18);
+  const dark = mixHex(base, '#000000', 0.08);
+  return `linear-gradient(135deg, ${light} 0%, ${base} 55%, ${dark} 100%)`;
 }
 
 /** Retourne une icône textuelle associée à une catégorie d'événement. */
@@ -75,28 +126,30 @@ export function categoryIcon(category: EventCategory): string {
   }
 }
 
-export function tagIcon(tag: EventTag): string {
+export function tagIcon(tag: EventTag | string): string {
   switch (tag) {
     case 'MUSIQUE':
       return '🎵';
     case 'DANSE':
-      return '🩰';
+      return '💃';
     case 'PLEIN AIR':
       return '☀️';
     case 'RENCONTRE':
       return '🤝';
     case 'FEU D’ARTIFICE':
-      return '🎆';
+      return '🔥';
     case 'SPORT':
       return '⚽';
     case 'MARCHÉ':
       return '🏠';
+    case 'COURSE':
+      return '🏁';
     default:
       return '🏠';
   }
 }
 
-export function tagIconUrl(tag: EventTag): string {
+export function tagIconUrl(tag: EventTag | string): string {
   const emoji = tagIcon(tag);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <text x="16" y="22" font-size="20" text-anchor="middle" font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji">${emoji}</text>

@@ -34,7 +34,7 @@ export type EventDto = {
   public: boolean;
   enAvant: boolean;
   couleur: string | null;
-  organisateur: { id: string; pseudo: string; email: string; role: string } | null;
+  organisateur: { id: string; pseudo: string; email: string; isAdmin?: boolean } | null;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -84,6 +84,7 @@ export class EventsService {
     dateDebut: string;
     dateFin?: string | null;
     enAvant?: boolean;
+    honeypot?: string;
   }) {
     return this.http.post<EventDto>(`${this.apiBaseUrl}/events`, payload);
   }

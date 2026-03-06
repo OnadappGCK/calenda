@@ -2,20 +2,18 @@ import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, 
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '../common/enums/role.enum';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { AdminGuard } from '../common/guards/admin.guard';
 import { ListEventsQueryDto } from '../events/dto/list-events.query';
 import { EventsService } from '../events/events.service';
 import { User } from '../users/user.entity';
 import { MartiguesMergeService } from './martigues-merge.service';
+import { SalsaOlivierMergeService } from './salsa-olivier-merge.service';
 import { Repository } from 'typeorm';
 import { AdminCreateUserDto } from './dto/admin-create-user.dto';
 import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
 
 @Controller('admin')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
+@UseGuards(JwtAuthGuard, AdminGuard)
 /**
  * Controller Admin.
  * Endpoints réservés à l'admin (modération/validation/suppression d'événements).
@@ -24,10 +22,11 @@ export class AdminController {
   constructor(
     private readonly eventsService: EventsService,
     private readonly martiguesMerge: MartiguesMergeService,
+    private readonly salsaMerge: SalsaOlivierMergeService,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
   ) {}
 
-  private validateProfileImageForRole(role: Role, profileImage: string) {
+  private validateProfileImageForRole(isAdmin: boolean, profileImage: string) {
     const img = (profileImage ?? '').trim();
     if (!img) {
       throw new BadRequestException('profile_image_invalid');
@@ -37,12 +36,8 @@ export class AdminController {
       throw new BadRequestException('profile_image_invalid');
     }
 
-    if (role === Role.UTILISATEUR) {
+    if (!isAdmin) {
       if (!/\-pp\.png$/i.test(img)) {
-        throw new BadRequestException('profile_image_forbidden');
-      }
-    } else if (role === Role.ORGANISATEUR) {
-      if (!/(\-pp|\-ppa)\.png$/i.test(img)) {
         throw new BadRequestException('profile_image_forbidden');
       }
     }
@@ -55,7 +50,8 @@ export class AdminController {
       pseudo: u.pseudo,
       ville: u.ville,
       lieu: u.lieu,
-      role: u.role,
+      isAdmin: u.isAdmin,
+      emailVerified: u.emailVerified,
       profileImage: u.profileImage,
       numero: u.numero,
       createdAt: u.createdAt,
@@ -67,24 +63,24 @@ export class AdminController {
   /** Liste les événements en attente (public=false). */
   async pending(@Query() query: ListEventsQueryDto) {
     // pending events are public=false
-    const events = await this.eventsService.findAll(query, { id: 'admin', role: Role.ADMIN });
+    const events = await this.eventsService.findAll(query, { id: 'admin', isAdmin: true, emailVerified: true });
     return events.filter((e) => e.public === false);
   }
 
   @Get('organizers')
   /** Liste les profils organisateurs (pour ré-assigner un événement en admin). */
   async organizers() {
-    const users = await this.usersRepo.find({ where: { role: Role.ORGANISATEUR }, order: { pseudo: 'ASC' } });
-    return users.map((u) => ({ id: u.id, pseudo: u.pseudo, email: u.email, role: u.role }));
+    const users = await this.usersRepo.find({ order: { pseudo: 'ASC' } });
+    return users.map((u) => ({ id: u.id, pseudo: u.pseudo, email: u.email, isAdmin: u.isAdmin }));
   }
 
   @Get('users')
-  /** Liste des comptes (admin). Filtres: q (email/pseudo), role. */
-  async listUsers(@Query('q') q?: string, @Query('role') role?: Role) {
+  /** Liste des comptes (admin). Filtres: q (email/pseudo), isAdmin. */
+  async listUsers(@Query('q') q?: string, @Query('isAdmin') isAdmin?: string) {
     const qb = this.usersRepo.createQueryBuilder('u');
-    if (role) {
-      qb.andWhere('u.role = :role', { role });
-    }
+    const adminFlag = (isAdmin ?? '').trim().toLowerCase();
+    if (adminFlag === 'true') qb.andWhere('u.isAdmin = :isAdmin', { isAdmin: true });
+    if (adminFlag === 'false') qb.andWhere('u.isAdmin = :isAdmin', { isAdmin: false });
     const qq = (q ?? '').trim();
     if (qq) {
       qb.andWhere('(LOWER(u.email) LIKE LOWER(:q) OR LOWER(u.pseudo) LIKE LOWER(:q))', { q: `%${qq}%` });
@@ -116,10 +112,10 @@ export class AdminController {
       throw new BadRequestException('pseudo_already_used');
     }
 
-    const role = dto.role ?? Role.ORGANISATEUR;
+    const isAdmin = !!dto.isAdmin;
     const profileImage = (dto.profileImage ?? '').trim();
     if (profileImage) {
-      this.validateProfileImageForRole(role, profileImage);
+      this.validateProfileImageForRole(isAdmin, profileImage);
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -129,7 +125,7 @@ export class AdminController {
       pseudo,
       ville: dto.ville.trim(),
       lieu: dto.lieu.trim(),
-      role,
+      isAdmin,
       profileImage: profileImage || null,
       numero: (dto.numero ?? '').trim() || null,
       passwordHash,
@@ -170,14 +166,12 @@ export class AdminController {
     if (dto.ville !== undefined) user.ville = dto.ville.trim();
     if (dto.lieu !== undefined) user.lieu = dto.lieu.trim();
 
-    if (dto.role !== undefined) {
-      user.role = dto.role;
-    }
+    if (dto.isAdmin !== undefined) user.isAdmin = dto.isAdmin;
 
     if (dto.profileImage !== undefined) {
       const img = (dto.profileImage ?? '').trim();
       if (img) {
-        this.validateProfileImageForRole(dto.role ?? user.role, img);
+        this.validateProfileImageForRole(dto.isAdmin ?? user.isAdmin, img);
         user.profileImage = img;
       } else {
         user.profileImage = null;
@@ -212,7 +206,7 @@ export class AdminController {
   @Delete('events/:id')
   /** Supprime un événement. */
   async remove(@Param('id') id: string) {
-    return this.eventsService.remove(id, 'admin', Role.ADMIN);
+    return this.eventsService.remove(id, 'admin', { isAdmin: true });
   }
 
   @Post('merge/martigues')
@@ -234,5 +228,26 @@ export class AdminController {
   @Post('merge/martigues/apply')
   async applyMergeMartigues(@Body() body: { urls?: string[] }) {
     return this.martiguesMerge.apply({ urls: body?.urls ?? [] });
+  }
+
+  @Post('merge/salsa-olivier')
+  async mergeSalsaOlivier(@Query('pages') pages?: string, @Query('dryRun') dryRun?: string) {
+    const pagesN = pages ? Number(pages) : undefined;
+    const dry = (dryRun ?? '').toLowerCase() === 'true';
+    return this.salsaMerge.merge({
+      pages: pagesN,
+      dryRun: dry,
+    });
+  }
+
+  @Get('merge/salsa-olivier/preview')
+  async previewMergeSalsaOlivier(@Query('pages') pages?: string) {
+    const pagesN = pages ? Number(pages) : undefined;
+    return this.salsaMerge.preview({ pages: pagesN });
+  }
+
+  @Post('merge/salsa-olivier/apply')
+  async applyMergeSalsaOlivier(@Body() body: { urls?: string[] }) {
+    return this.salsaMerge.apply({ urls: body?.urls ?? [] });
   }
 }

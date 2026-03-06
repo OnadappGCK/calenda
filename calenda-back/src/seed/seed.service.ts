@@ -5,7 +5,6 @@ import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
-import { Role } from '../common/enums/role.enum';
 import { EventTag } from '../common/enums/event-tag.enum';
 import { Event } from '../events/event.entity';
 import { News } from '../news/news.entity';
@@ -26,6 +25,48 @@ export class SeedService {
 
   /** Seed des comptes de dev (admin/organisateur) selon `SEED_ADMIN` / `SEED_ORGANISATEUR`. */
   async seedDevUsers() {
+    const nodeEnv = (this.configService.get<string>('NODE_ENV') ?? 'dev').toLowerCase();
+    if (nodeEnv !== 'production') {
+      const email = this.configService.get<string>('SEED_ADMIN_EMAIL') ?? 'admin@calenda.local';
+      const pseudo = this.configService.get<string>('SEED_ADMIN_PSEUDO') ?? 'admin';
+      const existingAdmin = await this.usersRepo.findOne({ where: [{ email }, { pseudo }] });
+      if (existingAdmin) {
+        let changed = false;
+        if (!existingAdmin.isAdmin) {
+          existingAdmin.isAdmin = true;
+          changed = true;
+        }
+        if (!existingAdmin.emailVerified) {
+          existingAdmin.emailVerified = true;
+          existingAdmin.emailVerificationToken = null;
+          changed = true;
+        }
+        if (changed) {
+          await this.usersRepo.save(existingAdmin);
+        }
+      }
+    }
+
+    const bootstrapAdminEmail = (this.configService.get<string>('BOOTSTRAP_ADMIN_EMAIL') ?? '').trim();
+    if (bootstrapAdminEmail) {
+      const u = await this.usersRepo.findOne({ where: { email: bootstrapAdminEmail } });
+      if (u) {
+        let changed = false;
+        if (!u.isAdmin) {
+          u.isAdmin = true;
+          changed = true;
+        }
+        if (!u.emailVerified) {
+          u.emailVerified = true;
+          u.emailVerificationToken = null;
+          changed = true;
+        }
+        if (changed) {
+          await this.usersRepo.save(u);
+        }
+      }
+    }
+
     const seedAdmin = (this.configService.get<string>('SEED_ADMIN') ?? 'false').toLowerCase();
     const seedOrganisateur = (
       this.configService.get<string>('SEED_ORGANISATEUR') ?? 'false'
@@ -45,12 +86,30 @@ export class SeedService {
           ville: 'Dev',
           lieu: 'Dev',
           passwordHash,
-          role: Role.ADMIN,
+          isAdmin: true,
           profileImage: 'img/profil/picture/cat-pp.png',
           emailVerified: true,
           emailVerificationToken: null,
         });
         await this.usersRepo.save(admin);
+      } else {
+        let changed = false;
+        if (!existing.isAdmin) {
+          existing.isAdmin = true;
+          changed = true;
+        }
+        if (!existing.emailVerified) {
+          existing.emailVerified = true;
+          existing.emailVerificationToken = null;
+          changed = true;
+        }
+        if ((pseudo ?? '').trim() && existing.pseudo !== pseudo) {
+          existing.pseudo = pseudo;
+          changed = true;
+        }
+        if (changed) {
+          await this.usersRepo.save(existing);
+        }
       }
     }
 
@@ -71,12 +130,30 @@ export class SeedService {
           ville: 'Dev',
           lieu: 'Dev',
           passwordHash: orgPasswordHash,
-          role: Role.ORGANISATEUR,
+          isAdmin: false,
           profileImage: 'img/profil/picture/dog-pp.png',
           emailVerified: true,
           emailVerificationToken: null,
         });
         await this.usersRepo.save(organisateur);
+      } else {
+        let changed = false;
+        if (existingOrg.isAdmin) {
+          existingOrg.isAdmin = false;
+          changed = true;
+        }
+        if (!existingOrg.emailVerified) {
+          existingOrg.emailVerified = true;
+          existingOrg.emailVerificationToken = null;
+          changed = true;
+        }
+        if ((orgPseudo ?? '').trim() && existingOrg.pseudo !== orgPseudo) {
+          existingOrg.pseudo = orgPseudo;
+          changed = true;
+        }
+        if (changed) {
+          await this.usersRepo.save(existingOrg);
+        }
       }
     }
   }

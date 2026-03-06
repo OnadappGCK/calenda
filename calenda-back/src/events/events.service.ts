@@ -1,8 +1,7 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository } from 'typeorm';
 import { EventOrigin } from '../common/enums/event-origin.enum';
-import { Role } from '../common/enums/role.enum';
 import { User } from '../users/user.entity';
 import { Event } from './event.entity';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -10,7 +9,7 @@ import { ListEventsQueryDto } from './dto/list-events.query';
 import { UpdateEventDto } from './dto/update-event.dto';
 
 /** User minimal porté par `req.user` (ou null si route publique). */
-type RequestUser = { id: string; role: Role } | null;
+type RequestUser = { id: string; isAdmin: boolean; emailVerified: boolean } | null;
 
 @Injectable()
 /**
@@ -30,7 +29,11 @@ export class EventsService {
 
   /** Indique si le user peut voir les événements non-public (admin/organisateur). */
   private canSeeNonPublic(user: RequestUser) {
-    return user?.role === Role.ADMIN || user?.role === Role.ORGANISATEUR;
+    return !!user?.isAdmin;
+  }
+
+  private dailyProposalLimit() {
+    return 3;
   }
 
   /** Liste des villes distinctes présentes dans les événements (pour UI calendrier). */
@@ -58,7 +61,9 @@ export class EventsService {
       .createQueryBuilder('event')
       .leftJoinAndSelect('event.organisateur', 'organisateur');
 
-    if (!this.canSeeNonPublic(user)) {
+    const includePending = !!(query.includePending && this.canSeeNonPublic(user));
+
+    if (!includePending) {
       qb.andWhere('event.public = :isPublic', { isPublic: true });
     }
 
@@ -158,7 +163,9 @@ export class EventsService {
       throw new NotFoundException('event_not_found');
     }
 
-    if (!event.public && !this.canSeeNonPublic(user)) {
+    const isOwner = !!(user?.id && event.organisateur?.id && user.id === event.organisateur.id);
+
+    if (!event.public && !this.canSeeNonPublic(user) && !isOwner) {
       throw new NotFoundException('event_not_found');
     }
 
@@ -186,14 +193,40 @@ export class EventsService {
     return qb.getMany();
   }
 
-  /** Crée un événement: organisateur lié au user, visibilité auto selon rôle (admin peut publier), origin forcée à `MANUAL`. */
-  async create(dto: CreateEventDto, userId: string, role: Role) {
+  /** Crée un événement: organisateur lié au user, visibilité auto selon admin, origin forcée à `MANUAL`. */
+  async create(dto: CreateEventDto, userId: string, user: { isAdmin: boolean; emailVerified: boolean }) {
+    const honeypot = (dto.honeypot ?? '').trim();
+    if (honeypot) {
+      throw new BadRequestException('bot_detected');
+    }
+
     const organisateur = await this.usersRepo.findOne({ where: { id: userId } });
     if (!organisateur) {
       throw new NotFoundException('user_not_found');
     }
 
-    if (dto.enAvant !== undefined && role !== Role.ADMIN) {
+    const isAdmin = !!(user?.isAdmin || organisateur.isAdmin);
+
+    const limit = this.dailyProposalLimit();
+    if (!isAdmin && limit > 0) {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+
+      const count = await this.eventsRepo
+        .createQueryBuilder('event')
+        .where('event.organisateurId = :userId', { userId })
+        .andWhere('event.origin = :origin', { origin: EventOrigin.MANUAL })
+        .andWhere('event.createdAt >= :start AND event.createdAt < :end', { start, end })
+        .getCount();
+
+      if (count >= limit) {
+        throw new ForbiddenException('daily_limit_reached');
+      }
+    }
+
+    if (dto.enAvant !== undefined && !isAdmin) {
       throw new ForbiddenException('forbidden');
     }
 
@@ -224,8 +257,8 @@ export class EventsService {
       dateDebut: new Date(dto.dateDebut),
       dateFin: rawEnd ? new Date(rawEnd) : null,
       couleur: dto.couleur ?? null,
-      enAvant: role === Role.ADMIN ? (dto.enAvant ?? false) : false,
-      public: role === Role.ADMIN ? (dto.public ?? true) : false,
+      enAvant: isAdmin ? (dto.enAvant ?? false) : false,
+      public: isAdmin ? (dto.public ?? true) : false,
       organisateur,
     });
 
@@ -233,14 +266,14 @@ export class EventsService {
   }
 
   /** Met à jour un événement (owner ou admin). Certains champs (public) réservés à l'admin. */
-  async update(id: string, dto: UpdateEventDto, userId: string, role: Role) {
+  async update(id: string, dto: UpdateEventDto, userId: string, user: { isAdmin: boolean }) {
     const event = await this.eventsRepo.findOne({ where: { id }, relations: { organisateur: true } });
     if (!event) {
       throw new NotFoundException('event_not_found');
     }
 
     const isOwner = event.organisateur?.id === userId;
-    if (!(role === Role.ADMIN || isOwner)) {
+    if (!(user.isAdmin || isOwner)) {
       throw new ForbiddenException('forbidden');
     }
 
@@ -283,15 +316,12 @@ export class EventsService {
     }
 
     if (dto.organisateurId !== undefined) {
-      if (role !== Role.ADMIN) {
+      if (!user.isAdmin) {
         throw new ForbiddenException('forbidden');
       }
       const newOrg = await this.usersRepo.findOne({ where: { id: dto.organisateurId } });
       if (!newOrg) {
         throw new NotFoundException('user_not_found');
-      }
-      if (newOrg.role !== Role.ORGANISATEUR) {
-        throw new ForbiddenException('organisateur_invalid');
       }
       event.organisateur = newOrg;
     }
@@ -304,14 +334,14 @@ export class EventsService {
     if (dto.couleur !== undefined) event.couleur = dto.couleur;
 
     if (dto.enAvant !== undefined) {
-      if (role !== Role.ADMIN) {
+      if (!user.isAdmin) {
         throw new ForbiddenException('forbidden');
       }
       event.enAvant = dto.enAvant;
     }
 
     if (dto.public !== undefined) {
-      if (role !== Role.ADMIN) {
+      if (!user.isAdmin) {
         throw new ForbiddenException('forbidden');
       }
       event.public = dto.public;
@@ -321,14 +351,14 @@ export class EventsService {
   }
 
   /** Supprime un événement (owner ou admin). */
-  async remove(id: string, userId: string, role: Role) {
+  async remove(id: string, userId: string, user: { isAdmin: boolean }) {
     const event = await this.eventsRepo.findOne({ where: { id }, relations: { organisateur: true } });
     if (!event) {
       throw new NotFoundException('event_not_found');
     }
 
     const isOwner = event.organisateur?.id === userId;
-    if (!(role === Role.ADMIN || isOwner)) {
+    if (!(user.isAdmin || isOwner)) {
       throw new ForbiddenException('forbidden');
     }
 

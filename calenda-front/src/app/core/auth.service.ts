@@ -5,15 +5,13 @@ import { inject } from '@angular/core';
 import { API_BASE_URL } from './api.config';
 import { StorageService } from './storage.service';
 
-/** Rôles applicatifs (alignés sur le backend). */
-export type Role = 'ADMIN' | 'ORGANISATEUR' | 'UTILISATEUR';
-
 /** Représentation minimaliste de l'utilisateur authentifié côté front. */
 export type AuthUser = {
   id: string;
   email: string;
   pseudo: string;
-  role: Role;
+  isAdmin: boolean;
+  emailVerified: boolean;
   profileImage?: string | null;
   numero?: string | null;
 };
@@ -94,8 +92,8 @@ export class AuthService {
   async register(payload: {
     pseudo: string;
     email: string;
-    ville: string;
-    lieu: string;
+    adresse: string;
+    ville?: string;
     numero?: string | null;
     password: string;
     passwordConfirmation: string;

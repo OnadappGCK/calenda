@@ -18,12 +18,11 @@
     </label>
 
     <label class="field">
-      Rôle
-      <select [(ngModel)]="roleFilter">
+      Admin
+      <select [(ngModel)]="isAdminFilter">
         <option value="">Tous</option>
-        <option value="ADMIN">ADMIN</option>
-        <option value="ORGANISATEUR">ORGANISATEUR</option>
-        <option value="UTILISATEUR">UTILISATEUR</option>
+        <option value="true">Admin</option>
+        <option value="false">Non admin</option>
       </select>
     </label>
 
@@ -32,7 +31,7 @@
       <select [(ngModel)]="sortKey">
         <option value="pseudo">Pseudo</option>
         <option value="email">Email</option>
-        <option value="role">Rôle</option>
+        <option value="isAdmin">Admin</option>
         <option value="createdAt">Création</option>
       </select>
     </label>
@@ -61,7 +60,7 @@
             <div class="main">
               <div class="line1">
                 <span class="pseudo">{{ u.pseudo }}</span>
-                <span class="role">{{ u.role }}</span>
+                <span class="role">{{ u.isAdmin ? 'ADMIN' : '' }}</span>
               </div>
               <div class="line2">{{ u.email }}</div>
               <div class="line3">{{ u.ville }} · {{ u.lieu }}</div>
@@ -82,13 +81,13 @@
     <h2>Créer un compte</h2>
 
     <div class="grid">
-      <label class="field">
-        Rôle
-        <select [ngModel]="create().role" (ngModelChange)="onCreateRoleChange($event)">
-          <option value="ORGANISATEUR">ORGANISATEUR</option>
-          <option value="ADMIN">ADMIN</option>
-          <option value="UTILISATEUR">UTILISATEUR</option>
-        </select>
+      <label class="check">
+        <input
+          type="checkbox"
+          [ngModel]="create().isAdmin"
+          (ngModelChange)="onCreateIsAdminChange($event)"
+        />
+        Admin
       </label>
 
       <label class="field">
@@ -119,7 +118,7 @@
       <label class="field">
         Photo de profil
         <select [ngModel]="create().profileImage" (ngModelChange)="create.set({ ...create(), profileImage: $event })">
-          @for (img of allowedImagesFor(create().role); track img) {
+          @for (img of allowedImagesFor(create().isAdmin); track img) {
             <option [value]="img">{{ img }}</option>
           }
         </select>
@@ -158,13 +157,13 @@
     <h2>Modifier un compte</h2>
 
     <div class="grid">
-      <label class="field">
-        Rôle
-        <select [ngModel]="edit()!.role" (ngModelChange)="onEditRoleChange($event)">
-          <option value="ORGANISATEUR">ORGANISATEUR</option>
-          <option value="ADMIN">ADMIN</option>
-          <option value="UTILISATEUR">UTILISATEUR</option>
-        </select>
+      <label class="check">
+        <input
+          type="checkbox"
+          [ngModel]="edit()!.isAdmin"
+          (ngModelChange)="onEditIsAdminChange($event)"
+        />
+        Admin
       </label>
 
       <label class="field">
@@ -196,7 +195,7 @@
         Photo de profil
         <select [ngModel]="edit()!.profileImage" (ngModelChange)="edit.set({ ...edit()!, profileImage: $event })">
           <option value="">(aucune)</option>
-          @for (img of allowedImagesFor(edit()!.role); track img) {
+          @for (img of allowedImagesFor(edit()!.isAdmin); track img) {
             <option [value]="img">{{ img }}</option>
           }
         </select>

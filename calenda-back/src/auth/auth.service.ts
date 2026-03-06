@@ -5,7 +5,6 @@ import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { CaptchaService } from '../common/services/captcha.service';
-import { Role } from '../common/enums/role.enum';
 import { User } from '../users/user.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -27,6 +26,14 @@ export class AuthService {
    */
   async register(dto: RegisterDto) {
     await this.captchaService.verify(dto.captchaToken);
+
+    const adresse = (dto.adresse ?? '').trim();
+    const ville = (dto.ville ?? '').trim();
+    const lieu = (dto.lieu ?? '').trim();
+
+    if (!adresse) {
+      throw new BadRequestException('adresse_required');
+    }
 
     if (dto.password !== dto.passwordConfirmation) {
       throw new BadRequestException('password_mismatch');
@@ -52,14 +59,14 @@ export class AuthService {
     const user = this.usersRepo.create({
       email: dto.email,
       pseudo: dto.pseudo,
-      ville: dto.ville,
-      lieu: dto.lieu,
+      ville: ville || adresse,
+      lieu: lieu || adresse,
       passwordHash,
-      role: Role.UTILISATEUR,
+      isAdmin: false,
       profileImage: profileImage || null,
       numero: (dto.numero ?? '').trim() || null,
-      emailVerified: true,
-      emailVerificationToken: null,
+      emailVerified: false,
+      emailVerificationToken: randomUUID(),
     });
 
     await this.usersRepo.save(user);
@@ -68,7 +75,8 @@ export class AuthService {
       id: user.id,
       email: user.email,
       pseudo: user.pseudo,
-      role: user.role,
+      isAdmin: user.isAdmin,
+      emailVerified: user.emailVerified,
       profileImage: user.profileImage,
       numero: user.numero,
     };
@@ -93,7 +101,8 @@ export class AuthService {
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
-      role: user.role,
+      isAdmin: user.isAdmin,
+      emailVerified: user.emailVerified,
     });
 
     return {
@@ -102,7 +111,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         pseudo: user.pseudo,
-        role: user.role,
+        isAdmin: user.isAdmin,
+        emailVerified: user.emailVerified,
         profileImage: user.profileImage,
         numero: user.numero,
       },

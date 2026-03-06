@@ -18,9 +18,7 @@ import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import { extname, join } from 'path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '../common/enums/role.enum';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { AdminGuard } from '../common/guards/admin.guard';
 import { CreateNewsDto } from './dto/create-news.dto';
 import { ListNewsQueryDto } from './dto/list-news.query';
 import { UpdateNewsDto } from './dto/update-news.dto';
@@ -54,8 +52,7 @@ export class NewsController {
     return this.newsService.list(query.page, query.pageSize);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, AdminGuard)
   @Post()
   @UseInterceptors(
     FileInterceptor('image', {
@@ -104,8 +101,7 @@ export class NewsController {
     }
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, AdminGuard)
   @Patch(':id')
   @UseInterceptors(
     FileInterceptor('image', {
@@ -155,8 +151,7 @@ export class NewsController {
     }
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard, AdminGuard)
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return this.newsService.remove(id);

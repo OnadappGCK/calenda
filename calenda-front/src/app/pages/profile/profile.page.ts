@@ -23,6 +23,10 @@ export class ProfilePage implements OnInit {
   readonly error = signal<string | null>(null);
   readonly ok = signal<boolean>(false);
 
+  readonly verifyLoading = signal<boolean>(false);
+  readonly verifyToken = signal<string | null>(null);
+  readonly verifyError = signal<string | null>(null);
+
   pseudo = '';
   ville = '';
   lieu = '';
@@ -33,8 +37,8 @@ export class ProfilePage implements OnInit {
 
   readonly showAvatarPicker = signal<boolean>(false);
 
-  readonly role = computed(() => this.auth.user()?.role ?? '');
-  readonly allowedAvatars = computed(() => allowedProfileImagesForRole(this.auth.user()?.role ?? 'UTILISATEUR'));
+  readonly role = computed(() => (this.auth.user()?.isAdmin ? 'ADMIN' : ''));
+  readonly allowedAvatars = computed(() => allowedProfileImagesForRole(this.auth.user()?.isAdmin ?? false));
   readonly profileImageUrl = profileImageUrl;
 
   /** Hook Angular: charge l'utilisateur puis récupère le profil. */
@@ -114,6 +118,36 @@ export class ProfilePage implements OnInit {
       this.ok.set(true);
     } catch {
       this.error.set('Sauvegarde impossible');
+    }
+  }
+
+  async requestEmailVerification() {
+    this.verifyError.set(null);
+    this.verifyToken.set(null);
+    this.verifyLoading.set(true);
+    try {
+      const res = await this.usersService.requestEmailVerification().toPromise();
+      this.verifyToken.set(res?.token ?? null);
+    } catch {
+      this.verifyError.set('Erreur');
+    } finally {
+      this.verifyLoading.set(false);
+    }
+  }
+
+  async confirmEmailVerification() {
+    const token = (this.verifyToken() ?? '').trim();
+    if (!token) return;
+    this.verifyError.set(null);
+    this.verifyLoading.set(true);
+    try {
+      await this.usersService.verifyEmail(token).toPromise();
+      await this.auth.refreshMe();
+      this.verifyToken.set(null);
+    } catch {
+      this.verifyError.set('Erreur');
+    } finally {
+      this.verifyLoading.set(false);
     }
   }
 }

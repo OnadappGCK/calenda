@@ -21,6 +21,17 @@
 
         <button class="btn" type="button" (click)="toggleFilters()">Filtres</button>
 
+        @if (isAdmin()) {
+          <button
+            class="btn pendingBtn"
+            type="button"
+            [class.active]="includePending"
+            (click)="toggleIncludePending()"
+          >
+            En attente
+          </button>
+        }
+
         <button class="iconBtn" type="button" (click)="reload()" aria-label="Rafraîchir">↻</button>
         @if (viewMode === 'week') {
           <button class="iconBtn" type="button" (click)="toggleFavoris()" aria-label="Favoris">♥</button>
@@ -38,27 +49,27 @@
         <button
           class="btn btnPrimary proposeBtn"
           type="button"
-          [class.proposeHidden]="!canPropose()"
-          [disabled]="!canPropose()"
-          (click)="canPropose() && openPropose()"
+          (click)="openPropose()"
         >
           Proposer un événement
         </button>
       </div>
     </div>
 
-    <div class="chips">
-      @for (c of activeChips(); track c.key) {
-        @if (c.key === 'date') {
-          <span class="chip chipFixed">{{ c.label }}</span>
-        } @else {
-          <button class="chip" type="button" (click)="clearChip(c.key)">
-            {{ c.label }}
-            <span class="x">×</span>
-          </button>
+    @if (activeChips().length > 0) {
+      <div class="chips">
+        @for (c of activeChips(); track c.key) {
+          @if (c.key === 'date') {
+            <span class="chip chipFixed">{{ c.label }}</span>
+          } @else {
+            <button class="chip" type="button" (click)="clearChip(c.key)">
+              {{ c.label }}
+              <span class="x">×</span>
+            </button>
+          }
         }
-      }
-    </div>
+      </div>
+    }
 
     @if (loading()) {
       <div class="loadingOverlay">Chargement…</div>
@@ -66,7 +77,7 @@
 
     @if (viewMode === 'week') {
         <div class="scheduler">
-          <div class="schedScroll">
+          <div class="schedScroll" #schedScroll>
             <div class="schedGrid" [style.--slot-px.px]="slotPx()">
               <div class="corner"></div>
 
@@ -96,7 +107,8 @@
                       type="button"
                       [class.small]="it.heightPx < 52"
                       [class.tiny]="it.heightPx < 34"
-                      [style.background]="categoryColor(it.event.categorie)"
+                      [style.background]="categoryGradient(it.event.categorie)"
+                      [style.color]="categoryForegroundColor(it.event.categorie)"
                       [style.top.px]="it.topPx"
                       [style.height.px]="it.heightPx"
                       [style.left.%]="it.leftPct"
@@ -151,11 +163,11 @@
           </div>
         </div>
     } @else {
-        <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0.5rem; align-items: start; flex: 1 1 auto; min-height: 0;">
-          <button class="iconBtn" style="margin-top: 0.75rem" type="button" (click)="prevPeriod()" aria-label="Jour précédent">‹</button>
+        <div class="dayNavLayout">
+          <button class="dayNavBtn" type="button" (click)="prevPeriod()" aria-label="Jour précédent">‹</button>
 
         <div class="scheduler" style="margin-top: 0; min-width: 0; height: 100%;">
-          <div class="schedScroll">
+          <div class="schedScroll" #schedScroll>
             <div class="schedGrid dayOnly" [style.--slot-px.px]="slotPx()">
               <div class="corner"></div>
 
@@ -177,7 +189,8 @@
                       type="button"
                       [class.small]="it.heightPx < 52"
                       [class.tiny]="it.heightPx < 34"
-                      [style.background]="categoryColor(it.event.categorie)"
+                      [style.background]="categoryGradient(it.event.categorie)"
+                      [style.color]="categoryForegroundColor(it.event.categorie)"
                       [style.top.px]="it.topPx"
                       [style.height.px]="it.heightPx"
                       [style.left.%]="it.leftPct"
@@ -229,7 +242,7 @@
           </div>
         </div>
 
-          <button class="iconBtn" style="margin-top: 0.75rem" type="button" (click)="nextPeriod()" aria-label="Jour suivant">›</button>
+          <button class="dayNavBtn" type="button" (click)="nextPeriod()" aria-label="Jour suivant">›</button>
         </div>
     }
   </div>
@@ -254,7 +267,7 @@
             </div>
 
             @for (e of g.items; track e.id) {
-              <div class="listRow" [style.background]="categoryColor(e.categorie)">
+              <div class="listRow" [style.background]="categoryGradient(e.categorie)" [style.color]="categoryForegroundColor(e.categorie)">
                 <div class="listMain">
                   <div class="listName">{{ e.titre }}</div>
                   <div class="eventMeta">
@@ -291,8 +304,8 @@
   <div class="sideBackdrop" (click)="closeSide()"></div>
   <aside class="side">
     <div class="sideHead">
-      <div>
-        <div class="sideTitle">{{ dayKeyToDate(sideTitleKey()) | date: 'fullDate' }}</div>
+      <div class="sideTitle">{{ dayKeyToDate(sideTitleKey()) | date: 'fullDate' }}</div>
+      <div class="sideHeadActions">
         <div class="sideTabs">
           <button class="tab" type="button" [class.active]="sideTab()==='day'" (click)="sideTab.set('day')">
             Jour
@@ -301,8 +314,8 @@
             Nocturne
           </button>
         </div>
+        <button class="sideCloseBtn" type="button" (click)="closeSide()" aria-label="Fermer">×</button>
       </div>
-      <button class="iconBtn" type="button" (click)="closeSide()">×</button>
     </div>
 
     <div class="sideList">
@@ -311,7 +324,7 @@
           <div class="empty">Aucun événement.</div>
         } @else {
           @for (e of sideDayEvents(); track e.id) {
-            <div class="sideCard" [style.background]="categoryColor(e.categorie)">
+            <div class="sideCard" [style.background]="categoryGradient(e.categorie)" [style.color]="categoryForegroundColor(e.categorie)">
               <img class="sideImg" [src]="eventImageUrl(e)" alt="" loading="lazy" />
               <div class="sideMain">
                 <div class="listName">{{ e.titre }}</div>
@@ -329,7 +342,13 @@
                 <div class="listText">{{ e.description }}</div>
               </div>
               <div class="sideActions">
-                <button class="iconBtn" type="button" (click)="toggleFavorite(e.id)" aria-label="Favori">
+                <button
+                  class="iconBtn heartBtn"
+                  type="button"
+                  (click)="toggleFavorite(e.id)"
+                  aria-label="Favori"
+                  [style.color]="isFavorite(e.id) ? '#ffffff' : '#64748b'"
+                >
                   {{ isFavorite(e.id) ? '♥' : '♡' }}
                 </button>
                 <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
@@ -342,7 +361,7 @@
           <div class="empty">Aucun événement nocturne.</div>
         } @else {
           @for (e of sideNightEvents(); track e.id) {
-            <div class="sideCard" [style.background]="categoryColor(e.categorie)">
+            <div class="sideCard" [style.background]="categoryGradient(e.categorie)" [style.color]="categoryForegroundColor(e.categorie)">
               <img class="sideImg" [src]="eventImageUrl(e)" alt="" loading="lazy" />
               <div class="sideMain">
                 <div class="listName">{{ e.titre }}</div>
@@ -360,7 +379,13 @@
                 <div class="listText">{{ e.description }}</div>
               </div>
               <div class="sideActions">
-                <button class="iconBtn" type="button" (click)="toggleFavorite(e.id)" aria-label="Favori">
+                <button
+                  class="iconBtn heartBtn"
+                  type="button"
+                  (click)="toggleFavorite(e.id)"
+                  aria-label="Favori"
+                  [style.color]="isFavorite(e.id) ? '#ffffff' : '#64748b'"
+                >
                   {{ isFavorite(e.id) ? '♥' : '♡' }}
                 </button>
                 <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
@@ -373,12 +398,25 @@
   </aside>
 }
 
+@if (proposeGateOpen) {
+  <div class="modalBackdrop" (click)="closeProposeGate()"></div>
+  <div class="modal" (click)="$event.stopPropagation()">
+    <h2>Proposer un événement</h2>
+    <p>{{ proposeGateMessage }}</p>
+    <div class="actions">
+      <a class="btn btnPrimary" routerLink="/login">Se connecter</a>
+      <a class="btn" routerLink="/register">Créer un compte</a>
+    </div>
+  </div>
+}
+
 @if (showPropose) {
   <div class="modalBackdrop" (click)="closePropose()"></div>
   <div class="modal">
     <h2>Proposer un événement</h2>
 
     <div class="grid">
+      <input type="text" [(ngModel)]="newHoneypot" name="newHoneypot" tabindex="-1" autocomplete="off" style="display:none" />
       <label>
         Titre
         <input type="text" [(ngModel)]="newTitre" name="newTitre" />

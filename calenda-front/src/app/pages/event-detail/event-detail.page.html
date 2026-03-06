@@ -1,6 +1,8 @@
 <section class="wrap">
-  @if (!event()) {
+  @if (loading()) {
     <p>Chargement…</p>
+  } @else if (loadError()) {
+    <p>Erreur de chargement.</p>
   } @else {
     <a class="back" routerLink="/calendar">Retour</a>
 
@@ -31,7 +33,66 @@
       }
     }
 
-    <img class="hero" [src]="imageUrlFor(event()!)" alt="" loading="lazy" />
+    <div class="heroWrap" [class.editing]="editing()">
+      <img
+        class="hero"
+        [src]="editing() ? draftImagePreviewUrl() : imageUrlFor(event()!)"
+        alt=""
+        loading="lazy"
+        (click)="onHeroClick()"
+      />
+      <button
+        class="zoomBtn"
+        type="button"
+        (click)="onHeroClick()"
+        [attr.aria-label]="editing() ? 'Modifier l’image' : 'Agrandir l’image'"
+      >
+        {{ editing() ? '✎' : '🔍' }}
+      </button>
+    </div>
+
+    @if (lightboxOpen()) {
+      <div class="lightboxBackdrop" (click)="closeLightbox()">
+        <div class="lightboxInner" (click)="$event.stopPropagation()">
+          <button class="lightboxClose" type="button" (click)="closeLightbox()" aria-label="Fermer">×</button>
+          <img class="lightboxImg" [src]="imageUrlFor(event()!)" alt="" />
+        </div>
+      </div>
+    }
+
+    @if (imageEditorOpen()) {
+      <div class="modalBackdrop" (click)="closeImageEditor()"></div>
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="imageEditorHeader">
+          <strong>Image de l’événement</strong>
+          <button class="btn" type="button" (click)="closeImageEditor()" aria-label="Fermer">×</button>
+        </div>
+
+        <label class="field">
+          Lien de l’image
+          <input
+            type="text"
+            placeholder="https://… ou img/categorie/..."
+            [ngModel]="draft()!.imageUrl ?? ''"
+            (ngModelChange)="setDraft({ imageUrl: $event })"
+          />
+        </label>
+
+        <div class="imagePreview">
+          <img class="imagePreviewImg" [src]="draftImagePreviewUrl()" alt="" loading="lazy" />
+        </div>
+
+        <div class="imageChoicesTitle">Images par défaut</div>
+        <div class="imageChoices">
+          @for (c of defaultImageChoices; track c.path) {
+            <button class="imageChoice" type="button" (click)="setDraft({ imageUrl: c.path })">
+              <img class="imageChoiceImg" [src]="'/assets/' + c.path" alt="" loading="lazy" />
+              <div class="imageChoiceLabel">{{ c.label }}</div>
+            </button>
+          }
+        </div>
+      </div>
+    }
 
     @if (!editing()) {
       <h1>{{ event()!.titre }}</h1>
@@ -76,8 +137,22 @@
         </div>
       }
 
+      @if (adresseLabel() && googleMapsUrl()) {
+        <div style="margin-top: 10px;">
+          <a class="btn" [href]="googleMapsUrl()!" target="_blank" rel="noopener noreferrer">Voir sur Google Maps</a>
+        </div>
+      }
+
       <div class="actions">
-        <button class="btn" type="button" (click)="like()" [disabled]="!canLike()">Like</button>
+        <button
+          class="heartBtn"
+          type="button"
+          (click)="toggleFavorite()"
+          aria-label="Favori"
+          [style.color]="isFavorite() ? '#ffffff' : '#64748b'"
+        >
+          {{ isFavorite() ? '♥' : '♡' }}
+        </button>
         <a class="btn" routerLink="/favorites">Voir mes favoris</a>
       </div>
     } @else {

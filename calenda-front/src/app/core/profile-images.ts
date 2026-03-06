@@ -1,5 +1,3 @@
-import { Role } from './auth.service';
-
 export const PROFILE_IMAGES = [
   'img/profil/picture/bird-pp.png',
   'img/profil/picture/cat-pp.png',
@@ -18,13 +16,9 @@ export function profileImageUrl(path: string | null | undefined) {
   return `/assets/${p}`;
 }
 
-export function allowedProfileImagesForRole(role: Role | null | undefined) {
-  const r = role ?? 'UTILISATEUR';
-  if (r === 'ADMIN') {
+export function allowedProfileImagesForRole(isAdmin: boolean | null | undefined) {
+  if (isAdmin) {
     return [...PROFILE_IMAGES];
-  }
-  if (r === 'ORGANISATEUR') {
-    return PROFILE_IMAGES.filter((p) => /(-pp|-ppa)\.png$/i.test(p));
   }
   return PROFILE_IMAGES.filter((p) => /-pp\.png$/i.test(p));
 }

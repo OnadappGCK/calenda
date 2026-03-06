@@ -7,7 +7,17 @@ export const requireAuthGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  await auth.ensureLoaded();
+  if (!auth.token()) {
+    return router.parseUrl('/login');
+  }
+
+  try {
+    await auth.ensureLoaded();
+  } catch {
+    // If the backend is temporarily unreachable (or /users/me fails), keep navigation working.
+    // Protected pages will handle their own API errors.
+    return true;
+  }
 
   if (auth.isLoggedIn()) {
     return true;
@@ -21,9 +31,13 @@ export const requireAdminGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  await auth.ensureLoaded();
+  try {
+    await auth.ensureLoaded();
+  } catch {
+    return router.parseUrl('/');
+  }
 
-  if (auth.user()?.role === 'ADMIN') {
+  if (auth.user()?.isAdmin) {
     return true;
   }
 

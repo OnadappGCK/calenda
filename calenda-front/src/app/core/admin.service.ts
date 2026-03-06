@@ -9,12 +9,11 @@ export class AdminService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = inject(API_BASE_URL);
 
-  users(params?: { q?: string; role?: string }) {
+  users(params?: { q?: string; isAdmin?: boolean }) {
     const query: Record<string, string> = {};
     const q = (params?.q ?? '').trim();
-    const role = (params?.role ?? '').trim();
     if (q) query['q'] = q;
-    if (role) query['role'] = role;
+    if (params?.isAdmin !== undefined) query['isAdmin'] = String(params.isAdmin);
     return this.http.get<
       {
         id: string;
@@ -23,7 +22,8 @@ export class AdminService {
         ville: string;
         lieu: string;
         numero?: string | null;
-        role: string;
+        isAdmin: boolean;
+        emailVerified: boolean;
         profileImage: string | null;
         createdAt: string;
         updatedAt: string;
@@ -37,7 +37,7 @@ export class AdminService {
     ville: string;
     lieu: string;
     numero?: string | null;
-    role?: string;
+    isAdmin?: boolean;
     profileImage?: string;
     password: string;
     passwordConfirmation: string;
@@ -53,7 +53,7 @@ export class AdminService {
       ville?: string;
       lieu?: string;
       numero?: string | null;
-      role?: string;
+      isAdmin?: boolean;
       profileImage?: string | null;
       password?: string;
       passwordConfirmation?: string;
@@ -79,7 +79,7 @@ export class AdminService {
 
   /** Liste les profils organisateurs (admin). */
   organizers() {
-    return this.http.get<{ id: string; pseudo: string; email: string; role: string }[]>(
+    return this.http.get<{ id: string; pseudo: string; email: string; isAdmin: boolean }[]>(
       `${this.apiBaseUrl}/admin/organizers`,
     );
   }
@@ -145,5 +145,53 @@ export class AdminService {
         dateFin?: string | null;
       }[];
     }>(`${this.apiBaseUrl}/admin/merge/martigues/apply`, body);
+  }
+
+  previewMergeSalsaOlivier(params?: { pages?: number }) {
+    const query: Record<string, string> = {};
+    if (params?.pages !== undefined) query['pages'] = String(params.pages);
+
+    return this.http.get<{
+      scannedPages: number;
+      foundUrls: number;
+      dedupedUrls: number;
+      parsed: number;
+      withImage: number;
+      withDescription: number;
+      wouldCreate: number;
+      skippedExisting: number;
+      skippedPast: number;
+      failed: number;
+      urls: string[];
+      failures: { url: string; reason: string }[];
+      debugSamples: {
+        status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
+        url: string;
+        reason?: string;
+        titre?: string;
+        dateDebut?: string;
+        dateFin?: string | null;
+        image?: boolean;
+        descLen?: number;
+      }[];
+    }>(`${this.apiBaseUrl}/admin/merge/salsa-olivier/preview`, { params: query });
+  }
+
+  applyMergeSalsaOlivier(body: { urls: string[] }) {
+    return this.http.post<{
+      processed: number;
+      created: number;
+      skippedExisting: number;
+      skippedPast: number;
+      failed: number;
+      debugSamples: {
+        status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
+        url: string;
+        reason?: string;
+        titre?: string;
+        dateDebut?: string;
+        dateFin?: string | null;
+      }[];
+    }>(`${this.apiBaseUrl}/admin/merge/salsa-olivier/apply`, body);
   }
 }

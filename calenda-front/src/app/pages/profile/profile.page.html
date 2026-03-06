@@ -18,6 +18,29 @@
       <div class="title">{{ auth.user()?.pseudo }}</div>
       <div class="role">{{ role() }}</div>
 
+      @if (!auth.user()?.emailVerified) {
+        <div class="error" style="margin-top: 10px;">Email non vérifié</div>
+        @if (verifyError()) {
+          <div class="error">{{ verifyError() }}</div>
+        }
+        <div class="actions" style="margin-top: 8px;">
+          <button class="btn" type="button" (click)="requestEmailVerification()" [disabled]="verifyLoading()">
+            Obtenir un lien de vérification
+          </button>
+        </div>
+        @if (verifyToken()) {
+          <label class="field" style="margin-top: 10px;">
+            Token
+            <input type="text" [ngModel]="verifyToken()" (ngModelChange)="verifyToken.set($event)" />
+          </label>
+          <div class="actions">
+            <button class="btn btnPrimary" type="button" (click)="confirmEmailVerification()" [disabled]="verifyLoading()">
+              Vérifier
+            </button>
+          </div>
+        }
+      }
+
       @if (!editing()) {
         <button class="btn btnPrimary" type="button" (click)="startEdit()">Modifier le Profil</button>
       } @else {

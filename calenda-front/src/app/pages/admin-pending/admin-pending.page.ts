@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { AdminService } from '../../core/admin.service';
 import { EventDto, EventOrigin } from '../../core/events.service';
 
-type MergeSourceId = 'MARTIGUES_TOURISME';
+type MergeSourceId = 'MARTIGUES_TOURISME' | 'SALSA_OLIVIER_13';
 type MergeSource = { id: MergeSourceId; label: string; description: string };
 
 const MERGE_SOURCES: MergeSource[] = [
@@ -13,6 +13,11 @@ const MERGE_SOURCES: MergeSource[] = [
     id: 'MARTIGUES_TOURISME',
     label: 'Martigues Tourisme',
     description: 'Import depuis martigues-tourisme.com (og:image, événements en attente).',
+  },
+  {
+    id: 'SALSA_OLIVIER_13',
+    label: 'Salsa d’Olivier (dpt 13)',
+    description: "Import depuis salsa.faurax.fr (Bouches-du-Rhône). Le paramètre 'pages' correspond à ~50 événements par tranche.",
   },
 ];
 
@@ -257,6 +262,8 @@ export class AdminPendingPage implements OnInit {
       const res =
         this.mergeSource === 'MARTIGUES_TOURISME'
           ? await this.adminService.previewMergeMartigues({ pages: this.mergePages }).toPromise()
+          : this.mergeSource === 'SALSA_OLIVIER_13'
+            ? await this.adminService.previewMergeSalsaOlivier({ pages: this.mergePages }).toPromise()
           : null;
 
       console.log('[Merge] preview response', res);
@@ -277,6 +284,8 @@ export class AdminPendingPage implements OnInit {
       const res =
         this.mergeSource === 'MARTIGUES_TOURISME'
           ? await this.adminService.applyMergeMartigues({ urls: preview.urls }).toPromise()
+          : this.mergeSource === 'SALSA_OLIVIER_13'
+            ? await this.adminService.applyMergeSalsaOlivier({ urls: preview.urls }).toPromise()
           : null;
 
       console.log('[Merge] apply response', res);

@@ -1,12 +1,22 @@
-import { DatePipe } from '@angular/common';
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe, isPlatformBrowser } from '@angular/common';
+import {
+  Component,
+  DestroyRef,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  PLATFORM_ID,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AdminService } from '../../core/admin.service';
 import { AuthService } from '../../core/auth.service';
-import { resolveEventImageUrl, tagIcon as tagIconFn } from '../../core/event-ui';
+import { categoryColor, resolveEventImageUrl, tagIcon as tagIconFn } from '../../core/event-ui';
 import { EventCategory, EventsService, EventDto, EventTag } from '../../core/events.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
@@ -42,7 +52,7 @@ type Draft = {
  * Page détail d'événement.
  * Charge un événement depuis l'ID de route et affiche des suggestions similaires.
  */
-export class EventDetailPage implements OnInit {
+export class EventDetailPage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly eventsService = inject(EventsService);
@@ -50,13 +60,18 @@ export class EventDetailPage implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly adminService = inject(AdminService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly photon = inject(PhotonService);
   private readonly sanitizer = inject(DomSanitizer);
 
   private loadToken = 0;
+  private lastLoadedId: string | null = null;
 
   readonly event = signal<EventDto | null>(null);
   readonly similar = signal<EventDto[]>([]);
+
+  readonly loading = signal(false);
+  readonly loadError = signal<string | null>(null);
 
   readonly editing = signal(false);
   readonly saving = signal(false);
@@ -66,22 +81,45 @@ export class EventDetailPage implements OnInit {
   readonly deleting = signal(false);
   readonly deleteError = signal<string | null>(null);
 
-  readonly organizers = signal<{ id: string; pseudo: string; email: string; role: string }[]>([]);
+  readonly organizers = signal<{ id: string; pseudo: string; email: string; isAdmin: boolean }[]>([]);
 
   private organizersLoaded = false;
 
   readonly canLike = computed(() => this.auth.isLoggedIn());
+  readonly favoriteIds = signal<Set<string>>(new Set());
+  readonly isFavorite = computed(() => {
+    const e = this.event();
+    if (!e) return false;
+    return this.favoriteIds().has(e.id);
+  });
 
-  readonly isAdmin = computed(() => this.auth.user()?.role === 'ADMIN');
+  readonly lightboxOpen = signal(false);
+  readonly imageEditorOpen = signal(false);
+  private prevBodyOverflow: string | null = null;
+
+  readonly geocodedCoords = signal<{ lat: number; lon: number } | null>(null);
+  private geocodeToken = 0;
+
+  readonly defaultImageChoices = [
+    { label: 'Spectacle', path: 'img/categorie/SPECTACLE/spec1.png' },
+    { label: 'Festival', path: 'img/categorie/FESTIVAL/fest1.png' },
+    { label: 'Exposition', path: 'img/categorie/EXPOSITION/expo1.png' },
+    { label: 'Autre', path: 'img/categorie/AUTRE/autre1.png' },
+    { label: 'Réunion', path: 'img/categorie/REUNION/reu1.png' },
+  ];
+
+  readonly isAdmin = computed(() => !!this.auth.user()?.isAdmin);
   readonly canEdit = computed(() => {
     const u = this.auth.user();
     const e = this.event();
     if (!u || !e) return false;
-    return u.role === 'ADMIN' || e.organisateur?.id === u.id;
+    return u.isAdmin || e.organisateur?.id === u.id;
   });
 
   readonly categories: EventCategory[] = ['Danse', 'Concert', 'Spectacle', "Feux d’artifice", 'Exposition', 'Autre'];
   readonly tags: EventTag[] = ['MUSIQUE', 'DANSE', 'PLEIN AIR', 'RENCONTRE', 'FEU D’ARTIFICE', 'SPORT', 'MARCHÉ'];
+
+  protected readonly categoryColor = categoryColor;
 
   readonly caracteristiqueBubbles = computed(() => {
     const e = this.event();
@@ -94,6 +132,27 @@ export class EventDetailPage implements OnInit {
     return (e?.adresse ?? e?.lieu ?? '').trim();
   });
 
+  readonly googleMapsUrl = computed(() => {
+    const e = this.event();
+    if (!e) return null;
+    const addr = (e.adresse ?? e.lieu ?? '').trim();
+    const city = (e.ville ?? '').trim();
+    const q = [addr, city].filter((x) => (x ?? '').trim()).join(', ').trim();
+    if (!q) return null;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  });
+
+  private coerceCoord(v: unknown): number | null {
+    if (typeof v === 'number') {
+      return Number.isFinite(v) ? v : null;
+    }
+    if (typeof v === 'string') {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  }
+
   private embedOsmUrl(lat: number, lon: number) {
     const delta = 0.01;
     const left = lon - delta;
@@ -105,20 +164,93 @@ export class EventDetailPage implements OnInit {
     )}&layer=mapnik&marker=${encodeURIComponent(`${lat},${lon}`)}`;
   }
 
+  ngOnDestroy() {
+    this.unlockBodyScroll();
+  }
+
+  onHeroClick() {
+    if (this.editing()) {
+      this.openImageEditor();
+      return;
+    }
+    this.openLightbox();
+  }
+
+  openLightbox() {
+    if (!this.event()) return;
+    this.lightboxOpen.set(true);
+    this.lockBodyScroll();
+  }
+
+  closeLightbox() {
+    this.lightboxOpen.set(false);
+    this.unlockBodyScroll();
+  }
+
+  openImageEditor() {
+    if (!this.editing()) return;
+    if (!this.draft()) return;
+    this.imageEditorOpen.set(true);
+    this.lockBodyScroll();
+  }
+
+  closeImageEditor() {
+    this.imageEditorOpen.set(false);
+    this.unlockBodyScroll();
+  }
+
+  draftImagePreviewUrl() {
+    const d = this.draft();
+    if (!d) return '';
+    return resolveEventImageUrl(d.categorie, d.imageUrl);
+  }
+
+  private lockBodyScroll() {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const body = document?.body;
+    if (!body) return;
+    if (this.prevBodyOverflow === null) {
+      this.prevBodyOverflow = body.style.overflow;
+    }
+    body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll() {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const body = document?.body;
+    if (!body) return;
+    if (this.prevBodyOverflow !== null) {
+      body.style.overflow = this.prevBodyOverflow;
+      this.prevBodyOverflow = null;
+    }
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydown(ev: KeyboardEvent) {
+    if (ev.key !== 'Escape') return;
+    if (this.imageEditorOpen()) {
+      this.closeImageEditor();
+      return;
+    }
+    if (this.lightboxOpen()) {
+      this.closeLightbox();
+    }
+  }
+
   readonly mapUrl = computed<SafeResourceUrl | null>(() => {
     const e = this.event();
-    const lat = e?.latitude;
-    const lon = e?.longitude;
-    if (typeof lat !== 'number' || typeof lon !== 'number') return null;
+    const lat = this.coerceCoord(e?.latitude) ?? this.geocodedCoords()?.lat ?? null;
+    const lon = this.coerceCoord(e?.longitude) ?? this.geocodedCoords()?.lon ?? null;
+    if (lat === null || lon === null) return null;
     const url = this.embedOsmUrl(lat, lon);
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
 
   readonly draftMapUrl = computed<SafeResourceUrl | null>(() => {
     const d = this.draft();
-    const lat = d?.latitude;
-    const lon = d?.longitude;
-    if (typeof lat !== 'number' || typeof lon !== 'number') return null;
+    const lat = this.coerceCoord(d?.latitude);
+    const lon = this.coerceCoord(d?.longitude);
+    if (lat === null || lon === null) return null;
     const url = this.embedOsmUrl(lat, lon);
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
@@ -131,6 +263,20 @@ export class EventDetailPage implements OnInit {
 
   imageUrlFor(e: EventDto) {
     return resolveEventImageUrl(e.categorie, e.imageUrl);
+  }
+
+  private async reloadFavorites() {
+    if (!this.auth.isLoggedIn()) {
+      this.favoriteIds.set(new Set());
+      return;
+    }
+    try {
+      const list = await this.favoritesService.list().toPromise();
+      const next = new Set((list ?? []).map((e) => e.id));
+      this.favoriteIds.set(next);
+    } catch {
+      this.favoriteIds.set(new Set());
+    }
   }
 
   private async refreshAdresseSuggestions(query: string) {
@@ -223,7 +369,10 @@ export class EventDetailPage implements OnInit {
 
   async startEdit() {
     const e = this.event();
-    if (!e || !this.canEdit()) return;
+    if (!e) return;
+
+    this.closeLightbox();
+    this.closeImageEditor();
 
     this.saveError.set(null);
     this.editing.set(true);
@@ -248,14 +397,15 @@ export class EventDetailPage implements OnInit {
       couleur: e.couleur ?? null,
     });
 
-    if (this.isAdmin() && !this.organizersLoaded) {
+    if (!this.organizersLoaded) {
       const list = await this.adminService.organizers().toPromise();
-      this.organizers.set(list ?? []);
+      this.organizers.set((list ?? []) as any);
       this.organizersLoaded = true;
     }
   }
 
   cancelEdit() {
+    this.closeImageEditor();
     this.editing.set(false);
     this.saving.set(false);
     this.saveError.set(null);
@@ -306,6 +456,7 @@ export class EventDetailPage implements OnInit {
     const d = this.draft();
     if (!e || !d) return;
 
+    this.closeImageEditor();
     this.saving.set(true);
     this.saveError.set(null);
 
@@ -370,15 +521,59 @@ export class EventDetailPage implements OnInit {
     this.saving.set(false);
     this.saveError.set(null);
     this.draft.set(null);
+    this.geocodedCoords.set(null);
     this.event.set(null);
     this.similar.set([]);
   }
 
+  private async maybeGeocodeEvent(e: EventDto | null) {
+    if (!isPlatformBrowser(this.platformId)) return;
+    if (!e) return;
+
+    const existingLat = this.coerceCoord(e.latitude);
+    const existingLon = this.coerceCoord(e.longitude);
+    if (existingLat !== null && existingLon !== null) {
+      this.geocodedCoords.set(null);
+      return;
+    }
+
+    const addr = ((e.adresse ?? e.lieu ?? '') + ' ' + (e.ville ?? '')).trim();
+    if (addr.length < 3) return;
+
+    const token = ++this.geocodeToken;
+    try {
+      const res = await this.photon.search(addr, { limit: 1 }).toPromise();
+      if (token !== this.geocodeToken) return;
+      const first = (res ?? [])[0];
+      const c = first ? this.photon.coords(first) : null;
+      this.geocodedCoords.set(c ? { lat: c.lat, lon: c.lon } : null);
+    } catch {
+      if (token !== this.geocodeToken) return;
+      this.geocodedCoords.set(null);
+    }
+  }
+
   private async loadEvent(id: string) {
+    if (id === this.lastLoadedId) {
+      return;
+    }
+
+    this.lastLoadedId = id;
+    this.loading.set(true);
+    this.loadError.set(null);
     this.resetForLoad();
     const token = ++this.loadToken;
 
-    const evt = await this.eventsService.getOne(id).toPromise();
+    let evt: EventDto | null = null;
+    try {
+      evt = (await this.eventsService.getOne(id).toPromise()) ?? null;
+    } catch {
+      if (token !== this.loadToken) return;
+      this.loadError.set('load_failed');
+      this.loading.set(false);
+      return;
+    }
+
     if (token !== this.loadToken) return;
     const normalizeTags = (v: any): EventTag[] | null => {
       if (!v) return null;
@@ -422,15 +617,28 @@ export class EventDetailPage implements OnInit {
     }
 
     this.event.set(normalized);
+    void this.maybeGeocodeEvent(normalized);
 
-    const sim = await this.eventsService.similar(id).toPromise();
-    if (token !== this.loadToken) return;
-    this.similar.set(sim ?? []);
+    try {
+      const sim = await this.eventsService.similar(id).toPromise();
+      if (token !== this.loadToken) return;
+      this.similar.set(sim ?? []);
+    } catch {
+      if (token !== this.loadToken) return;
+      this.similar.set([]);
+    } finally {
+      if (token !== this.loadToken) return;
+      this.loading.set(false);
+    }
   }
 
   /** Hook Angular: charge l'événement + la liste "similar" à partir du paramètre `id`. */
-  async ngOnInit() {
-    await this.auth.ensureLoaded();
+  ngOnInit() {
+    void this.auth.ensureLoaded()
+      .then(() => this.reloadFavorites())
+      .catch(() => {
+      // Page publique: ne pas bloquer le chargement de l'événement si l'auth échoue (token expiré, backend down, etc.).
+      });
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((pm) => {
       const id = pm.get('id');
       if (!id) return;
@@ -438,17 +646,31 @@ export class EventDetailPage implements OnInit {
     });
   }
 
-  /** Ajoute l'événement courant aux favoris (si connecté). */
-  async like() {
+  /** Ajoute/retire l'événement courant des favoris (si connecté). */
+  async toggleFavorite() {
     const evt = this.event();
     if (!evt) {
       return;
     }
 
-    if (!this.canLike()) {
+    if (!this.auth.isLoggedIn()) {
+      await this.router.navigateByUrl('/login');
       return;
     }
 
-    await this.favoritesService.add(evt.id).toPromise();
+    const current = this.favoriteIds();
+    const next = new Set(current);
+    try {
+      if (next.has(evt.id)) {
+        await this.favoritesService.remove(evt.id).toPromise();
+        next.delete(evt.id);
+      } else {
+        await this.favoritesService.add(evt.id).toPromise();
+        next.add(evt.id);
+      }
+      this.favoriteIds.set(next);
+    } catch {
+      // ignore
+    }
   }
 }

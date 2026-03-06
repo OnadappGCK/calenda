@@ -20,7 +20,7 @@ export class NewsPage implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly apiBaseUrl = inject(API_BASE_URL);
 
-  protected readonly isAdmin = computed(() => this.auth.user()?.role === 'ADMIN');
+  protected readonly isAdmin = computed(() => !!this.auth.user()?.isAdmin);
 
   private readonly apiHost = this.apiBaseUrl.replace(/\/api\/?$/, '');
 

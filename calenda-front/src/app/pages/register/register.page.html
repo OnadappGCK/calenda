@@ -24,14 +24,26 @@
     </label>
 
     <label>
-      Ville
-      <input name="ville" type="text" [(ngModel)]="ville" required />
+      Adresse
+      <input
+        type="text"
+        [ngModel]="adresse"
+        (ngModelChange)="onAdresseInput($event)"
+        name="adresse"
+        (focus)="adresseSuggestOpen.set(true)"
+        required
+      />
     </label>
 
-    <label>
-      Lieu
-      <input name="lieu" type="text" [(ngModel)]="lieu" required />
-    </label>
+    @if (adresseSuggestOpen() && adresseSuggestions().length > 0) {
+      <div class="suggest">
+        @for (f of adresseSuggestions(); track $index) {
+          <button class="suggestItem" type="button" (click)="chooseAdresseSuggestion(f)">
+            {{ adresseSuggestionLabel(f) }}
+          </button>
+        }
+      </div>
+    }
 
     <label>
       Téléphone

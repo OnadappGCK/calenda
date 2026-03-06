@@ -60,7 +60,7 @@
           class="dot"
           type="button"
           (click)="setFeatured(i)"
-          [class.active]="i === featuredIndex()"
+          [class.active]="i === normalizedFeaturedIndex()"
           aria-label="Aller à la diapositive"
         ></button>
       }
