@@ -5,31 +5,31 @@
     </a>
 
     <nav class="tabs">
-      <a class="tab" routerLink="/calendar">Calendrier</a>
-      <a class="tab" routerLink="/news">Actualité</a>
-      <a class="tab" routerLink="/contact">Contact</a>
+      <a class="tab" routerLink="/calendar">{{ i18n.t('nav.calendar') }}</a>
+      <a class="tab" routerLink="/news">{{ i18n.t('nav.news') }}</a>
+      <a class="tab" routerLink="/contact">{{ i18n.t('nav.contact') }}</a>
     </nav>
   </div>
 
   <div class="right">
     @if (!auth.isLoggedIn()) {
-      <a class="btn" routerLink="/login">Connexion</a>
+      <a class="btn" routerLink="/login">{{ i18n.t('nav.login') }}</a>
     } @else {
-      <a class="iconBtn" routerLink="/favorites" aria-label="Favoris">♥</a>
+      <a class="iconBtn" routerLink="/favorites" [attr.aria-label]="i18n.t('nav.favorites')">♥</a>
 
       @if (isAdmin()) {
         <a
           class="iconBtn"
           routerLink="/admin/accounts"
-          aria-label="Gérer les comptes"
-          title="Gérer les comptes"
+          [attr.aria-label]="i18n.t('nav.manageAccounts')"
+          [title]="i18n.t('nav.manageAccounts')"
         >
           👤
         </a>
       }
 
       @if (isAdmin()) {
-        <a class="iconBtn" routerLink="/admin/pending-events" aria-label="Admin">
+        <a class="iconBtn" routerLink="/admin/pending-events" [attr.aria-label]="i18n.t('nav.adminPending')">
           🔔
           @if (pendingCount() > 0) {
             <span class="badge">{{ pendingCount() }}</span>
@@ -38,14 +38,54 @@
       }
 
       <a class="userPill" routerLink="/profile">
-        <span class="hello">Bonjour</span>
+        <span class="hello">{{ i18n.t('nav.hello') }}</span>
         <span class="name">{{ auth.user()?.pseudo }}</span>
       </a>
 
-      <a class="avatarBtn" routerLink="/profile" aria-label="Profil">
+      <a class="avatarBtn" routerLink="/profile" [attr.aria-label]="i18n.t('nav.profile')">
         <img class="avatarImg" [src]="profileImageUrl(auth.user()?.profileImage)" alt="" />
       </a>
-      <button class="iconBtn" type="button" (click)="auth.logout()" aria-label="Déconnexion">⟶</button>
+      <button class="iconBtn" type="button" (click)="auth.logout()" [attr.aria-label]="i18n.t('nav.logout')">⟶</button>
     }
+
+    <button
+      class="iconBtn themeToggleBtn"
+      type="button"
+      (click)="toggleTheme()"
+      [attr.aria-label]="darkTheme() ? i18n.t('nav.switchToLight') : i18n.t('nav.switchToDark')"
+      [title]="darkTheme() ? i18n.t('nav.switchToLight') : i18n.t('nav.switchToDark')"
+    >
+      {{ darkTheme() ? '☀️' : '🌙' }}
+    </button>
+
+    <div class="languageSelector" (click)="$event.stopPropagation()">
+      <button
+        class="languageToggle"
+        type="button"
+        (click)="toggleLanguageMenu($event)"
+        [attr.aria-label]="i18n.t('nav.languageMenu')"
+        [title]="i18n.t('nav.languageMenu')"
+      >
+        <span class="flag" aria-hidden="true">{{ i18n.currentLanguage().flag }}</span>
+        <span class="chevron" aria-hidden="true">▾</span>
+      </button>
+
+      @if (languageMenuOpen()) {
+        <div class="languageMenu" role="menu" [attr.aria-label]="i18n.t('nav.languageMenu')">
+          @for (lang of i18n.availableLanguages; track lang.code) {
+            <button
+              class="languageOption"
+              type="button"
+              role="menuitem"
+              (click)="selectLanguage(lang.code, $event)"
+              [class.active]="isActiveLanguage(lang.code)"
+            >
+              <span class="flag" aria-hidden="true">{{ lang.flag }}</span>
+              <span class="langLabel">{{ lang.label }}</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
   </div>
 </header>

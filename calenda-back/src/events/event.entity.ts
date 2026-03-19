@@ -12,6 +12,10 @@ import { EventOrigin } from '../common/enums/event-origin.enum';
 import { EventTag } from '../common/enums/event-tag.enum';
 import { User } from '../users/user.entity';
 
+const dbType = (process.env.DB_TYPE ?? '').toLowerCase();
+const usePostgres = dbType === 'postgres' || !!process.env.DB_HOST;
+const dateColumnType = usePostgres ? 'timestamptz' : 'datetime';
+
 @Entity('events')
 /** Entité TypeORM représentant un événement (dates, localisation, visibilité, organisateur, favoris). */
 export class Event {
@@ -69,11 +73,11 @@ export class Event {
   @Column({ type: 'text', nullable: true })
   contact!: string | null;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: dateColumnType })
   /** Date/heure de début. */
   dateDebut!: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: dateColumnType, nullable: true })
   /** Date/heure de fin. */
   dateFin!: Date | null;
 

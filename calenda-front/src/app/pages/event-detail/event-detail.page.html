@@ -1,35 +1,35 @@
 <section class="wrap">
   @if (loading()) {
-    <p>Chargement…</p>
+    <p>{{ i18n.t('common.loading') }}</p>
   } @else if (loadError()) {
-    <p>Erreur de chargement.</p>
+    <p>{{ i18n.t('eventDetail.loadError') }}</p>
   } @else {
-    <a class="back" routerLink="/calendar">Retour</a>
+    <a class="back" routerLink="/calendar">{{ i18n.t('eventDetail.back') }}</a>
 
     @if (!editing() && canEdit()) {
       <div class="editTop">
-        <button class="btn" type="button" (click)="startEdit()">Modifier</button>
+        <button class="btn" type="button" (click)="startEdit()">{{ i18n.t('common.edit') }}</button>
       </div>
     }
 
     @if (editing()) {
       <div class="editBar">
         <div class="editBarLeft">
-          <strong>Mode modification</strong>
+          <strong>{{ i18n.t('eventDetail.editMode') }}</strong>
         </div>
         <div class="editBarActions">
-          <button class="btn" type="button" (click)="cancelEdit()" [disabled]="saving()">Annuler</button>
+          <button class="btn" type="button" (click)="cancelEdit()" [disabled]="saving()">{{ i18n.t('common.cancel') }}</button>
           <button class="btn" type="button" (click)="openDeleteConfirm()" [disabled]="saving() || deleting()">
-            Supprimer
+            {{ i18n.t('common.delete') }}
           </button>
           <button class="btn" type="button" (click)="saveEdit()" [disabled]="saving()">
-            @if (saving()) { Enregistrement… } @else { Enregistrer }
+            @if (saving()) { {{ i18n.t('eventDetail.saving') }} } @else { {{ i18n.t('common.save') }} }
           </button>
         </div>
       </div>
 
-      @if (saveError()) {
-        <div class="editError">Erreur: {{ saveError() }}</div>
+      @if (saveErrorMessage()) {
+        <div class="editError">{{ i18n.t('eventDetail.errorPrefix') }}: {{ saveErrorMessage() }}</div>
       }
     }
 
@@ -45,7 +45,7 @@
         class="zoomBtn"
         type="button"
         (click)="onHeroClick()"
-        [attr.aria-label]="editing() ? 'Modifier l’image' : 'Agrandir l’image'"
+        [attr.aria-label]="editing() ? i18n.t('eventDetail.editImage') : i18n.t('eventDetail.zoomImage')"
       >
         {{ editing() ? '✎' : '🔍' }}
       </button>
@@ -54,7 +54,7 @@
     @if (lightboxOpen()) {
       <div class="lightboxBackdrop" (click)="closeLightbox()">
         <div class="lightboxInner" (click)="$event.stopPropagation()">
-          <button class="lightboxClose" type="button" (click)="closeLightbox()" aria-label="Fermer">×</button>
+          <button class="lightboxClose" type="button" (click)="closeLightbox()" [attr.aria-label]="i18n.t('common.close')">×</button>
           <img class="lightboxImg" [src]="imageUrlFor(event()!)" alt="" />
         </div>
       </div>
@@ -64,15 +64,15 @@
       <div class="modalBackdrop" (click)="closeImageEditor()"></div>
       <div class="modal" (click)="$event.stopPropagation()">
         <div class="imageEditorHeader">
-          <strong>Image de l’événement</strong>
-          <button class="btn" type="button" (click)="closeImageEditor()" aria-label="Fermer">×</button>
+          <strong>{{ i18n.t('eventDetail.eventImage') }}</strong>
+          <button class="btn" type="button" (click)="closeImageEditor()" [attr.aria-label]="i18n.t('common.close')">×</button>
         </div>
 
         <label class="field">
-          Lien de l’image
+          {{ i18n.t('eventDetail.imageLink') }}
           <input
             type="text"
-            placeholder="https://… ou img/categorie/..."
+            [placeholder]="i18n.t('eventDetail.imageLinkPlaceholder')"
             [ngModel]="draft()!.imageUrl ?? ''"
             (ngModelChange)="setDraft({ imageUrl: $event })"
           />
@@ -82,9 +82,9 @@
           <img class="imagePreviewImg" [src]="draftImagePreviewUrl()" alt="" loading="lazy" />
         </div>
 
-        <div class="imageChoicesTitle">Images par défaut</div>
+        <div class="imageChoicesTitle">{{ i18n.t('eventDetail.defaultImages') }}</div>
         <div class="imageChoices">
-          @for (c of defaultImageChoices; track c.path) {
+          @for (c of defaultImageChoices(); track c.path) {
             <button class="imageChoice" type="button" (click)="setDraft({ imageUrl: c.path })">
               <img class="imageChoiceImg" [src]="'/assets/' + c.path" alt="" loading="lazy" />
               <div class="imageChoiceLabel">{{ c.label }}</div>
@@ -97,22 +97,22 @@
     @if (!editing()) {
       <h1>{{ event()!.titre }}</h1>
       <div class="meta">
-        {{ event()!.categorie }} · {{ event()!.ville }}
+        {{ categoryLabel(event()!.categorie) }} · {{ event()!.ville }}
       </div>
       <div class="meta">
-        {{ event()!.dateDebut | date: 'short' }} → {{ event()!.dateFin ? (event()!.dateFin | date: 'short') : 'non mentionnée' }}
+        {{ event()!.dateDebut | date: 'short':undefined:dateLocale() }} → {{ event()!.dateFin ? (event()!.dateFin | date: 'short':undefined:dateLocale()) : i18n.t('common.notMentioned') }}
       </div>
 
-      <div class="meta">Organisateur: {{ event()!.organisateur?.pseudo ?? 'Organisateur non mentionné' }}</div>
+      <div class="meta">{{ i18n.t('eventDetail.organizer') }}: {{ event()!.organisateur?.pseudo ?? i18n.t('eventDetail.organizerMissing') }}</div>
 
-      <div class="meta">Contact: {{ (event()!.contact ?? '').trim() || 'non mentionné' }}</div>
+      <div class="meta">{{ i18n.t('eventDetail.contact') }}: {{ (event()!.contact ?? '').trim() || i18n.t('common.notMentioned') }}</div>
 
-      <div class="meta tarif">Tarif: {{ event()!.tarif ?? 'Non renseigné' }}</div>
+      <div class="meta tarif">{{ i18n.t('eventDetail.tarif') }}: {{ event()!.tarif ?? i18n.t('common.notProvided') }}</div>
 
       @if (caracteristiqueBubbles().length > 0) {
         <div class="tagsBubbles" style="margin-top: 6px;">
           @for (b of caracteristiqueBubbles(); track b.tag) {
-            <span class="tagBubbleMini" [title]="b.tag">{{ b.icon }} {{ b.tag }}</span>
+            <span class="tagBubbleMini" [title]="tagLabel(b.tag)">{{ b.icon }} {{ tagLabel(b.tag) }}</span>
           }
         </div>
       }
@@ -120,7 +120,7 @@
       <p class="desc">{{ event()!.description }}</p>
 
       @if (adresseLabel()) {
-        <div class="meta" style="margin-top: 10px;">Adresse: {{ adresseLabel() }}</div>
+        <div class="meta" style="margin-top: 10px;">{{ i18n.t('eventDetail.address') }}: {{ adresseLabel() }}</div>
       }
 
       @if (mapUrl()) {
@@ -132,14 +132,14 @@
             style="border:0; display:block;"
             loading="lazy"
             referrerpolicy="no-referrer"
-            title="Carte"
+            [title]="i18n.t('eventDetail.map')"
           ></iframe>
         </div>
       }
 
       @if (adresseLabel() && googleMapsUrl()) {
         <div style="margin-top: 10px;">
-          <a class="btn" [href]="googleMapsUrl()!" target="_blank" rel="noopener noreferrer">Voir sur Google Maps</a>
+          <a class="btn" [href]="googleMapsUrl()!" target="_blank" rel="noopener noreferrer">{{ i18n.t('eventDetail.seeOnGoogleMaps') }}</a>
         </div>
       }
 
@@ -148,31 +148,31 @@
           class="heartBtn"
           type="button"
           (click)="toggleFavorite()"
-          aria-label="Favori"
+          [attr.aria-label]="i18n.t('common.favorite')"
           [style.color]="isFavorite() ? '#ffffff' : '#64748b'"
         >
           {{ isFavorite() ? '♥' : '♡' }}
         </button>
-        <a class="btn" routerLink="/favorites">Voir mes favoris</a>
+        <a class="btn" routerLink="/favorites">{{ i18n.t('eventDetail.myFavorites') }}</a>
       </div>
     } @else {
       <div class="editForm">
         <label class="field">
-          Titre
+          {{ i18n.t('calendar.title') }}
           <input type="text" [ngModel]="draft()!.titre" (ngModelChange)="setDraft({ titre: $event })" />
         </label>
 
         <label class="field">
-          Catégorie
+          {{ i18n.t('calendar.category') }}
           <select [ngModel]="draft()!.categorie" (ngModelChange)="setDraft({ categorie: $event })">
             @for (c of categories; track c) {
-              <option [ngValue]="c">{{ c }}</option>
+              <option [ngValue]="c">{{ categoryLabel(c) }}</option>
             }
           </select>
         </label>
 
         <label class="field">
-          Adresse
+          {{ i18n.t('calendar.address') }}
           <input
             type="text"
             [ngModel]="draft()!.adresse"
@@ -190,7 +190,7 @@
               style="border:0; display:block;"
               loading="lazy"
               referrerpolicy="no-referrer"
-              title="Carte"
+              [title]="i18n.t('eventDetail.map')"
             ></iframe>
           </div>
         }
@@ -207,7 +207,7 @@
 
         <div class="row2">
           <label class="field">
-            Début
+            {{ i18n.t('eventDetail.start') }}
             <input
               type="datetime-local"
               [ngModel]="draft()!.dateDebutLocal"
@@ -215,7 +215,7 @@
             />
           </label>
           <label class="field">
-            Fin
+            {{ i18n.t('eventDetail.end') }}
             <input
               type="datetime-local"
               [ngModel]="draft()!.dateFinLocal"
@@ -225,7 +225,7 @@
         </div>
 
         <label class="field">
-          Description
+          {{ i18n.t('calendar.description') }}
           <textarea
             rows="8"
             [ngModel]="draft()!.description"
@@ -234,20 +234,20 @@
         </label>
 
         <label class="field">
-          Tarif
+          {{ i18n.t('eventDetail.tarif') }}
           <textarea rows="3" [ngModel]="draft()!.tarif" (ngModelChange)="setDraft({ tarif: $event })"></textarea>
         </label>
 
         <label class="field">
-          Contact
+          {{ i18n.t('calendar.contact') }}
           <textarea rows="2" [ngModel]="draft()!.contact" (ngModelChange)="setDraft({ contact: $event })"></textarea>
         </label>
 
         @if (isAdmin()) {
           <label class="field">
-            Compte organisateur (admin)
+            {{ i18n.t('eventDetail.adminOrganizerAccount') }}
             <select [ngModel]="draft()!.organisateurId" (ngModelChange)="onOrganizerSelected($event)">
-              <option value="">(ne pas changer)</option>
+              <option value="">{{ i18n.t('eventDetail.noChange') }}</option>
               @for (o of organizers(); track o.id) {
                 <option [value]="o.id">{{ o.pseudo }} ({{ o.email }})</option>
               }
@@ -261,7 +261,7 @@
                 [ngModel]="draft()!.public"
                 (ngModelChange)="setDraft({ public: $event })"
               />
-              Public
+              {{ i18n.t('eventDetail.public') }}
             </label>
             <label class="field inline">
               <input
@@ -269,13 +269,13 @@
                 [ngModel]="draft()!.enAvant"
                 (ngModelChange)="setDraft({ enAvant: $event })"
               />
-              Mis en avant
+              {{ i18n.t('eventDetail.featured') }}
             </label>
           </div>
         }
 
         <div class="field">
-          Tags (max 3)
+          {{ i18n.t('eventDetail.tagsMax3') }}
           <div class="tags">
             @for (t of tags; track t) {
               <button
@@ -285,7 +285,7 @@
                 [disabled]="(draft()!.caracteristiques ?? []).length >= 3 && !(draft()!.caracteristiques ?? []).includes(t)"
                 (click)="toggleTag(t)"
               >
-                {{ tagIcon(t) }} {{ t }}
+                {{ tagIcon(t) }} {{ tagLabel(t) }}
               </button>
             }
           </div>
@@ -293,16 +293,16 @@
       </div>
     }
 
-    <h2>Événements similaires</h2>
+    <h2>{{ i18n.t('eventDetail.similarEvents') }}</h2>
     @if (similar().length === 0) {
-      <p>Aucun.</p>
+      <p>{{ i18n.t('eventDetail.none') }}</p>
     } @else {
       <div class="grid">
         @for (e of similar(); track e.id) {
           <a class="card" [routerLink]="['/events', e.id]">
             <img class="cardImg" [src]="imageUrlFor(e)" alt="" loading="lazy" />
             <div class="title">{{ e.titre }}</div>
-            <div class="meta">{{ e.dateDebut | date: 'short' }}</div>
+            <div class="meta">{{ e.dateDebut | date: 'short':undefined:dateLocale() }}</div>
           </a>
         }
       </div>
@@ -313,18 +313,18 @@
 @if (showDeleteConfirm()) {
   <div class="modalBackdrop" (click)="closeDeleteConfirm()"></div>
   <div class="modal">
-    <h2>Confirmation</h2>
-    <p>Supprimer cet événement : <strong>{{ event()!.titre }}</strong> ?</p>
+    <h2>{{ i18n.t('eventDetail.confirm') }}</h2>
+    <p>{{ i18n.t('eventDetail.confirmDelete', { title: event()!.titre }) }}</p>
 
-    @if (deleteError()) {
-      <div class="editError">Erreur: {{ deleteError() }}</div>
+    @if (deleteErrorMessage()) {
+      <div class="editError">{{ i18n.t('eventDetail.errorPrefix') }}: {{ deleteErrorMessage() }}</div>
     }
 
     <div class="actions">
       <button class="btn" type="button" (click)="confirmDelete()" [disabled]="deleting()">
-        @if (deleting()) { Suppression… } @else { Oui, supprimer }
+        @if (deleting()) { {{ i18n.t('eventDetail.deleting') }} } @else { {{ i18n.t('eventDetail.yesDelete') }} }
       </button>
-      <button class="btn" type="button" (click)="closeDeleteConfirm()" [disabled]="deleting()">Annuler</button>
+      <button class="btn" type="button" (click)="closeDeleteConfirm()" [disabled]="deleting()">{{ i18n.t('common.cancel') }}</button>
     </div>
   </div>
 }

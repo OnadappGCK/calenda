@@ -223,8 +223,12 @@ export class AdminPendingPage implements OnInit {
     if (!c) return;
 
     if (c.action === 'validate') {
-      for (const id of c.ids) {
-        await this.adminService.validateEvent(id).toPromise();
+      if (c.ids.length > 1) {
+        await this.adminService.validateEventsBulk(c.ids).toPromise();
+      } else {
+        for (const id of c.ids) {
+          await this.adminService.validateEvent(id).toPromise();
+        }
       }
     } else {
       for (const id of c.ids) {

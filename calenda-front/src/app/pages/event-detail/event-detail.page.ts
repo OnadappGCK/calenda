@@ -17,6 +17,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AdminService } from '../../core/admin.service';
 import { AuthService } from '../../core/auth.service';
 import { categoryColor, resolveEventImageUrl, tagIcon as tagIconFn } from '../../core/event-ui';
+import { I18nService } from '../../core/i18n.service';
 import { EventCategory, EventsService, EventDto, EventTag } from '../../core/events.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
@@ -59,6 +60,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
   private readonly favoritesService = inject(FavoritesService);
   private readonly auth = inject(AuthService);
   private readonly adminService = inject(AdminService);
+  protected readonly i18n = inject(I18nService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly photon = inject(PhotonService);
@@ -100,13 +102,13 @@ export class EventDetailPage implements OnInit, OnDestroy {
   readonly geocodedCoords = signal<{ lat: number; lon: number } | null>(null);
   private geocodeToken = 0;
 
-  readonly defaultImageChoices = [
-    { label: 'Spectacle', path: 'img/categorie/SPECTACLE/spec1.png' },
-    { label: 'Festival', path: 'img/categorie/FESTIVAL/fest1.png' },
-    { label: 'Exposition', path: 'img/categorie/EXPOSITION/expo1.png' },
-    { label: 'Autre', path: 'img/categorie/AUTRE/autre1.png' },
-    { label: 'Réunion', path: 'img/categorie/REUNION/reu1.png' },
-  ];
+  readonly defaultImageChoices = computed(() => [
+    { label: this.i18n.t('eventDetail.defaultImageSpectacle'), path: 'img/categorie/SPECTACLE/spec1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageFestival'), path: 'img/categorie/FESTIVAL/fest1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageExposition'), path: 'img/categorie/EXPOSITION/expo1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageOther'), path: 'img/categorie/AUTRE/autre1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageMeeting'), path: 'img/categorie/REUNION/reu1.png' },
+  ]);
 
   readonly isAdmin = computed(() => !!this.auth.user()?.isAdmin);
   readonly canEdit = computed(() => {
@@ -118,6 +120,15 @@ export class EventDetailPage implements OnInit, OnDestroy {
 
   readonly categories: EventCategory[] = ['Danse', 'Concert', 'Spectacle', "Feux d’artifice", 'Exposition', 'Autre'];
   readonly tags: EventTag[] = ['MUSIQUE', 'DANSE', 'PLEIN AIR', 'RENCONTRE', 'FEU D’ARTIFICE', 'SPORT', 'MARCHÉ'];
+
+  readonly dateLocale = computed(() => {
+    const lang = this.i18n.lang();
+    if (lang === 'en') return 'en-GB';
+    if (lang === 'es') return 'es-ES';
+    if (lang === 'it') return 'it-IT';
+    if (lang === 'de') return 'de-DE';
+    return 'fr-FR';
+  });
 
   protected readonly categoryColor = categoryColor;
 
@@ -257,6 +268,20 @@ export class EventDetailPage implements OnInit, OnDestroy {
 
   readonly draft = signal<Draft | null>(null);
 
+  readonly saveErrorMessage = computed(() => {
+    const err = this.saveError();
+    if (!err) return null;
+    if (err === 'save_failed') return this.i18n.t('eventDetail.saveFailed');
+    return err;
+  });
+
+  readonly deleteErrorMessage = computed(() => {
+    const err = this.deleteError();
+    if (!err) return null;
+    if (err === 'delete_failed') return this.i18n.t('eventDetail.deleteFailed');
+    return err;
+  });
+
   readonly adresseSuggestions = signal<PhotonFeature[]>([]);
   readonly adresseSuggestOpen = signal<boolean>(false);
   private adresseSuggestToken = 0;
@@ -322,6 +347,35 @@ export class EventDetailPage implements OnInit, OnDestroy {
 
   tagIcon(t: EventTag) {
     return tagIconFn(t);
+  }
+
+  categoryLabel(category: EventCategory) {
+    const key = this.categoryKey(category);
+    return this.i18n.t(`eventDetail.categories.${key}`);
+  }
+
+  tagLabel(tag: EventTag) {
+    const key = this.tagKey(tag);
+    return this.i18n.t(`eventDetail.tags.${key}`);
+  }
+
+  private categoryKey(category: EventCategory) {
+    if (category === 'Danse') return 'danse';
+    if (category === 'Concert') return 'concert';
+    if (category === 'Spectacle') return 'spectacle';
+    if (category === 'Feux d’artifice') return 'fireworks';
+    if (category === 'Exposition') return 'exhibition';
+    return 'other';
+  }
+
+  private tagKey(tag: EventTag) {
+    if (tag === 'MUSIQUE') return 'music';
+    if (tag === 'DANSE') return 'dance';
+    if (tag === 'PLEIN AIR') return 'outdoor';
+    if (tag === 'RENCONTRE') return 'social';
+    if (tag === 'FEU D’ARTIFICE') return 'fireworks';
+    if (tag === 'SPORT') return 'sport';
+    return 'market';
   }
 
   private formatDateTimeLocal(iso: string | null | undefined) {

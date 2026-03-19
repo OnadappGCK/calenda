@@ -72,6 +72,10 @@ export class AdminService {
     return this.http.patch(`${this.apiBaseUrl}/admin/events/${id}/validate`, {});
   }
 
+  validateEventsBulk(ids: string[]) {
+    return this.http.patch<{ updated: number }>(`${this.apiBaseUrl}/admin/events/validate-bulk`, { ids });
+  }
+
   /** Supprime un événement (admin). */
   deleteEvent(id: string) {
     return this.http.delete(`${this.apiBaseUrl}/admin/events/${id}`);

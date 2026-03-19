@@ -63,7 +63,13 @@ export class AdminController {
   /** Liste les événements en attente (public=false). */
   async pending(@Query() query: ListEventsQueryDto) {
     // pending events are public=false
-    const events = await this.eventsService.findAll(query, { id: 'admin', isAdmin: true, emailVerified: true });
+    const events = await this.eventsService.findAll(
+      {
+        ...query,
+        includePending: true,
+      },
+      { id: 'admin', isAdmin: true, emailVerified: true },
+    );
     return events.filter((e) => e.public === false);
   }
 
@@ -201,6 +207,12 @@ export class AdminController {
   /** Valide un événement (le rend public). */
   async validate(@Param('id') id: string) {
     return this.eventsService.validateEvent(id);
+  }
+
+  @Patch('events/validate-bulk')
+  async validateBulk(@Body() body: { ids?: string[] }) {
+    const ids = Array.isArray(body?.ids) ? body.ids : [];
+    return this.eventsService.validateEvents(ids);
   }
 
   @Delete('events/:id')

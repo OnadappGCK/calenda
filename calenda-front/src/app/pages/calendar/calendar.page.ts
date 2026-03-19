@@ -27,6 +27,7 @@ import {
   tagIconUrl,
 } from '../../core/event-ui';
 import { FavoritesService } from '../../core/favorites.service';
+import { I18nService } from '../../core/i18n.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
 
 type ImageChoice = { label: string; value: string };
@@ -54,6 +55,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly eventsService = inject(EventsService);
   private readonly favoritesService = inject(FavoritesService);
   private readonly auth = inject(AuthService);
+  protected readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
@@ -195,10 +197,17 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     return keys.map((k) => `${k}=${pm.get(k) ?? ''}`).join('&');
   }
 
+  private isMobileViewport() {
+    if (typeof window === 'undefined') return false;
+    return !!window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+  }
+
   private applyQueryParams(pm: { get: (k: string) => string | null }) {
     const view = pm.get('view');
     if (view === 'week' || view === 'day') {
       this.viewMode = view;
+    } else if (this.isMobileViewport()) {
+      this.viewMode = 'day';
     }
 
     const date = pm.get('date');
@@ -322,7 +331,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   protected readonly isAdmin = computed(() => !!this.auth.user()?.isAdmin);
 
   proposeGateOpen = false;
-  proposeGateMessage = 'Vous devez être connecté pour proposer un événement.';
+  proposeGateMessage = this.i18n.t('calendar.proposeLoginMessage');
   proposeGateKind: 'login_required' = 'login_required';
 
   /** Convertit un ISO datetime en minutes depuis minuit (heure locale). */
@@ -481,11 +490,23 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     });
   });
 
+  readonly dateLocale = computed(() => {
+    const code = this.i18n.lang();
+    if (code === 'fr') return 'fr-FR';
+    if (code === 'en') return 'en-GB';
+    if (code === 'es') return 'es-ES';
+    if (code === 'it') return 'it-IT';
+    return 'de-DE';
+  });
+
   readonly weekLabel = computed(() => {
     const start = this.weekStart();
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
-    return `Semaine du ${start.toLocaleDateString()} au ${end.toLocaleDateString()}`;
+    const locale = this.dateLocale();
+    const startLabel = start.toLocaleDateString(locale);
+    const endLabel = end.toLocaleDateString(locale);
+    return this.i18n.t('calendar.weekRange', { start: startLabel, end: endLabel });
   });
 
   private todayLocalKey() {
@@ -588,8 +609,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Formate un libellé de semaine basé sur le lundi (ex: "Semaine du 1 janvier"). */
   private formatWeekLabelFromStartKey(weekStartKey: string) {
     const d = this.dayKeyToDate(weekStartKey);
-    const formatted = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
-    return `Semaine du ${formatted}`;
+    const formatted = d.toLocaleDateString(this.dateLocale(), { day: 'numeric', month: 'long' });
+    return this.i18n.t('calendar.weekFrom', { date: formatted });
   }
 
   /** Retourne les jours (clés `YYYY-MM-DD`) présents dans la liste paginée des événements à venir. */
@@ -637,7 +658,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       const isCurrentWeek = weekStartKey === currentWeekStartKey;
 
       const label = isCurrentWeek
-        ? 'Semaine en cours'
+        ? this.i18n.t('calendar.currentWeek')
         : this.formatWeekLabelFromStartKey(weekStartKey);
 
       const w = weeks.get(weekStartKey) ?? { weekStartKey, label, days: [] };
@@ -669,7 +690,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
         const hit = entries.some((e) => e.isIntersecting);
         if (!hit) return;
         void this.loadMoreUpcoming();
-      });
+      }, { rootMargin: '800px 0px' });
     }
 
     this.upcomingObserver.disconnect();
@@ -1126,11 +1147,19 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.categorie) chips.push({ key: 'categorie', label: this.categorie });
     if (this.q) chips.push({ key: 'q', label: this.q });
     if (this.caracteristiquesFilter.length) chips.push({ key: 'caracteristiques', label: this.caracteristiquesFilter.join(', ') });
-    if (this.dateDebutFilter) chips.push({ key: 'dateDebut', label: `Du ${this.dateDebutFilter}` });
-    if (this.dateFinFilter) chips.push({ key: 'dateFin', label: `Au ${this.dateFinFilter}` });
-    if (this.favoris) chips.push({ key: 'favoris', label: 'Favoris' });
-    if (this.includePending && this.isAdmin()) chips.push({ key: 'includePending', label: 'En attente' });
+    if (this.dateDebutFilter) chips.push({ key: 'dateDebut', label: this.i18n.t('calendar.fromChip', { date: this.dateDebutFilter }) });
+    if (this.dateFinFilter) chips.push({ key: 'dateFin', label: this.i18n.t('calendar.toChip', { date: this.dateFinFilter }) });
+    if (this.favoris) chips.push({ key: 'favoris', label: this.i18n.t('calendar.favorites') });
+    if (this.includePending && this.isAdmin()) chips.push({ key: 'includePending', label: this.i18n.t('calendar.pending') });
     return chips;
+  }
+
+  eventCountLabel(count: number) {
+    return this.i18n.t('calendar.eventCount', { count });
+  }
+
+  nightEventsLabel(count: number) {
+    return this.i18n.t('calendar.nightEvents', { count });
   }
 
   /** Retire un filtre correspondant à une chip, puis relance un reload (sauf chip date). */
@@ -1517,7 +1546,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Ouvre la modale de proposition d'événement. */
   async openPropose() {
     if (!this.auth.isLoggedIn()) {
-      this.proposeGateMessage = 'Vous devez être connecté pour proposer un événement.';
+      this.proposeGateMessage = this.i18n.t('calendar.proposeLoginMessage');
       this.proposeGateKind = 'login_required';
       this.proposeGateOpen = true;
       return;
@@ -1530,7 +1559,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     if (!this.newContact.trim()) {
       const u = this.auth.user();
       const email = (u?.email ?? '').trim();
-      const phone = (u?.numero ?? '').trim() || 'non mentionné';
+      const phone = (u?.numero ?? '').trim() || this.i18n.t('common.notMentioned');
       if (email) {
         this.newContact = `email : ${email} Téléphone : ${phone}`;
       }
@@ -1554,7 +1583,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       titre: this.newTitre,
       description: this.newDescription,
       categorie: this.newCategorie,
-      ville: (this.newVille || this.newAdresse || 'Non renseigné').trim(),
+      ville: (this.newVille || this.newAdresse || this.i18n.t('common.notProvided')).trim(),
       adresse: this.newAdresse,
       latitude: this.newLatitude,
       longitude: this.newLongitude,

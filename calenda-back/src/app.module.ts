@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -27,11 +28,35 @@ import { UsersModule } from './users/users.module';
         limit: 100,
       },
     ]),
-    TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: 'calenda.sqlite',
-      entities: [User, Event, News],
-      synchronize: true,
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const dbType = (config.get<string>('DB_TYPE') ?? '').toLowerCase();
+        const usePostgres = dbType === 'postgres' || !!config.get<string>('DB_HOST');
+        const synchronize = (config.get<string>('DB_SYNCHRONIZE') ?? 'true').toLowerCase() === 'true';
+
+        if (usePostgres) {
+          return {
+            type: 'postgres' as const,
+            host: config.get<string>('DB_HOST') ?? 'localhost',
+            port: Number(config.get<string>('DB_PORT') ?? 5432),
+            username: config.get<string>('DB_USER') ?? 'postgres',
+            password: config.get<string>('DB_PASS') ?? '',
+            database: config.get<string>('DB_NAME') ?? 'calenda',
+            entities: [User, Event, News],
+            synchronize,
+            uuidExtension: 'pgcrypto' as const,
+            installExtensions: true,
+          };
+        }
+
+        return {
+          type: 'sqlite' as const,
+          database: config.get<string>('SQLITE_PATH') ?? 'calenda.sqlite',
+          entities: [User, Event, News],
+          synchronize,
+        };
+      },
     }),
     CommonModule,
     AuthModule,

@@ -89,6 +89,123 @@
   pointer-events: none;
 }
 
+@media screen and (max-width: 600px) {
+  .calendarContainer {
+    padding: 0.4rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .calendarViewport {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .topLeft,
+  .topRight {
+    width: 100%;
+  }
+
+  .topLeft {
+    justify-content: space-between;
+  }
+
+  .weekTitle {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .weekMain,
+  .weekSub {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topRight > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .topRight {
+    justify-content: flex-start;
+  }
+
+  .datePick {
+    flex: 1 1 160px;
+  }
+
+  .datePick input {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .toggle {
+    flex: 1 1 auto;
+  }
+
+  .proposeBtn {
+    min-width: 0;
+    flex: 1 0 100%;
+  }
+
+  .scheduler {
+    height: 62vh;
+    min-height: 320px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .dayNavLayout {
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 0.25rem;
+    height: 62vh;
+    min-height: 320px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .dayNavBtn {
+    width: 40px;
+    font-size: 34px;
+  }
+
+  .schedGrid.dayOnly {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .schedScroll {
+    max-width: 100%;
+  }
+
+  .schedGrid.dayOnly {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .schedScroll.dayOnly {
+    overflow-x: hidden;
+  }
+
+  .schedGrid.dayOnly .timeCell {
+    font-size: 0.6rem;
+    padding: 1px 2px 0;
+  }
+}
+
 .topbar input[type='date'] {
   height: var(--cal-date-height);
   padding: 0.12rem 0.35rem;
@@ -167,8 +284,9 @@
 // Height is managed by flex layout (see global styles): it takes the remaining height under the navbar.
 .scheduler {
   margin-top: 0.25rem;
-  flex: 1 1 auto;
-  min-height: 0;
+  height: 70vh;
+  max-height: 720px;
+  min-height: 420px;
 }
 
 .dayNavLayout {
@@ -176,8 +294,9 @@
   grid-template-columns: 56px minmax(0, 1fr) 56px;
   gap: 0.5rem;
   align-items: center;
-  flex: 1 1 auto;
-  min-height: 0;
+  height: 70vh;
+  max-height: 720px;
+  min-height: 420px;
 }
 
 .dayNavBtn {
@@ -190,7 +309,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: rgba(15, 23, 42, 0.72);
+  color: $text-muted-2;
   font-size: 42px;
   font-weight: 700;
   line-height: 1;
@@ -198,8 +317,8 @@
 }
 
 .dayNavBtn:hover {
-  color: rgba(15, 23, 42, 0.9);
-  background: rgba(15, 23, 42, 0.05);
+  color: $text-muted-1;
+  background: $overlay-1;
 }
 
 // Scroll container for the scheduler.
@@ -208,7 +327,7 @@
   height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  background: #F5F6F8;
+  background: $cal-grid-bg;
 }
 
 // Scheduler grid: time column + day columns + headers.
@@ -293,19 +412,19 @@
   background:
     repeating-linear-gradient(
       to bottom,
-      rgba(15, 23, 42, 0.14) 0px,
-      rgba(15, 23, 42, 0.14) 1px,
+      $grid-line-strong 0px,
+      $grid-line-strong 1px,
       transparent 1px,
       transparent calc(var(--slot-px, 26px) * 2)
     ),
     repeating-linear-gradient(
       to bottom,
-      rgba(15, 23, 42, 0.06) 0px,
-      rgba(15, 23, 42, 0.06) 1px,
+      $grid-line-soft 0px,
+      $grid-line-soft 1px,
       transparent 1px,
       transparent var(--slot-px, 26px)
     ),
-    #F5F6F8;
+    $cal-grid-bg;
   position: relative;
   box-sizing: border-box;
 }
@@ -326,7 +445,7 @@
   padding: 1px 4px 0;
   font-size: 0.75rem;
   line-height: 1;
-  color: rgba(15, 23, 42, 0.45);
+  color: $text-muted-5;
 }
 
 @media screen and (max-height: 720px) {
@@ -338,11 +457,11 @@
 
 .timeCell.hour {
   font-weight: 800;
-  color: rgba(15, 23, 42, 0.62);
+  color: $text-muted-2;
 }
 
 .dayBody {
-  --cal-day-bg: #F5F6F8;
+  --cal-day-bg: #{$cal-grid-bg};
   position: relative;
   border: 1px solid $border-1;
   overflow: hidden;
@@ -351,15 +470,15 @@
   background:
     repeating-linear-gradient(
       to bottom,
-      rgba(15, 23, 42, 0.14) 0px,
-      rgba(15, 23, 42, 0.14) 1px,
+      $grid-line-strong 0px,
+      $grid-line-strong 1px,
       transparent 1px,
       transparent calc(var(--slot-px, 26px) * 2)
     ),
     repeating-linear-gradient(
       to bottom,
-      rgba(15, 23, 42, 0.06) 0px,
-      rgba(15, 23, 42, 0.06) 1px,
+      $grid-line-soft 0px,
+      $grid-line-soft 1px,
       transparent 1px,
       transparent var(--slot-px, 26px)
     ),
@@ -554,9 +673,9 @@
 }
 
 .tagBubbleMini {
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.86);
-  color: #0f172a;
+  border: 1px solid $border-2;
+  background: $surface-2;
+  color: $text-1;
   padding: 0.22rem 0.45rem;
   border-radius: 999px;
   font-weight: 900;
@@ -627,6 +746,7 @@
   flex: 0 0 auto;
   max-height: none;
   overflow: visible;
+  padding-bottom: 5rem;
 }
 
 .moreRow {
@@ -723,9 +843,9 @@
   padding: 0.3rem 0.55rem;
   font-size: 0.82rem;
   border-radius: 0.7rem;
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(15, 23, 42, 0.14);
-  color: #0f172a;
+  background: $surface-1;
+  border-color: $border-2;
+  color: $text-1;
 }
 
 .listRow .btn:hover {
@@ -771,10 +891,10 @@
 
 .sideTabs {
   display: inline-flex;
-  border: 1px solid rgba(15, 23, 42, 0.14);
+  border: 1px solid $border-2;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.92);
+  background: $surface-1;
   margin-top: 0;
 }
 
@@ -784,18 +904,18 @@
   padding: 0.32rem 0.55rem;
   cursor: pointer;
   font-weight: 800;
-  color: #0f172a;
+  color: $text-1;
   line-height: 1;
 }
 
 .tab.active {
-  background: rgba(15, 23, 42, 0.92);
-  color: #ffffff;
+  background: $brand-accent;
+  color: $color-white;
 }
 
 .sideCloseBtn {
-  border: 1px solid rgba(15, 23, 42, 0.14);
-  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid $border-2;
+  background: $surface-1;
   width: 34px;
   height: 34px;
   border-radius: 999px;
@@ -803,14 +923,14 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #0f172a;
+  color: $text-1;
   font-size: 20px;
   font-weight: 900;
   line-height: 1;
 }
 
 .sideCloseBtn:hover {
-  background: rgba(255, 255, 255, 0.98);
+  background: $surface-2;
 }
 
 .sideTitle {
@@ -843,9 +963,9 @@
 
 .sideActions .iconBtn,
 .sideActions .btn {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(15, 23, 42, 0.14);
-  color: #0f172a;
+  background: $surface-1;
+  border-color: $border-2;
+  color: $text-1;
 }
 
 .sideActions .iconBtn {

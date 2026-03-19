@@ -3,14 +3,14 @@
     <div class="topbar">
       <div class="topLeft">
         @if (viewMode === 'week') {
-          <button class="iconBtn" type="button" (click)="prevPeriod()" aria-label="Précédent">‹</button>
+          <button class="iconBtn" type="button" (click)="prevPeriod()" [attr.aria-label]="i18n.t('calendar.previous')">‹</button>
         }
         <div class="weekTitle">
           <div class="weekMain">{{ weekLabel() }}</div>
-          <div class="weekSub">{{ selectedDateObj() | date: 'EEEE d MMMM' }}</div>
+          <div class="weekSub">{{ selectedDateObj() | date: 'EEEE d MMMM':undefined:dateLocale() }}</div>
         </div>
         @if (viewMode === 'week') {
-          <button class="iconBtn" type="button" (click)="nextPeriod()" aria-label="Suivant">›</button>
+          <button class="iconBtn" type="button" (click)="nextPeriod()" [attr.aria-label]="i18n.t('calendar.next')">›</button>
         }
       </div>
 
@@ -19,7 +19,7 @@
           <input type="date" [(ngModel)]="selectedDate" name="selectedDate" (change)="onDateChange()" />
         </label>
 
-        <button class="btn" type="button" (click)="toggleFilters()">Filtres</button>
+        <button class="btn" type="button" (click)="toggleFilters()">{{ i18n.t('calendar.filters') }}</button>
 
         @if (isAdmin()) {
           <button
@@ -28,21 +28,21 @@
             [class.active]="includePending"
             (click)="toggleIncludePending()"
           >
-            En attente
+            {{ i18n.t('calendar.pending') }}
           </button>
         }
 
-        <button class="iconBtn" type="button" (click)="reload()" aria-label="Rafraîchir">↻</button>
+        <button class="iconBtn" type="button" (click)="reload()" [attr.aria-label]="i18n.t('calendar.refresh')">↻</button>
         @if (viewMode === 'week') {
-          <button class="iconBtn" type="button" (click)="toggleFavoris()" aria-label="Favoris">♥</button>
+          <button class="iconBtn" type="button" (click)="toggleFavoris()" [attr.aria-label]="i18n.t('calendar.favorites')">♥</button>
         }
 
         <div class="toggle">
           <button class="toggleBtn" type="button" [class.active]="viewMode==='week'" (click)="setViewMode('week')">
-            Semaine
+            {{ i18n.t('calendar.week') }}
           </button>
           <button class="toggleBtn" type="button" [class.active]="viewMode==='day'" (click)="setViewMode('day')">
-            Journée
+            {{ i18n.t('calendar.day') }}
           </button>
         </div>
 
@@ -51,7 +51,7 @@
           type="button"
           (click)="openPropose()"
         >
-          Proposer un événement
+          {{ i18n.t('calendar.proposeEvent') }}
         </button>
       </div>
     </div>
@@ -88,7 +88,7 @@
                 [class.selected]="isSelectedDay(d)"
                 (click)="selectedDate = dateKey(d); onDateChange()"
               >
-                <div class="dayLabel">{{ d | date: 'EEEE d MMMM' }}</div>
+                <div class="dayLabel">{{ d | date: 'EEEE d MMMM':undefined:dateLocale() }}</div>
               </button>
             }
 
@@ -156,7 +156,7 @@
             </div>
             @for (d of weekDays(); track dateKey(d)) {
               <button class="nightBtn" type="button" (click)="openSideNightForDay(dateKey(d))">
-                Événements nocturnes ({{ nightCount(dateKey(d)) }})
+                {{ nightEventsLabel(nightCount(dateKey(d))) }}
               </button>
             }
             </div>
@@ -164,15 +164,15 @@
         </div>
     } @else {
         <div class="dayNavLayout">
-          <button class="dayNavBtn" type="button" (click)="prevPeriod()" aria-label="Jour précédent">‹</button>
+          <button class="dayNavBtn" type="button" (click)="prevPeriod()" [attr.aria-label]="i18n.t('calendar.previousDay')">‹</button>
 
         <div class="scheduler" style="margin-top: 0; min-width: 0; height: 100%;">
-          <div class="schedScroll" #schedScroll>
+          <div class="schedScroll dayOnly" #schedScroll>
             <div class="schedGrid dayOnly" [style.--slot-px.px]="slotPx()">
               <div class="corner"></div>
 
               <button class="dayHead" type="button" (click)="openSideForDay(selectedDate)">
-                <div class="dayLabel">{{ selectedDateObj() | date: 'EEEE d MMMM' }}</div>
+                <div class="dayLabel">{{ selectedDateObj() | date: 'EEEE d MMMM':undefined:dateLocale() }}</div>
               </button>
 
               <div class="timeCol" [style.height]="dayHeightPx()">
@@ -236,13 +236,13 @@
                 <div class="timeEnd">{{ endTimeLabel() }}</div>
               </div>
               <button class="nightBtn" type="button" (click)="openSideNightForDay(selectedDate)">
-                Événements nocturnes ({{ nightCount(selectedDate) }})
+                {{ nightEventsLabel(nightCount(selectedDate)) }}
               </button>
             </div>
           </div>
         </div>
 
-          <button class="dayNavBtn" type="button" (click)="nextPeriod()" aria-label="Jour suivant">›</button>
+          <button class="dayNavBtn" type="button" (click)="nextPeriod()" [attr.aria-label]="i18n.t('calendar.nextDay')">›</button>
         </div>
     }
   </div>
@@ -262,7 +262,7 @@
 
           @for (g of w.days; track g.dayKey) {
             <div class="daySep">
-              <div class="sepTitle">{{ dayKeyToDate(g.dayKey) | date: 'EEEE d MMMM' }}</div>
+              <div class="sepTitle">{{ dayKeyToDate(g.dayKey) | date: 'EEEE d MMMM':undefined:dateLocale() }}</div>
               <div class="sepLine"></div>
             </div>
 
@@ -276,11 +276,17 @@
                   </div>
                 </div>
                 <div class="listRight">
-                  <div class="tagsBubbles">
-                    @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
-                      <span class="tagBubbleMini" [title]="t">{{ tagIcon(t) }} {{ t }}</span>
-                    }
-                  </div>
+                  @if ((e.caracteristiques ?? []).length > 0) {
+                    <span class="tagsMini">
+                      @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
+                        <span class="tagMini" [title]="t">
+                          <img class="tagMiniImg" [src]="tagIconUrl(t)" alt="" />
+                        </span>
+                      }
+                    </span>
+                  } @else {
+                    <span class="catMini" [title]="e.categorie">{{ categoryIcon(e.categorie) }}</span>
+                  }
                   <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
                 </div>
               </div>
@@ -304,14 +310,14 @@
   <div class="sideBackdrop" (click)="closeSide()"></div>
   <aside class="side">
     <div class="sideHead">
-      <div class="sideTitle">{{ dayKeyToDate(sideTitleKey()) | date: 'fullDate' }}</div>
+      <div class="sideTitle">{{ dayKeyToDate(sideTitleKey()) | date: 'fullDate':undefined:dateLocale() }}</div>
       <div class="sideHeadActions">
         <div class="sideTabs">
           <button class="tab" type="button" [class.active]="sideTab()==='day'" (click)="sideTab.set('day')">
-            Jour
+            {{ i18n.t('calendar.sideDay') }}
           </button>
           <button class="tab" type="button" [class.active]="sideTab()==='night'" (click)="sideTab.set('night')">
-            Nocturne
+            {{ i18n.t('calendar.sideNight') }}
           </button>
         </div>
         <button class="sideCloseBtn" type="button" (click)="closeSide()" aria-label="Fermer">×</button>
@@ -517,10 +523,10 @@
     <div class="grid">
       <div class="toggle span2">
         <button class="toggleBtn" type="button" [class.active]="viewMode==='week'" (click)="setViewMode('week')">
-          Semaine
+          {{ i18n.t('calendar.week') }}
         </button>
         <button class="toggleBtn" type="button" [class.active]="viewMode==='day'" (click)="setViewMode('day')">
-          Journée
+          {{ i18n.t('calendar.day') }}
         </button>
       </div>
 

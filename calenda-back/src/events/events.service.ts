@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, Repository } from 'typeorm';
+import { Brackets, In, Repository } from 'typeorm';
 import { EventOrigin } from '../common/enums/event-origin.enum';
 import { User } from '../users/user.entity';
 import { Event } from './event.entity';
@@ -375,5 +375,15 @@ export class EventsService {
 
     event.public = true;
     return this.eventsRepo.save(event);
+  }
+
+  async validateEvents(ids: string[]) {
+    const clean = (ids ?? []).map((x) => (x ?? '').trim()).filter(Boolean);
+    if (clean.length === 0) {
+      throw new BadRequestException('invalid_payload');
+    }
+
+    const res = await this.eventsRepo.update({ id: In(clean), public: false }, { public: true });
+    return { updated: res.affected ?? 0 };
   }
 }

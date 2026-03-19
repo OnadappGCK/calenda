@@ -6,6 +6,109 @@
   margin: 0 auto;
 }
 
+@media screen and (max-width: 600px) {
+  .wrap {
+    padding: 0.65rem;
+  }
+
+  .hero {
+    height: 180px;
+    border-radius: 0.75rem;
+  }
+
+  .zoomBtn {
+    right: 10px;
+    bottom: 10px;
+    width: 34px;
+    height: 34px;
+  }
+
+  h1 {
+    font-size: 1.25rem;
+    line-height: 1.15;
+  }
+
+  .meta {
+    font-size: 0.85rem;
+  }
+
+  .tagBubbleMini {
+    font-size: 0.72rem;
+    padding: 0.18rem 0.38rem;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .editBar {
+    padding: 0.6rem;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .editBarActions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .editBarActions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .lightboxBackdrop {
+    padding: 2vh 2vw;
+  }
+
+  .lightboxInner {
+    width: 96vw;
+    height: 88vh;
+  }
+
+  .lightboxClose {
+    width: 34px;
+    height: 34px;
+    font-size: 20px;
+  }
+
+  .modal {
+    top: 8vh;
+    width: min(720px, 94vw);
+    padding: 0.75rem;
+  }
+
+  .imagePreviewImg {
+    height: 160px;
+  }
+
+  .imageChoices {
+    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
+  iframe {
+    height: 180px !important;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .hero {
+    height: 160px;
+  }
+
+  h1 {
+    font-size: 1.15rem;
+  }
+}
+
 .heroWrap {
   position: relative;
   margin: 0.5rem 0 1rem;
@@ -146,6 +249,22 @@
 .meta {
   color: $text-muted-4;
   font-size: 0.9rem;
+}
+
+:host-context(body.theme-dark) {
+  .btn {
+    background: $surface-2;
+    border-color: $border-2;
+    color: $text-1;
+  }
+
+  .btn:hover {
+    background: $surface-3;
+  }
+
+  .meta {
+    color: $text-muted-2;
+  }
 }
 
 .tagBubbles {

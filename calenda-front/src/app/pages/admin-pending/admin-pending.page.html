@@ -172,7 +172,7 @@
         <div><strong>Erreurs:</strong> {{ mergePreview()!.failed }}</div>
       </div>
 
-      @if ((mergePreview()!.failures?.length ?? 0) > 0) {
+      @if (mergePreview()!.failures.length > 0) {
         <div class="mergeResult">
           <div><strong>Exemples d'erreurs de parsing</strong></div>
           @for (f of mergePreview()!.failures; track f.url) {

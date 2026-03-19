@@ -2,21 +2,21 @@
   <div class="heroTop">
     <div class="heroText">
       <h1>Calenda</h1>
-      <p>Découvre les événements autour de toi.</p>
+      <p>{{ i18n.t('home.tagline') }}</p>
       <div class="heroActions">
-        <a class="btn btnPrimary" routerLink="/calendar">Accéder au calendrier</a>
-        <a class="btn" routerLink="/news">Voir les actualités</a>
+        <a class="btn btnPrimary" routerLink="/calendar">{{ i18n.t('home.openCalendar') }}</a>
+        <a class="btn" routerLink="/news">{{ i18n.t('home.seeNews') }}</a>
       </div>
     </div>
   </div>
 
-  <h2 class="sectionTitle">À l’affiche</h2>
+  <h2 class="sectionTitle">{{ i18n.t('home.featured') }}</h2>
 
   @if (!currentFeatured()) {
-    <div class="empty">Aucun événement mis en avant.</div>
+    <div class="empty">{{ i18n.t('home.noFeatured') }}</div>
   } @else {
     <div class="carousel">
-      <button class="navBtn" type="button" (click)="prevFeatured()" aria-label="Précédent">‹</button>
+      <button class="navBtn" type="button" (click)="prevFeatured()" [attr.aria-label]="i18n.t('home.previous')">‹</button>
 
       <div class="slide">
         <div class="media">
@@ -41,39 +41,39 @@
             <div class="metaLine">
               {{ currentFeatured()!.dateDebut | date: 'short' }}
               -
-              {{ currentFeatured()!.dateFin ? (currentFeatured()!.dateFin | date: 'short') : 'non mentionnée' }}
+              {{ currentFeatured()!.dateFin ? (currentFeatured()!.dateFin | date: 'short') : i18n.t('common.notMentioned') }}
             </div>
           </div>
 
           <div class="panelActions">
-            <a class="btn" [routerLink]="['/events', currentFeatured()!.id]">Voir plus…</a>
+            <a class="btn" [routerLink]="['/events', currentFeatured()!.id]">{{ i18n.t('common.seeMore') }}</a>
           </div>
         </div>
       </div>
 
-      <button class="navBtn" type="button" (click)="nextFeatured()" aria-label="Suivant">›</button>
+      <button class="navBtn" type="button" (click)="nextFeatured()" [attr.aria-label]="i18n.t('home.next')">›</button>
     </div>
 
-    <div class="dots" aria-label="Navigation carrousel">
+    <div class="dots" [attr.aria-label]="i18n.t('home.carouselNav')">
       @for (e of featured(); track e.id; let i = $index) {
         <button
           class="dot"
           type="button"
           (click)="setFeatured(i)"
           [class.active]="i === normalizedFeaturedIndex()"
-          aria-label="Aller à la diapositive"
+          [attr.aria-label]="i18n.t('home.goToSlide')"
         ></button>
       }
     </div>
   }
 
   <div class="newsHeader">
-    <h2 class="sectionTitle">Actualités</h2>
-    <a class="btn" routerLink="/news">Tout voir</a>
+    <h2 class="sectionTitle">{{ i18n.t('home.news') }}</h2>
+    <a class="btn" routerLink="/news">{{ i18n.t('home.seeAll') }}</a>
   </div>
 
   @if (news().length === 0) {
-    <div class="empty">Aucune actualité.</div>
+    <div class="empty">{{ i18n.t('home.noNews') }}</div>
   } @else {
     <div class="newsGrid">
       @for (n of news(); track n.id) {

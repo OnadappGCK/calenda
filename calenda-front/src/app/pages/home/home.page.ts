@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { EventsService, EventDto } from '../../core/events.service';
 import { NewsService, NewsDto } from '../../core/news.service';
 import { categoryColor, resolveEventImageUrl, tagIcon } from '../../core/event-ui';
+import { I18nService } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-home-page',
@@ -20,6 +21,7 @@ export class HomePage implements OnInit, OnDestroy {
   private readonly eventsService = inject(EventsService);
   private readonly newsService = inject(NewsService);
   private readonly platformId = inject(PLATFORM_ID);
+  protected readonly i18n = inject(I18nService);
 
   readonly featured = signal<EventDto[]>([]);
   readonly news = signal<NewsDto[]>([]);

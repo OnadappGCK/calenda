@@ -1,52 +1,166 @@
 $color-white: #ffffff;
 $color-black: #000000;
 
-$bg-app: #f6f5f2;
+@mixin define-theme-vars {
+  :root {
+    color-scheme: light;
 
-$surface-1: #ffffff;
-$surface-2: #e5e5e5;
-$surface-3: #bdbdbd;
+    --bg-app: #f6f5f2;
 
-$text-1: #111827;
-$text-muted-4: #555555;
+    --surface-1: #ffffff;
+    --surface-2: #e5e5e5;
+    --surface-3: #bdbdbd;
 
-$brand-primary: #0b5ed7;
-$brand-accent: #3b82f6;
-$brand-warm: #f59e0b;
-$brand-logo-orange: #f7b500;
-$brand-green: #2f7d5e;
-$navbar-bg: #f2e7c8;
+    --text-1: #111827;
+    --text-muted-4: #555555;
 
-$status-danger: #ef4444;
-$status-danger-border: #ffb4b4;
-$status-danger-surface: #fff3f3;
-$status-success-border: #a7f3d0;
-$status-success-surface: #ecfdf5;
+    --brand-primary: #0b5ed7;
+    --brand-accent: #3b82f6;
+    --brand-warm: #f59e0b;
+    --brand-logo-orange: #f7b500;
+    --brand-green: #2f7d5e;
+    --navbar-bg: #f2e7c8;
 
-$gray-500: #6b7280;
+    --status-danger: #ef4444;
+    --status-danger-border: #ffb4b4;
+    --status-danger-surface: #fff3f3;
+    --status-success-border: #a7f3d0;
+    --status-success-surface: #ecfdf5;
 
-$blue-100: #cfe9ff;
-$blue-200: #bfe1ff;
+    --gray-500: #6b7280;
+    --blue-100: #cfe9ff;
+    --blue-200: #bfe1ff;
 
-$border-1: rgba(0, 0, 0, 0.08);
-$border-2: rgba(0, 0, 0, 0.12);
-$border-3: rgba(0, 0, 0, 0.25);
-$line-1: rgba(0, 0, 0, 0.18);
-$grid-line-strong: rgba(0, 0, 0, 0.14);
-$grid-line-soft: rgba(0, 0, 0, 0.06);
+    --border-1: rgba(0, 0, 0, 0.08);
+    --border-2: rgba(0, 0, 0, 0.12);
+    --border-3: rgba(0, 0, 0, 0.25);
+    --line-1: rgba(0, 0, 0, 0.18);
+    --grid-line-strong: rgba(0, 0, 0, 0.14);
+    --grid-line-soft: rgba(0, 0, 0, 0.06);
 
-$text-muted-1: rgba(0, 0, 0, 0.75);
-$text-muted-2: rgba(0, 0, 0, 0.7);
-$text-muted-3: rgba(0, 0, 0, 0.65);
-$text-muted-5: rgba(0, 0, 0, 0.6);
+    --text-muted-1: rgba(0, 0, 0, 0.75);
+    --text-muted-2: rgba(0, 0, 0, 0.7);
+    --text-muted-3: rgba(0, 0, 0, 0.65);
+    --text-muted-5: rgba(0, 0, 0, 0.6);
 
-$overlay-1: rgba(255, 255, 255, 0.6);
-$overlay-1b: rgba(255, 255, 255, 0.65);
-$overlay-2: rgba(255, 255, 255, 0.7);
-$overlay-3: rgba(255, 255, 255, 0.8);
-$overlay-4: rgba(255, 255, 255, 0.85);
+    --overlay-1: rgba(255, 255, 255, 0.6);
+    --overlay-1b: rgba(255, 255, 255, 0.65);
+    --overlay-2: rgba(255, 255, 255, 0.7);
+    --overlay-3: rgba(255, 255, 255, 0.8);
+    --overlay-4: rgba(255, 255, 255, 0.85);
 
-$backdrop-1: rgba(0, 0, 0, 0.4);
-$backdrop-2: rgba(0, 0, 0, 0.35);
+    --backdrop-1: rgba(0, 0, 0, 0.4);
+    --backdrop-2: rgba(0, 0, 0, 0.35);
 
-$shadow-1: 0 1px 0 rgba(0, 0, 0, 0.08);
+    --shadow-1: 0 1px 0 rgba(0, 0, 0, 0.08);
+
+    --cal-grid-bg: #f5f6f8;
+  }
+
+  body.theme-dark {
+    color-scheme: dark;
+
+    --bg-app: #071426;
+
+    --surface-1: #0b1b33;
+    --surface-2: #0f2447;
+    --surface-3: #163663;
+
+    --text-1: #f8fafc;
+    --text-muted-4: #cbd5e1;
+
+    --brand-primary: #93c5fd;
+    --brand-accent: #60a5fa;
+    --brand-warm: #f59e0b;
+    --brand-logo-orange: #f7b500;
+    --brand-green: #34d399;
+    --navbar-bg: #0b1b33;
+
+    --status-danger: #f87171;
+    --status-danger-border: rgba(248, 113, 113, 0.35);
+    --status-danger-surface: rgba(248, 113, 113, 0.12);
+    --status-success-border: rgba(52, 211, 153, 0.35);
+    --status-success-surface: rgba(52, 211, 153, 0.12);
+
+    --gray-500: #94a3b8;
+    --blue-100: #1d4ed8;
+    --blue-200: #2563eb;
+
+    --border-1: rgba(255, 255, 255, 0.12);
+    --border-2: rgba(255, 255, 255, 0.18);
+    --border-3: rgba(255, 255, 255, 0.3);
+    --line-1: rgba(255, 255, 255, 0.22);
+    --grid-line-strong: rgba(255, 255, 255, 0.16);
+    --grid-line-soft: rgba(255, 255, 255, 0.08);
+
+    --text-muted-1: rgba(255, 255, 255, 0.86);
+    --text-muted-2: rgba(255, 255, 255, 0.78);
+    --text-muted-3: rgba(255, 255, 255, 0.72);
+    --text-muted-5: rgba(255, 255, 255, 0.62);
+
+    --overlay-1: rgba(255, 255, 255, 0.06);
+    --overlay-1b: rgba(255, 255, 255, 0.08);
+    --overlay-2: rgba(255, 255, 255, 0.1);
+    --overlay-3: rgba(255, 255, 255, 0.12);
+    --overlay-4: rgba(255, 255, 255, 0.16);
+
+    --backdrop-1: rgba(0, 0, 0, 0.6);
+    --backdrop-2: rgba(0, 0, 0, 0.5);
+
+    --shadow-1: 0 1px 0 rgba(0, 0, 0, 0.28);
+
+    --cal-grid-bg: #06172d;
+  }
+}
+
+$bg-app: var(--bg-app, #f6f5f2);
+
+$surface-1: var(--surface-1, #ffffff);
+$surface-2: var(--surface-2, #e5e5e5);
+$surface-3: var(--surface-3, #bdbdbd);
+
+$text-1: var(--text-1, #111827);
+$text-muted-4: var(--text-muted-4, #555555);
+
+$brand-primary: var(--brand-primary, #0b5ed7);
+$brand-accent: var(--brand-accent, #3b82f6);
+$brand-warm: var(--brand-warm, #f59e0b);
+$brand-logo-orange: var(--brand-logo-orange, #f7b500);
+$brand-green: var(--brand-green, #2f7d5e);
+$navbar-bg: var(--navbar-bg, #f2e7c8);
+
+$status-danger: var(--status-danger, #ef4444);
+$status-danger-border: var(--status-danger-border, #ffb4b4);
+$status-danger-surface: var(--status-danger-surface, #fff3f3);
+$status-success-border: var(--status-success-border, #a7f3d0);
+$status-success-surface: var(--status-success-surface, #ecfdf5);
+
+$gray-500: var(--gray-500, #6b7280);
+
+$blue-100: var(--blue-100, #cfe9ff);
+$blue-200: var(--blue-200, #bfe1ff);
+
+$border-1: var(--border-1, rgba(0, 0, 0, 0.08));
+$border-2: var(--border-2, rgba(0, 0, 0, 0.12));
+$border-3: var(--border-3, rgba(0, 0, 0, 0.25));
+$line-1: var(--line-1, rgba(0, 0, 0, 0.18));
+$grid-line-strong: var(--grid-line-strong, rgba(0, 0, 0, 0.14));
+$grid-line-soft: var(--grid-line-soft, rgba(0, 0, 0, 0.06));
+
+$text-muted-1: var(--text-muted-1, rgba(0, 0, 0, 0.75));
+$text-muted-2: var(--text-muted-2, rgba(0, 0, 0, 0.7));
+$text-muted-3: var(--text-muted-3, rgba(0, 0, 0, 0.65));
+$text-muted-5: var(--text-muted-5, rgba(0, 0, 0, 0.6));
+
+$overlay-1: var(--overlay-1, rgba(255, 255, 255, 0.6));
+$overlay-1b: var(--overlay-1b, rgba(255, 255, 255, 0.65));
+$overlay-2: var(--overlay-2, rgba(255, 255, 255, 0.7));
+$overlay-3: var(--overlay-3, rgba(255, 255, 255, 0.8));
+$overlay-4: var(--overlay-4, rgba(255, 255, 255, 0.85));
+
+$backdrop-1: var(--backdrop-1, rgba(0, 0, 0, 0.4));
+$backdrop-2: var(--backdrop-2, rgba(0, 0, 0, 0.35));
+
+$shadow-1: var(--shadow-1, 0 1px 0 rgba(0, 0, 0, 0.08));
+
+$cal-grid-bg: var(--cal-grid-bg, #f5f6f8);
