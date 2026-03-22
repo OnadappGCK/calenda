@@ -20,6 +20,15 @@ registerLocaleData(localeEs);
 registerLocaleData(localeIt);
 registerLocaleData(localeDe);
 
+function resolveApiBaseUrl(): string {
+  if (typeof window === 'undefined') {
+    return process.env['API_BASE_URL'] ?? 'http://127.0.0.1:8000/api';
+  }
+
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  return isLocalhost ? 'http://localhost:3000/api' : '/api';
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
@@ -32,7 +41,7 @@ export const appConfig: ApplicationConfig = {
     },
     {
       provide: API_BASE_URL,
-      useValue: 'http://localhost:3000/api',
+      useValue: resolveApiBaseUrl(),
     },
   ]
 };

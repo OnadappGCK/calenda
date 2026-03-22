@@ -43,6 +43,7 @@ import { UsersModule } from './users/users.module';
             username: config.get<string>('DB_USER') ?? 'postgres',
             password: config.get<string>('DB_PASS') ?? '',
             database: config.get<string>('DB_NAME') ?? 'calenda',
+            schema: config.get<string>('DB_SCHEMA') ?? 'public',
             entities: [User, Event, News],
             synchronize,
             uuidExtension: 'pgcrypto' as const,
