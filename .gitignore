@@ -17,6 +17,9 @@ pnpm-debug.log*
 # Env files
 .env
 .env.*
+*.local
+!.env.example
+!**/.env.example
 
 # Node
 node_modules/
@@ -41,3 +44,10 @@ calenda-back/uploads/
 
 # Misc
 *.tgz
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.ovpn
+*.kubeconfig
