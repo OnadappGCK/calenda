@@ -1,19 +1,69 @@
 @use 'palette' as *;
 
+:host {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
 .heroTop {
-  margin: 0.5rem 0 1rem;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  margin-top: 0;
+  margin-bottom: -200px;
+  min-height: 520px;
+  background-image: url('/assets/img/background/miroir.jpeg');
+  background-size: 100% auto;
+  background-position: top center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+}
+
+.heroTop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to right,
+      transparent 0%,
+      $bg-app 22%,
+      $bg-app 78%,
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 25%,
+      $bg-app 68%
+    );
+  pointer-events: none;
 }
 
 .heroText {
-  background: $surface-1;
-  border: 1px solid $border-1;
-  border-radius: 1.25rem;
-  padding: 1rem;
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 2rem 2.5rem;
+  color: $text-1;
+  width: min(480px, 44%);
+  text-align: center;
 }
 
 .heroText h1 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 2.4rem;
+  color: $text-1;
+}
+
+.heroText p {
+  color: $text-muted-2;
+  margin: 0.4rem 0 0;
 }
 
 .heroActions {
@@ -21,6 +71,12 @@
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pageContent {
+  position: relative;
+  z-index: 1;
 }
 
 .sectionTitle {
@@ -193,6 +249,25 @@
 }
 
 @media screen and (max-width: 860px) {
+  .heroTop {
+    min-height: 300px;
+    margin-bottom: -120px;
+    padding-top: 50px;
+  }
+
+  .heroTop::after {
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      $bg-app 55%
+    );
+  }
+
+  .heroText {
+    width: 100%;
+    padding: 1.5rem 1.25rem;
+  }
+
   .slide {
     flex-direction: column;
   }

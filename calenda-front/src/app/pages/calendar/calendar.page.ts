@@ -445,6 +445,24 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     return (e.adresse ?? e.lieu ?? '').trim();
   }
 
+  mergedBlockTags(eventIds: string[]): string[] {
+    const evMap = new Map(this.events().map((e) => [e.id, e]));
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const id of eventIds) {
+      const ev = evMap.get(id);
+      if (!ev) continue;
+      for (const tag of ev.caracteristiques ?? []) {
+        if (!seen.has(tag)) {
+          seen.add(tag);
+          result.push(tag);
+          if (result.length >= 5) return result;
+        }
+      }
+    }
+    return result;
+  }
+
   newImageOptions(): ImageChoice[] {
     return CATEGORY_IMAGE_CHOICES[this.newCategorie] ?? [];
   }
@@ -1541,6 +1559,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Indique si la Date passée correspond à la date sélectionnée. */
   isSelectedDay(d: Date) {
     return this.dateKey(d) === this.selectedDate;
+  }
+
+  /** Indique si la Date passée correspond à aujourd'hui (pour la surbrillance fixe). */
+  isTodayDay(d: Date) {
+    return this.dateKey(d) === this.todayLocalKey();
   }
 
   /** Ouvre la modale de proposition d'événement. */

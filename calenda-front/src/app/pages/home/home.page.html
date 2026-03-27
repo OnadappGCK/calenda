@@ -1,15 +1,15 @@
-<section class="container">
-  <div class="heroTop">
-    <div class="heroText">
-      <h1>Calenda</h1>
-      <p>{{ i18n.t('home.tagline') }}</p>
-      <div class="heroActions">
-        <a class="btn btnPrimary" routerLink="/calendar">{{ i18n.t('home.openCalendar') }}</a>
-        <a class="btn" routerLink="/news">{{ i18n.t('home.seeNews') }}</a>
-      </div>
+<div class="heroTop">
+  <div class="heroText">
+    <h1>Calenda</h1>
+    <p>{{ i18n.t('home.tagline') }}</p>
+    <div class="heroActions">
+      <a class="btn btnPrimary" routerLink="/calendar">{{ i18n.t('home.openCalendar') }}</a>
+      <a class="btn" routerLink="/news">{{ i18n.t('home.seeNews') }}</a>
     </div>
   </div>
+</div>
 
+<section class="container pageContent">
   <h2 class="sectionTitle">{{ i18n.t('home.featured') }}</h2>
 
   @if (!currentFeatured()) {

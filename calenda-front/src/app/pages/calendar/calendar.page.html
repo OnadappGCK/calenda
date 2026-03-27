@@ -85,7 +85,7 @@
               <button
                 class="dayHead"
                 type="button"
-                [class.selected]="isSelectedDay(d)"
+                [class.selected]="isTodayDay(d)"
                 (click)="selectedDate = dateKey(d); onDateChange()"
               >
                 <div class="dayLabel">{{ d | date: 'EEEE d MMMM':undefined:dateLocale() }}</div>
@@ -99,7 +99,7 @@
             </div>
 
             @for (d of weekDays(); track dateKey(d)) {
-              <div class="dayBody" [class.selected]="isSelectedDay(d)" [style.height]="dayHeightPx()">
+              <div class="dayBody" [class.selected]="isTodayDay(d)" [style.height]="dayHeightPx()">
                 @for (it of (layoutsByDay().get(dateKey(d)) ?? []); track $index) {
                   @if (it.kind === 'event') {
                     <button
@@ -145,6 +145,15 @@
                       (click)="openSideForGroup(dateKey(d), it.eventIds)"
                     >
                       {{ it.count }} événements
+                      @if (mergedBlockTags(it.eventIds).length > 0) {
+                        <span class="tagsMini mergedTags">
+                          @for (t of mergedBlockTags(it.eventIds); track t) {
+                            <span class="tagMini" [title]="t">
+                              <img class="tagMiniImg" [src]="tagIconUrl(t)" alt="" />
+                            </span>
+                          }
+                        </span>
+                      }
                     </button>
                   }
                 }
@@ -227,6 +236,15 @@
                       (click)="openSideForGroup(selectedDate, it.eventIds)"
                     >
                       {{ it.count }} événements
+                      @if (mergedBlockTags(it.eventIds).length > 0) {
+                        <span class="tagsMini mergedTags">
+                          @for (t of mergedBlockTags(it.eventIds); track t) {
+                            <span class="tagMini" [title]="t">
+                              <img class="tagMiniImg" [src]="tagIconUrl(t)" alt="" />
+                            </span>
+                          }
+                        </span>
+                      }
                     </button>
                   }
                 }

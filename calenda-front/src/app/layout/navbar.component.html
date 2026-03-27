@@ -38,24 +38,26 @@
       }
 
       <a class="userPill" routerLink="/profile">
-        <span class="hello">{{ i18n.t('nav.hello') }}</span>
-        <span class="name">{{ auth.user()?.pseudo }}</span>
+        <span class="pillText">
+          <span class="hello">{{ i18n.t('nav.hello') }}</span>
+          <span class="name">{{ auth.user()?.pseudo }}</span>
+        </span>
+        <img class="pillAvatar" [src]="profileImageUrl(auth.user()?.profileImage)" alt="" />
       </a>
 
-      <a class="avatarBtn" routerLink="/profile" [attr.aria-label]="i18n.t('nav.profile')">
-        <img class="avatarImg" [src]="profileImageUrl(auth.user()?.profileImage)" alt="" />
-      </a>
-      <button class="iconBtn" type="button" (click)="auth.logout()" [attr.aria-label]="i18n.t('nav.logout')">⟶</button>
+      <button class="iconBtn logoutBtn" type="button" (click)="auth.logout()" [attr.aria-label]="i18n.t('nav.logout')">⟶</button>
     }
 
     <button
-      class="iconBtn themeToggleBtn"
+      class="themeToggle"
       type="button"
       (click)="toggleTheme()"
       [attr.aria-label]="darkTheme() ? i18n.t('nav.switchToLight') : i18n.t('nav.switchToDark')"
       [title]="darkTheme() ? i18n.t('nav.switchToLight') : i18n.t('nav.switchToDark')"
     >
-      {{ darkTheme() ? '☀️' : '🌙' }}
+      <span class="themeTrack" [class.dark]="darkTheme()">
+        <span class="themeKnob">{{ darkTheme() ? '☀️' : '🌙' }}</span>
+      </span>
     </button>
 
     <div class="languageSelector" (click)="$event.stopPropagation()">

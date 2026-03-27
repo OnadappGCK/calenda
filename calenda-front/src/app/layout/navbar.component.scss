@@ -75,11 +75,53 @@
   height: 36px;
 }
 
-.themeToggleBtn {
+.themeToggle {
   order: -10;
   flex: 0 0 auto;
   flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
   display: inline-flex;
+  align-items: center;
+}
+
+.themeTrack {
+  display: inline-flex;
+  align-items: center;
+  width: 52px;
+  height: 28px;
+  border-radius: 999px;
+  background: $overlay-3;
+  border: 1px solid $border-2;
+  padding: 3px;
+  position: relative;
+  transition: background 0.25s;
+}
+
+.themeTrack.dark {
+  background: $brand-primary;
+  border-color: $brand-primary;
+}
+
+.themeKnob {
+  position: absolute;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: $surface-1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  transition: left 0.22s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+}
+
+.themeTrack.dark .themeKnob {
+  left: calc(100% - 25px);
 }
 
 .languageSelector {
@@ -158,10 +200,27 @@
   color: $text-1;
   text-decoration: none;
   border-radius: 999px;
-  padding: 0.38rem 0.65rem;
+  padding: 0.28rem 0.28rem 0.28rem 0.65rem;
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
   line-height: 1.05;
+}
+
+.pillText {
+  display: flex;
+  flex-direction: column;
+}
+
+.pillAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  object-fit: cover;
+  display: block;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,0.4);
 }
 
 .hello {
@@ -175,23 +234,8 @@
   font-weight: 800;
 }
 
-.avatarBtn {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  border: 1px solid $border-2;
-  background: $surface-1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.avatarImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.logoutBtn {
+  border-radius: 0.5rem;
 }
 
 .btn {
@@ -230,9 +274,19 @@
     padding: 0 0.35rem;
   }
 
-  .avatarBtn {
-    width: 32px;
-    height: 32px;
+  .themeTrack {
+    width: 44px;
+    height: 24px;
+  }
+
+  .themeKnob {
+    width: 18px;
+    height: 18px;
+    font-size: 0.72rem;
+  }
+
+  .themeTrack.dark .themeKnob {
+    left: calc(100% - 21px);
   }
 
   .brand {
@@ -301,9 +355,9 @@
     gap: 0.25rem;
   }
 
-  .avatarBtn {
-    width: 30px;
-    height: 30px;
+  .pillAvatar {
+    width: 26px;
+    height: 26px;
   }
 
   .navbar .iconBtn {
@@ -324,8 +378,7 @@
 }
 
 @media screen and (max-width: 360px) {
-  .navbar .iconBtn,
-  .avatarBtn {
+  .navbar .iconBtn {
     width: 28px;
     height: 28px;
   }

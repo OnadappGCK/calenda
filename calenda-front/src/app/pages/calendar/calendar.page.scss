@@ -611,6 +611,24 @@
   cursor: pointer;
   font-weight: 900;
   font-size: 1.75vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.mergedTags {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  right: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: flex-end;
+  overflow: hidden;
+  max-height: 26px;
 }
 
 .eventTitle {
