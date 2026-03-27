@@ -1,5 +1,13 @@
 @use 'palette' as *;
 
+.container {
+  max-width: 100% !important;
+  width: 100%;
+  margin: 0 !important;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
 .head {
   display: flex;
   align-items: center;
@@ -71,6 +79,8 @@
   border: 1px solid $border-1;
   border-radius: 1rem;
   padding: 1rem;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .rowTop {
@@ -120,10 +130,15 @@
 .meta {
   color: $text-muted-4;
   font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .desc {
   margin: 0.75rem 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .desc.short {
