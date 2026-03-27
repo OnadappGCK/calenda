@@ -441,36 +441,25 @@
   <div class="modalBackdrop" (click)="closePropose()"></div>
   <div class="modal">
     <h2>Proposer un événement</h2>
+    <input type="text" [(ngModel)]="newHoneypot" name="newHoneypot" tabindex="-1" autocomplete="off" style="display:none" />
 
+    <div class="formDivider">Événement</div>
     <div class="grid">
-      <input type="text" [(ngModel)]="newHoneypot" name="newHoneypot" tabindex="-1" autocomplete="off" style="display:none" />
-      <label>
-        Titre
-        <input type="text" [(ngModel)]="newTitre" name="newTitre" />
+      <label class="span2">
+        Titre *
+        <input type="text" [(ngModel)]="newTitre" name="newTitre" placeholder="Nom de l'événement" />
       </label>
-
       <label>
-        Description
-        <textarea rows="3" [(ngModel)]="newDescription" name="newDescription"></textarea>
-      </label>
-
-      <label>
-        Contact
-        <textarea rows="2" [(ngModel)]="newContact" name="newContact"></textarea>
-      </label>
-
-      <label>
-        Catégorie
+        Catégorie *
         <select [(ngModel)]="newCategorie" name="newCategorie" (ngModelChange)="onNewCategorieChange()">
           <option value="Danse">Danse</option>
           <option value="Concert">Concert</option>
           <option value="Spectacle">Spectacle</option>
-          <option value="Feux d’artifice">Feux d’artifice</option>
+          <option value="Feux d'artifice">Feux d'artifice</option>
           <option value="Exposition">Exposition</option>
           <option value="Autre">Autre</option>
         </select>
       </label>
-
       <label>
         Image
         <select [(ngModel)]="newImageUrl" name="newImageUrl">
@@ -480,25 +469,39 @@
           }
         </select>
       </label>
-
-      <div class="imgPreview">
-        <div class="imgPreviewLabel">Aperçu</div>
+      <div class="imgPreview span2">
+        <div class="imgPreviewLabel">Aperçu de l'image</div>
         <img class="imgPreviewImg" [src]="newImagePreviewUrl()" alt="" loading="lazy" />
       </div>
+    </div>
 
+    <div class="formDivider">Dates</div>
+    <div class="grid">
       <label>
-        Adresse
+        Début *
+        <input type="datetime-local" [(ngModel)]="newDateDebut" name="newDateDebut" />
+      </label>
+      <label>
+        Fin
+        <input type="datetime-local" [(ngModel)]="newDateFin" name="newDateFin" />
+      </label>
+    </div>
+
+    <div class="formDivider">Lieu</div>
+    <div class="grid">
+      <label class="span2">
+        Adresse *
         <input
           type="text"
           [ngModel]="newAdresse"
           (ngModelChange)="onNewAdresseInput($event)"
           name="newAdresse"
+          placeholder="Rechercher une adresse…"
           (focus)="newAdresseSuggestOpen.set(true)"
         />
       </label>
-
       @if (newAdresseSuggestOpen() && newAdresseSuggestions().length > 0) {
-        <div class="suggest">
+        <div class="suggest span2">
           @for (f of newAdresseSuggestions(); track $index) {
             <button class="suggestItem" type="button" (click)="chooseNewAdresseSuggestion(f)">
               {{ newAdresseSuggestionLabel(f) }}
@@ -506,9 +509,12 @@
           }
         </div>
       }
+    </div>
 
-      <label>
-        Caractéristiques (max 3)
+    <div class="formDivider">Caractéristiques</div>
+    <div class="grid">
+      <div class="span2">
+        <div class="formHint">Sélectionnez jusqu'à 3 caractéristiques</div>
         <div class="tagsPick">
           @for (t of availableTags; track t) {
             <button class="tagPick" type="button" [class.active]="isNewTagSelected(t)" (click)="toggleNewTag(t)">
@@ -516,22 +522,24 @@
             </button>
           }
         </div>
-      </label>
+      </div>
+    </div>
 
-      <label>
-        Date début
-        <input type="datetime-local" [(ngModel)]="newDateDebut" name="newDateDebut" />
+    <div class="formDivider">Description et contact</div>
+    <div class="grid">
+      <label class="span2">
+        Description *
+        <textarea rows="3" [(ngModel)]="newDescription" name="newDescription" placeholder="Décrivez l'événement…"></textarea>
       </label>
-
-      <label>
-        Date fin
-        <input type="datetime-local" [(ngModel)]="newDateFin" name="newDateFin" />
+      <label class="span2">
+        Contact <span class="formOptional">(optionnel)</span>
+        <textarea rows="2" [(ngModel)]="newContact" name="newContact" placeholder="Email, téléphone, site web…"></textarea>
       </label>
     </div>
 
     <div class="actions">
-      <button class="btn" type="button" (click)="submitPropose()">Envoyer</button>
       <button class="btn" type="button" (click)="closePropose()">Annuler</button>
+      <button class="btn btnPrimary" type="button" (click)="submitPropose()">Envoyer</button>
     </div>
   </div>
 }
