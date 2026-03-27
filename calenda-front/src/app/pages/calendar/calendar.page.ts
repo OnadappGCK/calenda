@@ -32,6 +32,17 @@ import { PhotonFeature, PhotonService } from '../../core/photon.service';
 
 type ImageChoice = { label: string; value: string };
 
+/**
+ * Villes toujours proposées en suggestion.
+ * `label`      : texte affiché dans la bulle.
+ * `searchTerm` : terme envoyé au filtre (plus flexible, généralement le premier mot).
+ */
+const PINNED_SUGGESTION_CITIES: Array<{ label: string; searchTerm: string }> = [
+  { label: 'Martigues',       searchTerm: 'Martigues' },
+  { label: 'Sausset-les-Pins', searchTerm: 'Sausset'  },
+  { label: 'Carry-le-Rouet',  searchTerm: 'Carry'    },
+];
+
 const CATEGORY_IMAGE_CHOICES: Record<EventCategory, ImageChoice[]> = {
   Concert: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
   Danse: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
@@ -172,6 +183,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   includePending = false;
 
   readonly cities = signal<string[]>([]);
+  readonly suggestionPool = signal<EventDto[]>([]);
 
   readonly adresseSuggestions = signal<PhotonFeature[]>([]);
   readonly adresseSuggestOpen = signal<boolean>(false);
@@ -797,6 +809,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.syncingFromUrl = false;
     this.syncUrl();
 
+    void this.loadSuggestionPool();
     await this.reload();
   }
 
@@ -1178,6 +1191,76 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   nightEventsLabel(count: number) {
     return this.i18n.t('calendar.nightEvents', { count });
+  }
+
+  /** Charge tous les événements à venir pour alimenter les suggestions de filtres. */
+  private async loadSuggestionPool() {
+    const res = await this.eventsService.list({ from: this.todayLocalKey() }).toPromise();
+    if (!this.destroyed) this.suggestionPool.set(res ?? []);
+  }
+
+  /** Retourne les suggestions de filtres (villes/catégories/tags) triées par fréquence, hors filtres déjà actifs. */
+  suggestionChips(): Array<{ type: 'city' | 'category' | 'tag'; value: string; label: string }> {
+    const pool = this.suggestionPool();
+    const cityCount = new Map<string, number>();
+    const catCount = new Map<string, number>();
+    const tagCount = new Map<string, number>();
+    for (const e of pool) {
+      if (e.ville) {
+        const k = e.ville.trim().toLowerCase();
+        cityCount.set(k, (cityCount.get(k) ?? 0) + 1);
+      }
+      catCount.set(e.categorie, (catCount.get(e.categorie) ?? 0) + 1);
+      for (const tag of e.caracteristiques ?? []) {
+        tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+      }
+    }
+    // Villes fixées toujours présentes (clé en minuscules)
+    for (const p of PINNED_SUGGESTION_CITIES) {
+      const k = p.label.toLowerCase();
+      if (!cityCount.has(k)) cityCount.set(k, 0);
+    }
+    const activeCity = this.adresse.trim().toLowerCase();
+    const activeCat = (this.categorie ?? '').toLowerCase();
+    const activeTags = new Set(this.caracteristiquesFilter.map(t => t.toLowerCase()));
+    const canAddTag = this.caracteristiquesFilter.length < 3;
+    const all: Array<{ type: 'city' | 'category' | 'tag'; value: string; label: string; count: number; pinned: boolean }> = [];
+    for (const [cityKey, count] of cityCount.entries()) {
+      const pinnedEntry = PINNED_SUGGESTION_CITIES.find(p => p.label.toLowerCase() === cityKey);
+      const label = pinnedEntry ? pinnedEntry.label : cityKey;
+      const searchTerm = pinnedEntry ? pinnedEntry.searchTerm : cityKey;
+      if (searchTerm.toLowerCase() !== activeCity)
+        all.push({ type: 'city', value: searchTerm, label, count, pinned: !!pinnedEntry });
+    }
+    for (const [cat, count] of catCount.entries()) {
+      if (cat.toLowerCase() !== activeCat)
+        all.push({ type: 'category', value: cat, label: cat, count, pinned: false });
+    }
+    if (canAddTag) {
+      for (const [tag, count] of tagCount.entries()) {
+        if (!activeTags.has(tag.toLowerCase()))
+          all.push({ type: 'tag', value: tag, label: tag, count, pinned: false });
+      }
+    }
+    // Villes fixées en tête, puis tri par fréquence décroissante
+    return all
+      .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.count - a.count)
+      .slice(0, 12);
+  }
+
+  /** Active un filtre suggéré et relance le chargement. */
+  applySuggestion(type: string, value: string) {
+    if (type === 'city') {
+      this.adresse = value;
+    } else if (type === 'category') {
+      this.categorie = value as EventCategory;
+    } else if (type === 'tag') {
+      const current = this.caracteristiquesFilter;
+      if (!current.includes(value as EventTag) && current.length < 3)
+        this.caracteristiquesFilter = [...current, value as EventTag];
+    }
+    this.syncUrl();
+    void this.reload();
   }
 
   /** Retire un filtre correspondant à une chip, puis relance un reload (sauf chip date). */

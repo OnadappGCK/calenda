@@ -56,7 +56,7 @@
       </div>
     </div>
 
-    @if (activeChips().length > 0) {
+    @if (activeChips().length > 0 || suggestionChips().length > 0) {
       <div class="chips">
         @for (c of activeChips(); track c.key) {
           @if (c.key === 'date') {
@@ -67,6 +67,11 @@
               <span class="x">×</span>
             </button>
           }
+        }
+        @for (s of suggestionChips(); track s.value + s.type) {
+          <button class="chip chipSuggestion" type="button" (click)="applySuggestion(s.type, s.value)">
+            {{ s.label }}
+          </button>
         }
       </div>
     }
@@ -327,18 +332,16 @@
 @if (sideOpen()) {
   <div class="sideBackdrop" (click)="closeSide()"></div>
   <aside class="side">
+    <button class="sideCloseBtn" type="button" (click)="closeSide()" aria-label="Fermer">×</button>
     <div class="sideHead">
       <div class="sideTitle">{{ dayKeyToDate(sideTitleKey()) | date: 'fullDate':undefined:dateLocale() }}</div>
-      <div class="sideHeadActions">
-        <div class="sideTabs">
-          <button class="tab" type="button" [class.active]="sideTab()==='day'" (click)="sideTab.set('day')">
-            {{ i18n.t('calendar.sideDay') }}
-          </button>
-          <button class="tab" type="button" [class.active]="sideTab()==='night'" (click)="sideTab.set('night')">
-            {{ i18n.t('calendar.sideNight') }}
-          </button>
-        </div>
-        <button class="sideCloseBtn" type="button" (click)="closeSide()" aria-label="Fermer">×</button>
+      <div class="sideTabs">
+        <button class="tab" type="button" [class.active]="sideTab()==='day'" (click)="sideTab.set('day')">
+          {{ i18n.t('calendar.sideDay') }}
+        </button>
+        <button class="tab" type="button" [class.active]="sideTab()==='night'" (click)="sideTab.set('night')">
+          {{ i18n.t('calendar.sideNight') }}
+        </button>
       </div>
     </div>
 

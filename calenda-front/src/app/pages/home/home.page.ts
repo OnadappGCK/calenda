@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { isPlatformBrowser } from '@angular/common';
 import { Component, OnDestroy, OnInit, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { API_BASE_URL } from '../../core/api.config';
 import { EventsService, EventDto } from '../../core/events.service';
 import { NewsService, NewsDto } from '../../core/news.service';
 import { categoryColor, resolveEventImageUrl, tagIcon } from '../../core/event-ui';
@@ -21,10 +22,28 @@ export class HomePage implements OnInit, OnDestroy {
   private readonly eventsService = inject(EventsService);
   private readonly newsService = inject(NewsService);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly apiBaseUrl = inject(API_BASE_URL);
+  private readonly apiHost = this.apiBaseUrl.replace(/\/api\/?$/, '');
   protected readonly i18n = inject(I18nService);
 
   readonly featured = signal<EventDto[]>([]);
   readonly news = signal<NewsDto[]>([]);
+  readonly allEvents = signal<EventDto[]>([]);
+
+  readonly eventsByCategory = computed(() => {
+    const now = new Date();
+    const upcoming = this.allEvents().filter(e => {
+      const end = e.dateFin ? new Date(e.dateFin) : new Date(e.dateDebut);
+      return end >= now;
+    });
+    const map = new Map<string, EventDto[]>();
+    for (const e of upcoming) {
+      const cat = e.categorie;
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(e);
+    }
+    return Array.from(map.entries()).filter(([, evts]) => evts.length > 0);
+  });
 
   readonly featuredIndex = signal<number>(0);
   readonly normalizedFeaturedIndex = computed(() => {
@@ -45,6 +64,15 @@ export class HomePage implements OnInit, OnDestroy {
 
   protected readonly categoryColor = categoryColor;
   protected readonly tagIcon = tagIcon;
+  protected readonly resolveEventImageUrl = resolveEventImageUrl;
+
+  newsImageUrl(image: string | null): string | null {
+    const raw = (image ?? '').trim();
+    if (!raw) return null;
+    if (/^https?:\/\//i.test(raw)) return raw;
+    if (raw.startsWith('/')) return `${this.apiHost}${raw}`;
+    return `${this.apiHost}/${raw}`;
+  }
 
   featuredImageUrl(e: EventDto) {
     return resolveEventImageUrl(e.categorie, e.imageUrl);
@@ -65,6 +93,9 @@ export class HomePage implements OnInit, OnDestroy {
 
     const news = await this.newsService.list(1, 5).toPromise();
     this.news.set(news?.items ?? []);
+
+    const all = await this.eventsService.list().toPromise();
+    this.allEvents.set(all ?? []);
   }
 
   /** Hook Angular: stoppe le timer d'auto-rotation du carrousel. */
