@@ -24,6 +24,23 @@
   padding-top: 80px;
 }
 
+@media screen and (max-width: 600px) {
+  .heroTop {
+    min-height: 340px;
+    margin-bottom: 0;
+    padding-top: 48px;
+  }
+
+  .heroText {
+    width: 90%;
+    padding: 1.25rem 1rem;
+  }
+
+  .heroText h1 {
+    font-size: 1.8rem;
+  }
+}
+
 .heroTop::after {
   content: '';
   position: absolute;
