@@ -307,18 +307,15 @@
 }
 
 .dayNavLayout {
-  display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 56px;
-  gap: 0.5rem;
-  align-items: center;
+  display: flex;
+  align-items: stretch;
   height: 70vh;
   max-height: 720px;
   min-height: 420px;
 }
 
 .dayNavBtn {
-  width: 56px;
-  height: 100%;
+  flex: 0 0 10%;
   border: 0;
   background: transparent;
   border-radius: 0.75rem;
@@ -327,15 +324,23 @@
   justify-content: center;
   cursor: pointer;
   color: $text-muted-2;
-  font-size: 42px;
-  font-weight: 700;
+  font-size: clamp(2rem, 6vw, 4rem);
+  font-weight: 300;
   line-height: 1;
   user-select: none;
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    color: $text-1;
+    background: $overlay-1;
+  }
 }
 
-.dayNavBtn:hover {
-  color: $text-muted-1;
-  background: $overlay-1;
+.dayNavLayout .scheduler {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  margin-top: 0;
 }
 
 // Scroll container for the scheduler.
@@ -515,16 +520,16 @@
   border: 0;
   border-radius: 1rem;
   padding: 0.35rem 0.45rem;
-  padding-right: calc(var(--tag-size) + 0.65rem);
   padding-bottom: calc(var(--tag-size) + 0.25rem);
   cursor: pointer;
   text-align: left;
   overflow: hidden;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.15rem;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14);
   box-sizing: border-box;
-  font-size: clamp(0.62rem, 1.05vw, 0.78rem);
+  font-size: clamp(0.45rem, 5cqi, 0.68rem);
   line-height: 1.12;
   container-type: inline-size;
   transition:
@@ -537,67 +542,39 @@
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
 }
 
-// Title line inside an event block.
+// Title: always visible, single line with ellipsis, never shrinks.
 .eventBlock .eventTitle {
-  display: block;
+  flex: 0 0 auto;
   font-size: 1.02em;
   font-weight: 900;
-  white-space: normal;
+  white-space: nowrap;
   overflow: hidden;
-  display: -webkit-box;
-  line-clamp: 3;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
   color: inherit;
-  position: relative;
-  z-index: 1;
 }
 
-.eventBlock.small {
-  padding-right: calc(var(--tag-size) + 0.65rem);
-}
-
-.eventBlock.small .eventTitle {
-  font-size: 0.98em;
-  white-space: normal;
-  overflow: hidden;
-  display: -webkit-box;
-  line-clamp: 3;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-}
-
-.eventBlock.tiny {
-  padding-right: calc(var(--tag-size) + 0.65rem);
-  padding-bottom: calc(var(--tag-size) + 0.15rem);
-}
-
+// Small blocks: hide info, keep only title.
+.eventBlock.small .eventInfo,
 .eventBlock.tiny .eventInfo {
   display: none;
 }
 
-.eventBlock.tiny .eventTitle {
-  font-size: 0.9em;
-  display: block;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+.eventBlock.tiny {
+  padding-bottom: calc(var(--tag-size) + 0.15rem);
 }
 
 .eventBlock .eventInfo {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 1fr auto;
   column-gap: 0.35rem;
-  row-gap: 0.1rem;
+  align-content: start;
   min-width: 0;
   font-size: 0.86em;
   color: inherit;
   opacity: 0.82;
-  position: relative;
-  z-index: 1;
-}
-
-.eventBlock.small .eventInfo {
-  display: none;
 }
 
 .eventBlock .eventTime {
