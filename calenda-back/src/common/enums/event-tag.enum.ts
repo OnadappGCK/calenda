@@ -6,4 +6,8 @@ export enum EventTag {
   FEU_D_ARTIFICE = 'FEU D’ARTIFICE',
   SPORT = 'SPORT',
   MARCHE = 'MARCHÉ',
+  COMPETITION = 'COMPÉTITION',
+  HUMOUR = 'HUMOUR',
+  ART = 'ART',
+  VISITE = 'VISITE',
 }

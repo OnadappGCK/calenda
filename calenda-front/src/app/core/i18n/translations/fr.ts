@@ -149,6 +149,10 @@ export const fr: TranslationTree = {
       fireworks: 'Feu d\'artifice',
       sport: 'Sport',
       market: 'Marche',
+      competition: 'Compétition',
+      humour: 'Humour',
+      art: 'Art',
+      visite: 'Visite',
     },
   },
 };

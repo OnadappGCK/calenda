@@ -144,6 +144,14 @@ export function tagIcon(tag: EventTag | string): string {
       return '🏠';
     case 'COURSE':
       return '🏁';
+    case 'COMPÉTITION':
+      return '🏆';
+    case 'HUMOUR':
+      return '😄';
+    case 'ART':
+      return '🎨';
+    case 'VISITE':
+      return '🔍';
     default:
       return '🏠';
   }

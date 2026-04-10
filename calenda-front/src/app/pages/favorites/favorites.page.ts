@@ -37,6 +37,10 @@ export class FavoritesPage implements OnInit {
     'FEU D’ARTIFICE',
     'SPORT',
     'MARCHÉ',
+    'COMPÉTITION',
+    'HUMOUR',
+    'ART',
+    'VISITE',
   ];
 
   showFilters = false;
