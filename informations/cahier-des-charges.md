@@ -72,11 +72,14 @@
 ## Pages
 
 ### 1. Accueil
+- Hero plein écran avec image de fond (`miroir.jpeg`) et double dégradé (gauche/droite + bas)
+- Titre, accroche et boutons d'action (Calendrier, Actualités)
 - Carrousel événements mis en avant (`enAvant == true`)
-- Présentation du service + bouton vers le calendrier
-- Actualités (aperçu de la page 1)
-- Navigation du carrousel (précédent/suivant + pagination)
-- Rotation automatique du carrousel côté navigateur
+  - Navigation précédent/suivant + dots de pagination
+  - Rotation automatique (8 s) côté navigateur
+  - Slide : image + panneau titre/description/lieu/date/lien
+- Sections événements par catégorie avec scroll horizontal et boutons de navigation
+- Actualités (aperçu de la page 1) sous forme de grille responsive
 
 ### 2. Connexion
 - Formulaire email + mot de passe
@@ -97,9 +100,18 @@
 - Sélecteur de date
 - Filtres : catégorie, lieu, ville, mot-clé, caractéristiques, favoris, dates (début/fin)
 - Bulles de filtres actifs avec croix de suppression
+- Bulles de suggestions de filtres (villes, catégories, tags) :
+  - Ordonnées par fréquence dans les événements à venir
+  - Villes pinnées toujours présentes : Martigues, Sausset-les-Pins, Carry-le-Rouet
+  - Matching flexible (premier mot) et insensible à la casse
+  - Affichées sur la même ligne que les filtres actifs (une seule ligne, overflow caché)
+  - Cliquer une suggestion active le filtre correspondant
 - Boutons "Rechercher" et "Réinitialiser"
-- Toggle semaine/journalier (mobile = journalier par défaut)
-- ADMIN/ORGANISATEUR/UTILISATEUR connecté : bouton "Proposer un événement" (popup formulaire)
+- Toggle Semaine/Journée : pill ajustée à la largeur du texte
+- Mobile = journalier par défaut
+- ADMIN/ORGANISATEUR/UTILISATEUR connecté : bouton "Proposer un événement"
+  - Formulaire en popup organisé en sections : Événement, Dates, Lieu, Caractéristiques, Description et contact
+  - Champs obligatoires marqués, placeholders explicatifs
 - Utilisateur non connecté: popup d'accès (connexion / création de compte)
 - Libellés traduits (menus, navigation, période, filtres)
 
@@ -114,6 +126,9 @@
 - Navigation swipe tactile (mobile/tablette)
 - Bouton "événements nocturnes" par jour
 - Clic bloc événement → apparition menu latéral :
+  - Positionné sous la navbar (décalage automatique)
+  - Bouton de fermeture (×) positionné en absolu en haut à droite
+  - Toggle Jour/Nocturne : pill ajustée à la largeur du texte
   - Liste des événements du jour sous forme de carte avec résumé, bouton "voir plus" et bouton favoris (coché ou non si l'évenement est dans la liste de favori de l'utilisateur connecté)
   - Onglet "nuit" pour les événements 00:00–05:59
 - Rechargement protégé contre les appels concurrents
@@ -195,6 +210,7 @@
 ## Aspects techniques
 
 - Angular (frontend) / NestJS (backend)
+- Server-Side Rendering (SSR) Angular activé
 - Authentification JWT
 - API REST
 - TypeORM (entités `events`, `users`, `news`)
@@ -206,3 +222,6 @@
 - Pas de mode offline/PWA
 - Système i18n interne (traductions applicatives)
 - Locales de dates enregistrées pour fr/en/es/it/de
+- Titre de l'onglet navigateur : "Calenda Event"
+- Favicon : logo de la navbar (`logo-calenda.png`)
+- Déployé sur `onadapp.com`

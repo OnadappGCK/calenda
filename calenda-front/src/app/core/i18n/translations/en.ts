@@ -138,7 +138,7 @@ export const en: TranslationTree = {
       concert: 'Concert',
       spectacle: 'Show',
       fireworks: 'Fireworks',
-      exhibition: 'Exhibition',
+      exhibition: 'Exposition',
       other: 'Other',
     },
     tags: {
@@ -149,6 +149,10 @@ export const en: TranslationTree = {
       fireworks: 'Fireworks',
       sport: 'Sport',
       market: 'Market',
+      competition: 'Competition',
+      humour: 'Comedy',
+      art: 'Art',
+      visite: 'Visit',
     },
   },
 };

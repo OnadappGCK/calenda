@@ -47,7 +47,7 @@ const CATEGORY_IMAGE_CHOICES: Record<EventCategory, ImageChoice[]> = {
   Concert: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
   Danse: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
   Spectacle: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
-  "Feux d’artifice": [{ label: 'Générique', value: 'img/categorie/FESTIVAL/fest1.png' }],
+  'Feux d\u2019artifice': [{ label: 'Générique', value: 'img/categorie/FESTIVAL/fest1.png' }],
   Exposition: [{ label: 'Générique', value: 'img/categorie/EXPOSITION/expo1.png' }],
   Autre: [{ label: 'Générique', value: 'img/categorie/AUTRE/autre1.png' }],
 };
@@ -495,6 +495,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     'FEU D’ARTIFICE',
     'SPORT',
     'MARCHÉ',
+    'COMPÉTITION',
+    'HUMOUR',
+    'ART',
+    'VISITE',
   ];
 
   readonly selectedDateObj = computed(() => {

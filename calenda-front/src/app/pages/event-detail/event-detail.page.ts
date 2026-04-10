@@ -118,8 +118,8 @@ export class EventDetailPage implements OnInit, OnDestroy {
     return u.isAdmin || e.organisateur?.id === u.id;
   });
 
-  readonly categories: EventCategory[] = ['Danse', 'Concert', 'Spectacle', "Feux d’artifice", 'Exposition', 'Autre'];
-  readonly tags: EventTag[] = ['MUSIQUE', 'DANSE', 'PLEIN AIR', 'RENCONTRE', 'FEU D’ARTIFICE', 'SPORT', 'MARCHÉ'];
+  readonly categories: EventCategory[] = ['Danse', 'Concert', 'Spectacle', 'Feux d\u2019artifice', 'Exposition', 'Autre'];
+  readonly tags: EventTag[] = ['MUSIQUE', 'DANSE', 'PLEIN AIR', 'RENCONTRE', 'FEU D’ARTIFICE', 'SPORT', 'MARCHÉ', 'COMPÉTITION', 'HUMOUR', 'ART', 'VISITE'];
 
   readonly dateLocale = computed(() => {
     const lang = this.i18n.lang();
@@ -375,6 +375,10 @@ export class EventDetailPage implements OnInit, OnDestroy {
     if (tag === 'RENCONTRE') return 'social';
     if (tag === 'FEU D’ARTIFICE') return 'fireworks';
     if (tag === 'SPORT') return 'sport';
+    if (tag === 'COMPÉTITION') return 'competition';
+    if (tag === 'HUMOUR') return 'humour';
+    if (tag === 'ART') return 'art';
+    if (tag === 'VISITE') return 'visite';
     return 'market';
   }
 
