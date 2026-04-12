@@ -4,6 +4,7 @@ import { Brackets, In, Repository } from 'typeorm';
 import { EventOrigin } from '../common/enums/event-origin.enum';
 import { User } from '../users/user.entity';
 import { Event } from './event.entity';
+import { Highlight } from './highlight.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { ListEventsQueryDto } from './dto/list-events.query';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -20,6 +21,7 @@ export class EventsService {
   constructor(
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    @InjectRepository(Highlight) private readonly highlightsRepo: Repository<Highlight>,
   ) {}
 
   private defaultContactForUser(u: User) {
@@ -136,19 +138,36 @@ export class EventsService {
     return qb.getMany();
   }
 
-  /** Liste les événements "en avant" (homepage). */
+  /** Liste les événements mis en avant via une Highlight active (homepage). */
   async findFeatured(user: RequestUser) {
+    const now = new Date();
+
+    const active = await this.highlightsRepo
+      .createQueryBuilder('h')
+      .select('h.eventId', 'eventId')
+      .addSelect('MAX(h.priority)', 'maxPriority')
+      .where('h.startAt <= :now', { now })
+      .andWhere('h.endAt >= :now', { now })
+      .groupBy('h.eventId')
+      .getRawMany<{ eventId: string; maxPriority: string }>();
+
+    if (active.length === 0) return [];
+
+    active.sort((a, b) => Number(b.maxPriority) - Number(a.maxPriority));
+    const ids = active.map((a) => a.eventId);
+
     const qb = this.eventsRepo
       .createQueryBuilder('event')
       .leftJoinAndSelect('event.organisateur', 'organisateur')
-      .where('event.enAvant = :enAvant', { enAvant: true });
+      .where('event.id IN (:...ids)', { ids });
 
     if (!this.canSeeNonPublic(user)) {
       qb.andWhere('event.public = :isPublic', { isPublic: true });
     }
 
-    qb.orderBy('event.dateDebut', 'ASC');
-    return qb.getMany();
+    const events = await qb.getMany();
+    const eventMap = new Map(events.map((e) => [e.id, e]));
+    return ids.map((id) => eventMap.get(id)).filter((e): e is Event => !!e);
   }
 
   /** Récupère un événement par id (masque les non-public si non autorisé). */
@@ -169,7 +188,12 @@ export class EventsService {
       throw new NotFoundException('event_not_found');
     }
 
-    return event;
+    const highlights = await this.highlightsRepo.find({
+      where: { eventId: id },
+      order: { priority: 'DESC', startAt: 'ASC' },
+    });
+
+    return Object.assign(event, { highlights });
   }
 
   /** Retourne une liste d'événements similaires (même catégorie ou même date). */

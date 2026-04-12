@@ -263,14 +263,73 @@
               />
               {{ i18n.t('eventDetail.public') }}
             </label>
-            <label class="field inline">
-              <input
-                type="checkbox"
-                [ngModel]="draft()!.enAvant"
-                (ngModelChange)="setDraft({ enAvant: $event })"
-              />
-              {{ i18n.t('eventDetail.featured') }}
-            </label>
+          </div>
+
+          <div class="highlightSection">
+            <div class="highlightHeader">
+              <span class="highlightTitle">{{ i18n.t('eventDetail.highlight.title') }}</span>
+              <button type="button" class="btnSmall" (click)="openNewHighlight()" [disabled]="!!highlightForm()">
+                + {{ i18n.t('eventDetail.highlight.add') }}
+              </button>
+            </div>
+
+            @if (highlights().length === 0 && !highlightForm()) {
+              <p class="highlightEmpty">{{ i18n.t('eventDetail.highlight.none') }}</p>
+            }
+
+            @for (h of highlights(); track h.id) {
+              <div class="highlightItem" [class.active]="isHighlightActive(h)">
+                <span class="highlightBadge" [class.premium]="h.priority > 0">
+                  {{ h.priority > 0 ? i18n.t('eventDetail.highlight.premium') : i18n.t('eventDetail.highlight.standard') }}
+                </span>
+                <span class="highlightDates">
+                  {{ h.startAt | date:'dd/MM/yy HH:mm' }} → {{ h.endAt | date:'dd/MM/yy HH:mm' }}
+                </span>
+                @if (isHighlightActive(h)) {
+                  <span class="highlightActive">● {{ i18n.t('eventDetail.highlight.activeNow') }}</span>
+                }
+                <div class="highlightActions">
+                  <button type="button" class="btnSmall" (click)="openEditHighlight(h)">✏</button>
+                  <button type="button" class="btnSmall danger" (click)="deleteHighlight(h.id)" [disabled]="highlightSaving()">✕</button>
+                </div>
+              </div>
+            }
+
+            @if (highlightForm()) {
+              <div class="highlightForm">
+                <label class="field">
+                  {{ i18n.t('eventDetail.highlight.startAt') }}
+                  <input type="datetime-local"
+                    [ngModel]="highlightForm()!.startAt"
+                    (ngModelChange)="setHighlightFormField('startAt', $event)" />
+                </label>
+                <label class="field">
+                  {{ i18n.t('eventDetail.highlight.endAt') }}
+                  <input type="datetime-local"
+                    [ngModel]="highlightForm()!.endAt"
+                    (ngModelChange)="setHighlightFormField('endAt', $event)" />
+                </label>
+                <label class="field">
+                  {{ i18n.t('eventDetail.highlight.priority') }}
+                  <select [ngModel]="highlightForm()!.priority" (ngModelChange)="setHighlightFormField('priority', +$event)">
+                    <option [value]="0">{{ i18n.t('eventDetail.highlight.standard') }} (0)</option>
+                    <option [value]="1">{{ i18n.t('eventDetail.highlight.premium') }} (1)</option>
+                    <option [value]="2">{{ i18n.t('eventDetail.highlight.premium') }} (2)</option>
+                  </select>
+                </label>
+                @if (highlightError()) {
+                  <p class="error">{{ i18n.t('eventDetail.highlight.saveError') }}</p>
+                }
+                <div class="row2">
+                  <button type="button" class="btnSmall" (click)="saveHighlight()" [disabled]="highlightSaving()">
+                    {{ i18n.t('eventDetail.highlight.save') }}
+                  </button>
+                  <button type="button" class="btnSmall" (click)="cancelHighlightForm()">
+                    {{ i18n.t('eventDetail.highlight.cancel') }}
+                  </button>
+                </div>
+              </div>
+            }
           </div>
         }
 

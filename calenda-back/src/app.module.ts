@@ -10,6 +10,7 @@ import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { Event } from './events/event.entity';
+import { Highlight } from './events/highlight.entity';
 import { EventsModule } from './events/events.module';
 import { News } from './news/news.entity';
 import { NewsModule } from './news/news.module';
@@ -43,7 +44,7 @@ import { UsersModule } from './users/users.module';
             username: config.get<string>('DB_USER') ?? 'postgres',
             password: config.get<string>('DB_PASS') ?? '',
             database: config.get<string>('DB_NAME') ?? 'calenda',
-            entities: [User, Event, News],
+            entities: [User, Event, News, Highlight],
             synchronize,
             uuidExtension: 'pgcrypto' as const,
             installExtensions: true,
@@ -53,7 +54,7 @@ import { UsersModule } from './users/users.module';
         return {
           type: 'sqlite' as const,
           database: config.get<string>('SQLITE_PATH') ?? 'calenda.sqlite',
-          entities: [User, Event, News],
+          entities: [User, Event, News, Highlight],
           synchronize,
         };
       },

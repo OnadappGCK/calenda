@@ -11,6 +11,16 @@ export type EventTag = 'MUSIQUE' | 'DANSE' | 'PLEIN AIR' | 'RENCONTRE' | 'FEU D�
 /** Origine d'un événement (création manuelle ou import externe). */
 export type EventOrigin = 'MANUAL' | 'MARTIGUES_SITE' | 'SALSA_OLIVIER';
 
+/** DTO d'une mise en avant. */
+export type HighlightDto = {
+  id: string;
+  eventId: string;
+  startAt: string;
+  endAt: string;
+  priority: number;
+  createdAt: string;
+};
+
 /** DTO événement renvoyé par l'API. */
 export type EventDto = {
   id: string;
@@ -32,8 +42,8 @@ export type EventDto = {
   dateDebut: string;
   dateFin: string | null;
   public: boolean;
-  enAvant: boolean;
   couleur: string | null;
+  highlights?: HighlightDto[];
   organisateur: { id: string; pseudo: string; email: string; isAdmin?: boolean } | null;
 };
 
@@ -83,7 +93,6 @@ export class EventsService {
     contact?: string | null;
     dateDebut: string;
     dateFin?: string | null;
-    enAvant?: boolean;
     honeypot?: string;
   }) {
     return this.http.post<EventDto>(`${this.apiBaseUrl}/events`, payload);
@@ -109,11 +118,30 @@ export class EventsService {
       dateDebut?: string;
       dateFin?: string | null;
       public?: boolean;
-      enAvant?: boolean;
       couleur?: string | null;
     },
   ) {
     return this.http.patch<EventDto>(`${this.apiBaseUrl}/events/${id}`, payload);
+  }
+
+  /** Liste les mises en avant d'un événement. */
+  listHighlights(eventId: string) {
+    return this.http.get<HighlightDto[]>(`${this.apiBaseUrl}/events/${eventId}/highlights`);
+  }
+
+  /** Crée une mise en avant (admin). */
+  createHighlight(eventId: string, payload: { startAt: string; endAt: string; priority: number }) {
+    return this.http.post<HighlightDto>(`${this.apiBaseUrl}/events/${eventId}/highlights`, payload);
+  }
+
+  /** Met à jour une mise en avant (admin). */
+  updateHighlight(id: string, payload: { startAt?: string; endAt?: string; priority?: number }) {
+    return this.http.patch<HighlightDto>(`${this.apiBaseUrl}/highlights/${id}`, payload);
+  }
+
+  /** Supprime une mise en avant (admin). */
+  deleteHighlight(id: string) {
+    return this.http.delete<{ ok: true }>(`${this.apiBaseUrl}/highlights/${id}`);
   }
 
   /** Supprime un événement (admin ou owner, contrôlé côté backend). */

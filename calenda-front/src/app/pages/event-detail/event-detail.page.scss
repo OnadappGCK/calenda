@@ -536,3 +536,114 @@
 .title {
   font-weight: 700;
 }
+
+.btnSmall {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  color: inherit;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.12s;
+
+  &:hover:not(:disabled) {
+    background: $overlay-1;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.danger {
+    color: #e53e3e;
+    border-color: #e53e3e;
+    &:hover:not(:disabled) {
+      background: rgba(229, 62, 62, 0.1);
+    }
+  }
+}
+
+.highlightSection {
+  margin-top: 0.75rem;
+  border: 1px solid $border-1;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.highlightHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.highlightTitle {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.highlightEmpty {
+  font-size: 0.85rem;
+  color: $text-muted-1;
+  margin: 0;
+}
+
+.highlightItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid $border-1;
+  margin-bottom: 0.4rem;
+  font-size: 0.82rem;
+
+  &.active {
+    border-color: #38a169;
+    background: rgba(56, 161, 105, 0.06);
+  }
+}
+
+.highlightBadge {
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: $overlay-1;
+  color: $text-muted-1;
+
+  &.premium {
+    background: rgba(214, 158, 46, 0.18);
+    color: #d69e2e;
+  }
+}
+
+.highlightDates {
+  flex: 1 1 auto;
+  color: $text-muted-1;
+}
+
+.highlightActive {
+  color: #38a169;
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.highlightActions {
+  display: flex;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.highlightForm {
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  background: $overlay-1;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

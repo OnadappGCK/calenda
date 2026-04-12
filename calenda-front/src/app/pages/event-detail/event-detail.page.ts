@@ -18,7 +18,7 @@ import { AdminService } from '../../core/admin.service';
 import { AuthService } from '../../core/auth.service';
 import { categoryColor, resolveEventImageUrl, tagIcon as tagIconFn } from '../../core/event-ui';
 import { I18nService } from '../../core/i18n.service';
-import { EventCategory, EventsService, EventDto, EventTag } from '../../core/events.service';
+import { EventCategory, EventsService, EventDto, EventTag, HighlightDto } from '../../core/events.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
 
@@ -39,7 +39,6 @@ type Draft = {
   dateDebutLocal: string;
   dateFinLocal: string;
   public: boolean;
-  enAvant: boolean;
   couleur: string | null;
 };
 
@@ -86,6 +85,11 @@ export class EventDetailPage implements OnInit, OnDestroy {
   readonly organizers = signal<{ id: string; pseudo: string; email: string; isAdmin: boolean }[]>([]);
 
   private organizersLoaded = false;
+
+  readonly highlights = signal<HighlightDto[]>([]);
+  readonly highlightForm = signal<{ id: string | null; startAt: string; endAt: string; priority: number } | null>(null);
+  readonly highlightSaving = signal(false);
+  readonly highlightError = signal<string | null>(null);
 
   readonly canLike = computed(() => this.auth.isLoggedIn());
   readonly favoriteIds = signal<Set<string>>(new Set());
@@ -451,7 +455,6 @@ export class EventDetailPage implements OnInit, OnDestroy {
       dateDebutLocal: this.formatDateTimeLocal(e.dateDebut),
       dateFinLocal: this.formatDateTimeLocal(e.dateFin),
       public: e.public,
-      enAvant: e.enAvant,
       couleur: e.couleur ?? null,
     });
 
@@ -471,6 +474,8 @@ export class EventDetailPage implements OnInit, OnDestroy {
     this.showDeleteConfirm.set(false);
     this.deleting.set(false);
     this.deleteError.set(null);
+    this.highlightForm.set(null);
+    this.highlightError.set(null);
   }
 
   openDeleteConfirm() {
@@ -555,7 +560,6 @@ export class EventDetailPage implements OnInit, OnDestroy {
 
       if (this.isAdmin()) {
         payload.public = d.public;
-        payload.enAvant = d.enAvant;
         if (d.organisateurId) {
           payload.organisateurId = d.organisateurId;
         }
@@ -582,6 +586,9 @@ export class EventDetailPage implements OnInit, OnDestroy {
     this.geocodedCoords.set(null);
     this.event.set(null);
     this.similar.set([]);
+    this.highlights.set([]);
+    this.highlightForm.set(null);
+    this.highlightError.set(null);
   }
 
   private async maybeGeocodeEvent(e: EventDto | null) {
@@ -675,6 +682,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
     }
 
     this.event.set(normalized);
+    this.highlights.set((normalized?.highlights ?? []));
     void this.maybeGeocodeEvent(normalized);
 
     try {
@@ -702,6 +710,87 @@ export class EventDetailPage implements OnInit, OnDestroy {
       if (!id) return;
       void this.loadEvent(id);
     });
+  }
+
+  openNewHighlight() {
+    const now = new Date();
+    const start = now.toISOString().slice(0, 16);
+    const end30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+    this.highlightForm.set({ id: null, startAt: start, endAt: end30, priority: 0 });
+    this.highlightError.set(null);
+  }
+
+  openEditHighlight(h: HighlightDto) {
+    this.highlightForm.set({
+      id: h.id,
+      startAt: h.startAt.slice(0, 16),
+      endAt: h.endAt.slice(0, 16),
+      priority: h.priority,
+    });
+    this.highlightError.set(null);
+  }
+
+  cancelHighlightForm() {
+    this.highlightForm.set(null);
+    this.highlightError.set(null);
+  }
+
+  async saveHighlight() {
+    const e = this.event();
+    const f = this.highlightForm();
+    if (!e || !f) return;
+    this.highlightSaving.set(true);
+    this.highlightError.set(null);
+    try {
+      const payload = {
+        startAt: new Date(f.startAt).toISOString(),
+        endAt: new Date(f.endAt).toISOString(),
+        priority: f.priority,
+      };
+      if (f.id) {
+        const updated = await this.eventsService.updateHighlight(f.id, payload).toPromise();
+        if (updated) {
+          this.highlights.update((list) => list.map((h) => (h.id === f.id ? updated : h)));
+        }
+      } else {
+        const created = await this.eventsService.createHighlight(e.id, payload).toPromise();
+        if (created) {
+          this.highlights.update((list) => [...list, created]);
+        }
+      }
+      this.highlightForm.set(null);
+    } catch {
+      this.highlightError.set('highlight_save_failed');
+    } finally {
+      this.highlightSaving.set(false);
+    }
+  }
+
+  async deleteHighlight(id: string) {
+    this.highlightSaving.set(true);
+    this.highlightError.set(null);
+    try {
+      await this.eventsService.deleteHighlight(id).toPromise();
+      this.highlights.update((list) => list.filter((h) => h.id !== id));
+      if (this.highlightForm()?.id === id) {
+        this.highlightForm.set(null);
+      }
+    } catch {
+      this.highlightError.set('highlight_save_failed');
+    } finally {
+      this.highlightSaving.set(false);
+    }
+  }
+
+  isHighlightActive(h: HighlightDto): boolean {
+    const now = Date.now();
+    return new Date(h.startAt).getTime() <= now && new Date(h.endAt).getTime() >= now;
+  }
+
+  setHighlightFormField(field: 'startAt' | 'endAt' | 'priority', value: string | number) {
+    const f = this.highlightForm();
+    if (!f) return;
+    this.highlightForm.set({ ...f, [field]: value });
   }
 
   /** Ajoute/retire l'événement courant des favoris (si connecté). */
