@@ -647,3 +647,101 @@
   flex-direction: column;
   gap: 0.5rem;
 }
+
+.editTop {
+  gap: 0.5rem;
+}
+
+.btnBoost {
+  background: linear-gradient(135deg, #f6ad55, #ed8936);
+  color: #fff;
+  border-color: #dd6b20;
+  font-weight: 600;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ed8936, #dd6b20);
+  }
+}
+
+.boostModal {
+  max-width: 480px;
+  text-align: center;
+  padding: 2rem 1.5rem 1.5rem;
+}
+
+.boostClose {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: $text-muted-1;
+  line-height: 1;
+  padding: 0.25rem;
+
+  &:hover { color: $text-1; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.boostHero {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.boostIntro {
+  font-size: 0.9rem;
+  color: $text-muted-1;
+  line-height: 1.5;
+  margin: 0.5rem 0 1rem;
+  text-align: left;
+}
+
+.boostPerks {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+}
+
+.boostForm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  text-align: left;
+  margin-bottom: 0.75rem;
+
+  @media (max-width: 420px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.boostSummary {
+  font-size: 0.85rem;
+  color: $text-muted-1;
+  margin: 0 0 0.75rem;
+}
+
+.boostActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.boostSuccess {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.boostSuccessIcon {
+  font-size: 3rem;
+}

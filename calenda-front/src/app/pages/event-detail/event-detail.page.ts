@@ -121,6 +121,20 @@ export class EventDetailPage implements OnInit, OnDestroy {
     if (!u || !e) return false;
     return u.isAdmin || e.organisateur?.id === u.id;
   });
+  /** Propriétaire non-admin : peut ouvrir la modale de boost. */
+  readonly canBoost = computed(() => {
+    const u = this.auth.user();
+    const e = this.event();
+    if (!u || !e || u.isAdmin) return false;
+    return e.organisateur?.id === u.id;
+  });
+
+  readonly boostOpen = signal(false);
+  readonly boostDays = signal(30);
+  readonly boostStartDate = signal('');
+  readonly boostSaving = signal(false);
+  readonly boostError = signal<string | null>(null);
+  readonly boostSuccess = signal(false);
 
   readonly categories: EventCategory[] = ['Danse', 'Concert', 'Spectacle', 'Feux d\u2019artifice', 'Exposition', 'Autre'];
   readonly tags: EventTag[] = ['MUSIQUE', 'DANSE', 'PLEIN AIR', 'RENCONTRE', 'FEU D’ARTIFICE', 'SPORT', 'MARCHÉ', 'COMPÉTITION', 'HUMOUR', 'ART', 'VISITE'];
@@ -710,6 +724,55 @@ export class EventDetailPage implements OnInit, OnDestroy {
       if (!id) return;
       void this.loadEvent(id);
     });
+  }
+
+  openBoost() {
+    const today = new Date().toISOString().slice(0, 10);
+    this.boostStartDate.set(today);
+    this.boostDays.set(30);
+    this.boostError.set(null);
+    this.boostSuccess.set(false);
+    this.boostOpen.set(true);
+  }
+
+  closeBoost() {
+    if (this.boostSaving()) return;
+    this.boostOpen.set(false);
+    this.boostError.set(null);
+    this.boostSuccess.set(false);
+  }
+
+  async submitBoost() {
+    const e = this.event();
+    if (!e) return;
+    const days = this.boostDays();
+    const startRaw = this.boostStartDate();
+    if (!startRaw || days < 1) {
+      this.boostError.set('boost_invalid');
+      return;
+    }
+    const startAt = new Date(startRaw);
+    startAt.setHours(0, 0, 0, 0);
+    const endAt = new Date(startAt.getTime() + days * 24 * 60 * 60 * 1000);
+    this.boostSaving.set(true);
+    this.boostError.set(null);
+    try {
+      const created = await this.eventsService
+        .createHighlight(e.id, {
+          startAt: startAt.toISOString(),
+          endAt: endAt.toISOString(),
+          priority: 0,
+        })
+        .toPromise();
+      if (created) {
+        this.highlights.update((list) => [...list, created]);
+      }
+      this.boostSuccess.set(true);
+    } catch {
+      this.boostError.set('boost_failed');
+    } finally {
+      this.boostSaving.set(false);
+    }
   }
 
   openNewHighlight() {

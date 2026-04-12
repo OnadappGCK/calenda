@@ -9,6 +9,9 @@
     @if (!editing() && canEdit()) {
       <div class="editTop">
         <button class="btn" type="button" (click)="startEdit()">{{ i18n.t('common.edit') }}</button>
+        @if (canBoost()) {
+          <button class="btn btnBoost" type="button" (click)="openBoost()">{{ i18n.t('eventDetail.boost.btn') }}</button>
+        }
       </div>
     }
 
@@ -367,6 +370,61 @@
       </div>
     }
   }
+@if (boostOpen()) {
+  <div class="modalBackdrop" (click)="closeBoost()"></div>
+  <div class="modal boostModal" (click)="$event.stopPropagation()">
+    @if (boostSuccess()) {
+      <div class="boostSuccess">
+        <div class="boostSuccessIcon">🎉</div>
+        <h2>{{ i18n.t('eventDetail.boost.successTitle') }}</h2>
+        <p>{{ i18n.t('eventDetail.boost.successMsg') }}</p>
+        <button class="btn btnPrimary" type="button" (click)="closeBoost()">{{ i18n.t('common.close') }}</button>
+      </div>
+    } @else {
+      <button class="boostClose" type="button" (click)="closeBoost()" [disabled]="boostSaving()">✕</button>
+      <div class="boostHero">⭐</div>
+      <h2>{{ i18n.t('eventDetail.boost.title') }}</h2>
+      <p class="boostIntro">{{ i18n.t('eventDetail.boost.intro') }}</p>
+
+      <ul class="boostPerks">
+        <li>📅 {{ i18n.t('eventDetail.boost.perk1') }}</li>
+        <li>🏠 {{ i18n.t('eventDetail.boost.perk2') }}</li>
+        <li>🔄 {{ i18n.t('eventDetail.boost.perk3') }}</li>
+      </ul>
+
+      <div class="boostForm">
+        <label class="field">
+          {{ i18n.t('eventDetail.boost.startDate') }}
+          <input type="date"
+            [ngModel]="boostStartDate()"
+            (ngModelChange)="boostStartDate.set($event)" />
+        </label>
+        <label class="field">
+          {{ i18n.t('eventDetail.boost.days') }}
+          <input type="number" min="1" max="365"
+            [ngModel]="boostDays()"
+            (ngModelChange)="boostDays.set(+$event)" />
+        </label>
+      </div>
+
+      <p class="boostSummary">
+        {{ i18n.t('eventDetail.boost.summary', { days: boostDays() }) }}
+      </p>
+
+      @if (boostError()) {
+        <p class="error">{{ i18n.t('eventDetail.boost.' + boostError()) }}</p>
+      }
+
+      <div class="boostActions">
+        <button class="btn" type="button" (click)="closeBoost()" [disabled]="boostSaving()">{{ i18n.t('common.cancel') }}</button>
+        <button class="btn btnPrimary" type="button" (click)="submitBoost()" [disabled]="boostSaving()">
+          @if (boostSaving()) { {{ i18n.t('common.loading') }} } @else { {{ i18n.t('eventDetail.boost.submit') }} }
+        </button>
+      </div>
+    }
+  </div>
+}
+
 </section>
 
 @if (showDeleteConfirm()) {
