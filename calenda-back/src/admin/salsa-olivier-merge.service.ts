@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Between, MoreThanOrEqual, Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
 import { Event } from '../events/event.entity';
+import { EventSlot } from '../events/event-slot.entity';
 
 type MergeOptions = {
   pages?: number;
@@ -16,6 +17,7 @@ type MergeResult = {
   dedupedUrls: number;
   created: number;
   skippedExisting: number;
+  deleted: number;
   failed: number;
 };
 
@@ -31,6 +33,7 @@ type PreviewResult = {
   skippedPast: number;
   failed: number;
   urls: string[];
+  toDelete: { id: string; titre: string; dateDebut: string; dateFin: string | null }[];
   failures: { url: string; reason: string }[];
   debugSamples: {
     status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
@@ -49,6 +52,7 @@ type ApplyResult = {
   created: number;
   skippedExisting: number;
   skippedPast: number;
+  deleted: number;
   failed: number;
   debugSamples: {
     status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
@@ -64,7 +68,10 @@ type ApplyResult = {
 export class SalsaOlivierMergeService {
   private readonly logger = new Logger(SalsaOlivierMergeService.name);
 
-  constructor(@InjectRepository(Event) private readonly eventsRepo: Repository<Event>) {}
+  constructor(
+    @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
+    @InjectRepository(EventSlot) private readonly slotsRepo: Repository<EventSlot>,
+  ) {}
 
   private async updateExistingIfBetter(existing: Event, detail: { description: string; contact: string | null; tarif: string | null; adresse: string | null }) {
     let changed = false;
@@ -108,17 +115,20 @@ export class SalsaOlivierMergeService {
         dedupedUrls: preview.dedupedUrls,
         created: preview.wouldCreate,
         skippedExisting: preview.skippedExisting,
+        deleted: 0,
         failed: preview.failed,
       };
     }
 
-    const apply = await this.apply({ urls: preview.urls });
+    const toDeleteIds = preview.toDelete.map((e) => e.id);
+    const apply = await this.apply({ urls: preview.urls, toDeleteIds });
     return {
       scannedPages: preview.scannedPages,
       foundUrls: preview.foundUrls,
       dedupedUrls: preview.dedupedUrls,
       created: apply.created,
       skippedExisting: apply.skippedExisting,
+      deleted: apply.deleted,
       failed: preview.failed + apply.failed,
     };
   }
@@ -136,6 +146,7 @@ export class SalsaOlivierMergeService {
     let skippedPast = 0;
     const failures: { url: string; reason: string }[] = [];
     const debugSamples: PreviewResult['debugSamples'] = [];
+    const titresVus = new Set<string>();
 
     const now = new Date();
 
@@ -163,6 +174,7 @@ export class SalsaOlivierMergeService {
         }
 
         parsed++;
+        titresVus.add(detail.titre);
 
         const endForPast = this.effectiveEndForPastCheck(detail.dateDebut, detail.dateFin);
         if (endForPast < now) {
@@ -253,6 +265,21 @@ export class SalsaOlivierMergeService {
       `salsa_preview_done pages=${pages} parsed=${parsed} addable=${wouldCreate} skippedPast=${skippedPast} skippedExisting=${skippedExisting} failed=${failed}`,
     );
 
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const futureDbEvents = await this.eventsRepo.find({
+      where: { origin: EventOrigin.SALSA_OLIVIER, dateDebut: MoreThanOrEqual(yesterday) },
+    });
+    const toDelete = futureDbEvents
+      .filter((ev) => !titresVus.has(ev.titre))
+      .map((ev) => ({
+        id: ev.id,
+        titre: ev.titre,
+        dateDebut: ev.dateDebut.toISOString(),
+        dateFin: ev.dateFin ? ev.dateFin.toISOString() : null,
+      }));
+    this.logger.log(`salsa_preview_toDelete count=${toDelete.length}`);
+
     return {
       scannedPages: pages,
       foundUrls: allUrls.length,
@@ -264,18 +291,21 @@ export class SalsaOlivierMergeService {
       skippedExisting,
       skippedPast,
       failed,
+      toDelete,
       urls,
       failures,
       debugSamples,
     };
   }
 
-  async apply(payload: { urls: string[] }): Promise<ApplyResult> {
+  async apply(payload: { urls: string[]; toDeleteIds?: string[] }): Promise<ApplyResult> {
     const uniqueUrls = [...new Set(payload.urls ?? [])];
+    const toDeleteIds = [...new Set(payload.toDeleteIds ?? [])];
 
     let created = 0;
     let skippedExisting = 0;
     let skippedPast = 0;
+    let deleted = 0;
     let failed = 0;
     const debugSamples: ApplyResult['debugSamples'] = [];
 
@@ -386,8 +416,20 @@ export class SalsaOlivierMergeService {
       }
     }
 
+    for (const id of toDeleteIds) {
+      try {
+        await this.slotsRepo.delete({ eventId: id });
+        await this.eventsRepo.delete(id);
+        deleted++;
+        this.logger.log(`salsa_apply_deleted id=${id}`);
+      } catch {
+        this.logger.warn(`salsa_apply_delete_failed id=${id}`);
+        failed++;
+      }
+    }
+
     this.logger.log(
-      `salsa_apply_done processed=${uniqueUrls.length} created=${created} skippedPast=${skippedPast} skippedExisting=${skippedExisting} failed=${failed}`,
+      `salsa_apply_done processed=${uniqueUrls.length} created=${created} deleted=${deleted} skippedPast=${skippedPast} skippedExisting=${skippedExisting} failed=${failed}`,
     );
 
     return {
@@ -395,6 +437,7 @@ export class SalsaOlivierMergeService {
       created,
       skippedExisting,
       skippedPast,
+      deleted,
       failed,
       debugSamples,
     };

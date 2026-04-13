@@ -126,6 +126,13 @@ export const en: TranslationTree = {
     noChange: '(do not change)',
     public: 'Public',
     tagsMax3: 'Tags (max 3)',
+    slots: {
+      title: 'Time slots',
+      add: 'Add a slot',
+      date: 'Date',
+      from: 'Start',
+      to: 'End',
+    },
     boost: {
       btn: 'Boost ⭐',
       title: 'Give your event more visibility',

@@ -126,6 +126,13 @@ export const it: TranslationTree = {
     noChange: '(non cambiare)',
     public: 'Pubblico',
     tagsMax3: 'Tag (max 3)',
+    slots: {
+      title: 'Fasce orarie',
+      add: 'Aggiungi fascia',
+      date: 'Data',
+      from: 'Inizio',
+      to: 'Fine',
+    },
     boost: {
       btn: 'Metti in evidenza ⭐',
       title: 'Dai visibilità al tuo evento',

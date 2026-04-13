@@ -99,7 +99,7 @@
 
             <div class="timeCol" [style.height]="dayHeightPx()">
               @for (t of timeSlots(); track t.idx) {
-                <div class="timeCell" [class.hour]="t.isHour">{{ t.label }}</div>
+                <div class="timeCell" [class.hour]="t.isHour"><span [class.halfLabel]="!t.isHour">{{ t.label }}</span></div>
               }
             </div>
 
@@ -191,7 +191,7 @@
 
               <div class="timeCol" [style.height]="dayHeightPx()">
                 @for (t of timeSlots(); track t.idx) {
-                  <div class="timeCell" [class.hour]="t.isHour">{{ t.label }}</div>
+                  <div class="timeCell" [class.hour]="t.isHour"><span [class.halfLabel]="!t.isHour">{{ t.label }}</span></div>
                 }
               </div>
 
@@ -475,17 +475,38 @@
       </div>
     </div>
 
-    <div class="formDivider">Dates</div>
-    <div class="grid">
-      <label>
-        Début *
-        <input type="datetime-local" [(ngModel)]="newDateDebut" name="newDateDebut" />
-      </label>
-      <label>
-        Fin
-        <input type="datetime-local" [(ngModel)]="newDateFin" name="newDateFin" />
-      </label>
-    </div>
+    <div class="formDivider">{{ i18n.t('eventDetail.slots.title') }}</div>
+    @for (slot of newSlots; track $index) {
+      <div class="slotRowForm">
+        <label>
+          {{ i18n.t('eventDetail.slots.date') }} *
+          <input type="date"
+            [ngModel]="slot.date"
+            (ngModelChange)="updateNewSlot($index, 'date', $event)"
+            [name]="'newSlotDate' + $index" />
+        </label>
+        <label>
+          {{ i18n.t('eventDetail.slots.from') }}
+          <input type="time"
+            [ngModel]="slot.heureDebut"
+            (ngModelChange)="updateNewSlot($index, 'heureDebut', $event)"
+            [name]="'newSlotDebut' + $index" />
+        </label>
+        <label>
+          {{ i18n.t('eventDetail.slots.to') }}
+          <input type="time"
+            [ngModel]="slot.heureFin"
+            (ngModelChange)="updateNewSlot($index, 'heureFin', $event)"
+            [name]="'newSlotFin' + $index" />
+        </label>
+        @if (newSlots.length > 1) {
+          <button type="button" class="btnRemoveSlot" (click)="removeNewSlot($index)">✕</button>
+        }
+      </div>
+    }
+    <button type="button" class="btnAddSlot" (click)="addNewSlot()">
+      + {{ i18n.t('eventDetail.slots.add') }}
+    </button>
 
     <div class="formDivider">Lieu</div>
     <div class="grid">

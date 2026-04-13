@@ -4,8 +4,10 @@ import { Brackets, In, Repository } from 'typeorm';
 import { EventOrigin } from '../common/enums/event-origin.enum';
 import { User } from '../users/user.entity';
 import { Event } from './event.entity';
+import { EventSlot } from './event-slot.entity';
 import { Highlight } from './highlight.entity';
 import { CreateEventDto } from './dto/create-event.dto';
+import { EventSlotDto } from './dto/event-slot.dto';
 import { ListEventsQueryDto } from './dto/list-events.query';
 import { UpdateEventDto } from './dto/update-event.dto';
 
@@ -22,7 +24,24 @@ export class EventsService {
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Highlight) private readonly highlightsRepo: Repository<Highlight>,
+    @InjectRepository(EventSlot) private readonly slotsRepo: Repository<EventSlot>,
   ) {}
+
+  /**
+   * Calcule dateDebut et dateFin à partir d'une liste de slots.
+   * Les slots sont triés par date puis heureDebut.
+   */
+  private computeDatesFromSlots(slots: EventSlotDto[]) {
+    const sorted = [...slots].sort(
+      (a, b) => a.date.localeCompare(b.date) || a.heureDebut.localeCompare(b.heureDebut),
+    );
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    return {
+      dateDebut: new Date(`${first.date}T${first.heureDebut}:00`),
+      dateFin: new Date(`${last.date}T${last.heureFin}:00`),
+    };
+  }
 
   private defaultContactForUser(u: User) {
     const phone = (u.numero ?? '').trim();
@@ -70,7 +89,7 @@ export class EventsService {
     }
 
     if (query.from) {
-      qb.andWhere('event.dateDebut >= :from', { from: query.from });
+      qb.andWhere('(event.dateFin >= :from OR (event.dateFin IS NULL AND event.dateDebut >= :from))', { from: query.from });
     }
 
     if (query.to) {
@@ -188,12 +207,12 @@ export class EventsService {
       throw new NotFoundException('event_not_found');
     }
 
-    const highlights = await this.highlightsRepo.find({
-      where: { eventId: id },
-      order: { priority: 'DESC', startAt: 'ASC' },
-    });
+    const [highlights, slots] = await Promise.all([
+      this.highlightsRepo.find({ where: { eventId: id }, order: { priority: 'DESC', startAt: 'ASC' } }),
+      this.slotsRepo.find({ where: { eventId: id }, order: { date: 'ASC', heureDebut: 'ASC', ordre: 'ASC' } }),
+    ]);
 
-    return Object.assign(event, { highlights });
+    return Object.assign(event, { highlights, slots });
   }
 
   /** Retourne une liste d'événements similaires (même catégorie ou même date). */
@@ -256,12 +275,24 @@ export class EventsService {
 
     const adresse = (dto.adresse ?? '').trim() || (dto.lieu ?? '').trim();
 
-    const rawEnd = (dto.dateFin ?? '').trim();
-
     const contact =
       dto.contact === undefined
         ? this.defaultContactForUser(organisateur)
         : ((dto.contact ?? '').trim() ? (dto.contact ?? '').trim() : null);
+
+    let computedDebut: Date;
+    let computedFin: Date | null;
+
+    if (dto.slots && dto.slots.length > 0) {
+      const computed = this.computeDatesFromSlots(dto.slots);
+      computedDebut = computed.dateDebut;
+      computedFin = computed.dateFin;
+    } else {
+      if (!dto.dateDebut) throw new BadRequestException('slots_or_dateDebut_required');
+      computedDebut = new Date(dto.dateDebut);
+      const rawEnd = (dto.dateFin ?? '').trim();
+      computedFin = rawEnd ? new Date(rawEnd) : null;
+    }
 
     const event = this.eventsRepo.create({
       titre: dto.titre,
@@ -278,15 +309,24 @@ export class EventsService {
       imageUrl: dto.imageUrl ?? null,
       tarif: dto.tarif ?? 'Non renseigné',
       contact,
-      dateDebut: new Date(dto.dateDebut),
-      dateFin: rawEnd ? new Date(rawEnd) : null,
+      dateDebut: computedDebut,
+      dateFin: computedFin,
       couleur: dto.couleur ?? null,
       enAvant: isAdmin ? (dto.enAvant ?? false) : false,
       public: isAdmin ? (dto.public ?? true) : false,
       organisateur,
     });
 
-    return this.eventsRepo.save(event);
+    const saved = await this.eventsRepo.save(event);
+
+    if (dto.slots && dto.slots.length > 0) {
+      const slotEntities = dto.slots.map((s, i) =>
+        this.slotsRepo.create({ eventId: saved.id, date: s.date, heureDebut: s.heureDebut, heureFin: s.heureFin, ordre: i }),
+      );
+      await this.slotsRepo.save(slotEntities);
+    }
+
+    return saved;
   }
 
   /** Met à jour un événement (owner ou admin). Certains champs (public) réservés à l'admin. */
@@ -350,10 +390,22 @@ export class EventsService {
       event.organisateur = newOrg;
     }
 
-    if (dto.dateDebut !== undefined) event.dateDebut = new Date(dto.dateDebut);
-    if (dto.dateFin !== undefined) {
-      const raw = (dto.dateFin ?? '').trim();
-      event.dateFin = raw ? new Date(raw) : null;
+    if (dto.slots && dto.slots.length > 0) {
+      // Remplace tous les slots existants
+      await this.slotsRepo.delete({ eventId: id });
+      const slotEntities = dto.slots.map((s, i) =>
+        this.slotsRepo.create({ eventId: id, date: s.date, heureDebut: s.heureDebut, heureFin: s.heureFin, ordre: i }),
+      );
+      await this.slotsRepo.save(slotEntities);
+      const computed = this.computeDatesFromSlots(dto.slots);
+      event.dateDebut = computed.dateDebut;
+      event.dateFin = computed.dateFin;
+    } else {
+      if (dto.dateDebut !== undefined) event.dateDebut = new Date(dto.dateDebut);
+      if (dto.dateFin !== undefined) {
+        const raw = (dto.dateFin ?? '').trim();
+        event.dateFin = raw ? new Date(raw) : null;
+      }
     }
     if (dto.couleur !== undefined) event.couleur = dto.couleur;
 

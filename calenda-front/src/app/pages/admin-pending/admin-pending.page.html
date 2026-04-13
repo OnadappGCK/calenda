@@ -31,9 +31,36 @@
     </div>
   }
 
-  @if (filteredItems().length === 0) {
+  @if (pendingDeletions().length > 0) {
+    <div class="deletionSection">
+      <div class="deletionSectionTitle">⚠ Suppressions proposées par le merge ({{ pendingDeletions().length }})</div>
+      <div class="list">
+        @for (d of pendingDeletions(); track d.id) {
+          <div class="item itemDelete">
+            <div class="rowTop">
+              <div class="rowLeft">
+                <span class="deleteTag">● À supprimer</span>
+                <div class="title">{{ d.titre }}</div>
+              </div>
+            </div>
+            <div class="meta">
+              {{ d.dateDebut | date: 'dd/MM/yyyy' }}
+              @if (d.dateFin) { → {{ d.dateFin | date: 'dd/MM/yyyy' }} }
+              · Source : {{ sourceLabel(d.source) }}
+            </div>
+            <div class="actions">
+              <button class="btn btnDeleteConfirm" type="button" (click)="confirmDeleteOrphan(d.id)">Supprimer</button>
+              <button class="btn" type="button" (click)="dismissOrphan(d.id)">Ignorer</button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (filteredItems().length === 0 && pendingDeletions().length === 0) {
     <p>Aucun événement en attente.</p>
-  } @else {
+  } @else if (filteredItems().length > 0) {
     @if (selectedCount() > 0) {
       <div class="bulkBar">
         <div class="bulkLeft">
@@ -150,10 +177,15 @@
         class="btn"
         type="button"
         (click)="runMergeApply()"
-        [disabled]="mergeLoading() || !mergePreview() || mergePreview()!.urls.length === 0"
+        [disabled]="mergeLoading() || !mergePreview() || (mergePreview()!.urls.length === 0 && (mergePreview()!.toDelete?.length ?? 0) === 0)"
       >
-        Ajouter
-        @if (mergePreview()) { ({{ mergePreview()!.urls.length }}) }
+        Appliquer
+        @if (mergePreview()) {
+          (+{{ mergePreview()!.urls.length }}
+          @if ((mergePreview()!.toDelete?.length ?? 0) > 0) {
+            / −{{ mergePreview()!.toDelete!.length }}
+          })
+        }
       </button>
       <button class="btn" type="button" (click)="closeMerge()">Fermer</button>
     </div>
@@ -171,6 +203,19 @@
         <div><strong>Ignorés (passés):</strong> {{ mergePreview()!.skippedPast }}</div>
         <div><strong>Erreurs:</strong> {{ mergePreview()!.failed }}</div>
       </div>
+
+      @if ((mergePreview()!.toDelete?.length ?? 0) > 0) {
+        <div class="mergeResult mergeResultDelete">
+          <div><strong class="deleteTitle">⚠ Événements à supprimer ({{ mergePreview()!.toDelete!.length }}) — absents du site</strong></div>
+          @for (ev of mergePreview()!.toDelete!; track ev.id) {
+            <div class="mergeDeleteRow">
+              <span class="deleteMarker">●</span>
+              <span class="deleteEventTitle">{{ ev.titre }}</span>
+              <span class="deleteEventDate">{{ ev.dateDebut | date:'dd/MM/yyyy' }}</span>
+            </div>
+          }
+        </div>
+      }
 
       @if (mergePreview()!.failures.length > 0) {
         <div class="mergeResult">
@@ -190,6 +235,9 @@
         <div><strong>Ajoutés:</strong> {{ mergeApply()!.created }}</div>
         <div><strong>Déjà existants:</strong> {{ mergeApply()!.skippedExisting }}</div>
         <div><strong>Ignorés (passés):</strong> {{ mergeApply()!.skippedPast }}</div>
+        @if ((mergeApply()!.deleted ?? 0) > 0) {
+          <div><strong class="deleteCount">Supprimés:</strong> {{ mergeApply()!.deleted }}</div>
+        }
         <div><strong>Erreurs:</strong> {{ mergeApply()!.failed }}</div>
       </div>
     }

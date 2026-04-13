@@ -66,6 +66,7 @@ export class AdminPendingPage implements OnInit {
       skippedPast: number;
       failed: number;
       urls: string[];
+      toDelete?: { id: string; titre: string; dateDebut: string; dateFin: string | null }[];
       failures: { url: string; reason: string }[];
       debugSamples: {
         status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
@@ -85,6 +86,7 @@ export class AdminPendingPage implements OnInit {
       created: number;
       skippedExisting: number;
       skippedPast: number;
+      deleted?: number;
       failed: number;
       debugSamples: {
         status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
@@ -97,6 +99,10 @@ export class AdminPendingPage implements OnInit {
     }
   >(null);
   readonly mergeLoading = signal<boolean>(false);
+
+  readonly pendingDeletions = signal<
+    { id: string; titre: string; dateDebut: string; dateFin: string | null; source: MergeSourceId }[]
+  >([]);
 
   readonly showFilters = signal<boolean>(false);
   originFilter: '' | EventOrigin | 'NONE' = '';
@@ -274,6 +280,14 @@ export class AdminPendingPage implements OnInit {
       console.log('[Merge] preview debugSamples', res?.debugSamples);
 
       this.mergePreview.set(res ?? null);
+
+      if (res?.toDelete && res.toDelete.length > 0) {
+        const source = this.mergeSource;
+        const newDeletions = res.toDelete.map((e) => ({ ...e, source }));
+        const existingIds = new Set(this.pendingDeletions().map((d) => d.id));
+        const fresh = newDeletions.filter((d) => !existingIds.has(d.id));
+        this.pendingDeletions.update((prev) => [...prev, ...fresh]);
+      }
     } finally {
       this.mergeLoading.set(false);
     }
@@ -281,21 +295,25 @@ export class AdminPendingPage implements OnInit {
 
   async runMergeApply() {
     const preview = this.mergePreview();
-    if (!preview || preview.urls.length === 0) return;
+    if (!preview || (preview.urls.length === 0 && (preview.toDelete?.length ?? 0) === 0)) return;
     if (this.mergeLoading()) return;
     this.mergeLoading.set(true);
     try {
+      const toDeleteIds = (preview.toDelete ?? []).map((e) => e.id);
       const res =
         this.mergeSource === 'MARTIGUES_TOURISME'
-          ? await this.adminService.applyMergeMartigues({ urls: preview.urls }).toPromise()
+          ? await this.adminService.applyMergeMartigues({ urls: preview.urls, toDeleteIds }).toPromise()
           : this.mergeSource === 'SALSA_OLIVIER_13'
-            ? await this.adminService.applyMergeSalsaOlivier({ urls: preview.urls }).toPromise()
+            ? await this.adminService.applyMergeSalsaOlivier({ urls: preview.urls, toDeleteIds }).toPromise()
           : null;
 
       console.log('[Merge] apply response', res);
       console.log('[Merge] apply debugSamples', res?.debugSamples);
 
       this.mergeApply.set(res ?? null);
+      if (toDeleteIds.length > 0) {
+        this.pendingDeletions.update((prev) => prev.filter((d) => !toDeleteIds.includes(d.id)));
+      }
       await this.reload();
     } finally {
       this.mergeLoading.set(false);
@@ -304,5 +322,18 @@ export class AdminPendingPage implements OnInit {
 
   mergeSourceDescription() {
     return this.mergeSourcesList.find((s) => s.id === this.mergeSource)?.description ?? '';
+  }
+
+  async confirmDeleteOrphan(id: string) {
+    await this.adminService.deleteEvent(id).toPromise();
+    this.pendingDeletions.update((prev) => prev.filter((d) => d.id !== id));
+  }
+
+  dismissOrphan(id: string) {
+    this.pendingDeletions.update((prev) => prev.filter((d) => d.id !== id));
+  }
+
+  sourceLabel(source: MergeSourceId) {
+    return this.mergeSourcesList.find((s) => s.id === source)?.label ?? source;
   }
 }

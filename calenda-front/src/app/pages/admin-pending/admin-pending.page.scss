@@ -83,6 +83,40 @@
   overflow-x: hidden;
 }
 
+.itemDelete {
+  background: rgba(231, 76, 60, 0.05);
+  border-color: #e74c3c;
+}
+
+.deletionSection {
+  margin: 0.75rem 0;
+}
+
+.deletionSectionTitle {
+  font-weight: 700;
+  color: #c0392b;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.deleteTag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #e74c3c;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btnDeleteConfirm {
+  background: #e74c3c;
+  color: #fff;
+  border-color: #c0392b;
+
+  &:hover {
+    background: #c0392b;
+  }
+}
+
 .rowTop {
   display: flex;
   align-items: center;
@@ -194,4 +228,43 @@
   background: $surface-1;
   display: grid;
   gap: 0.25rem;
+}
+
+.mergeResultDelete {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.06);
+}
+
+.deleteTitle {
+  color: #c0392b;
+}
+
+.mergeDeleteRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  padding: 0.15rem 0;
+}
+
+.deleteMarker {
+  color: #e74c3c;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.deleteEventTitle {
+  flex: 1;
+  color: #c0392b;
+  font-weight: 500;
+}
+
+.deleteEventDate {
+  color: $text-muted-4;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.deleteCount {
+  color: #c0392b;
 }

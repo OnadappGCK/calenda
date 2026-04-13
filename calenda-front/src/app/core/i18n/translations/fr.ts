@@ -126,6 +126,13 @@ export const fr: TranslationTree = {
     noChange: '(ne pas changer)',
     public: 'Public',
     tagsMax3: 'Tags (max 3)',
+    slots: {
+      title: 'Créneaux horaires',
+      add: 'Ajouter un créneau',
+      date: 'Date',
+      from: 'Début',
+      to: 'Fin',
+    },
     boost: {
       btn: 'Mettre en avant ⭐',
       title: 'Donnez de la visibilité à votre événement',

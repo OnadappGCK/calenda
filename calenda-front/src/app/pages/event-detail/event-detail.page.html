@@ -102,9 +102,17 @@
       <div class="meta">
         {{ categoryLabel(event()!.categorie) }} · {{ event()!.ville }}
       </div>
-      <div class="meta">
-        {{ event()!.dateDebut | date: 'short':undefined:dateLocale() }} → {{ event()!.dateFin ? (event()!.dateFin | date: 'short':undefined:dateLocale()) : i18n.t('common.notMentioned') }}
-      </div>
+      @if ((event()!.slots ?? []).length > 0) {
+        <div class="slotsList">
+          @for (s of event()!.slots!; track s.id) {
+            <span class="slotChip">📅 {{ s.date | date:'EEE d MMM':undefined:dateLocale() }} · {{ s.heureDebut }}–{{ s.heureFin }}</span>
+          }
+        </div>
+      } @else {
+        <div class="meta">
+          {{ event()!.dateDebut | date: 'short':undefined:dateLocale() }} → {{ event()!.dateFin ? (event()!.dateFin | date: 'short':undefined:dateLocale()) : i18n.t('common.notMentioned') }}
+        </div>
+      }
 
       <div class="meta">{{ i18n.t('eventDetail.organizer') }}: {{ event()!.organisateur?.pseudo ?? i18n.t('eventDetail.organizerMissing') }}</div>
 
@@ -208,23 +216,38 @@
           </div>
         }
 
-        <div class="row2">
-          <label class="field">
-            {{ i18n.t('eventDetail.start') }}
-            <input
-              type="datetime-local"
-              [ngModel]="draft()!.dateDebutLocal"
-              (ngModelChange)="setDraft({ dateDebutLocal: $event })"
-            />
-          </label>
-          <label class="field">
-            {{ i18n.t('eventDetail.end') }}
-            <input
-              type="datetime-local"
-              [ngModel]="draft()!.dateFinLocal"
-              (ngModelChange)="setDraft({ dateFinLocal: $event })"
-            />
-          </label>
+        <div class="slotsSection">
+          <div class="slotsHeader">
+            <span class="slotsLabel">{{ i18n.t('eventDetail.slots.title') }}</span>
+            <button type="button" class="btnSmall" (click)="addDraftSlot()">
+              + {{ i18n.t('eventDetail.slots.add') }}
+            </button>
+          </div>
+          @for (slot of draft()!.slots; track $index) {
+            <div class="slotRow">
+              <label class="field slotField">
+                {{ i18n.t('eventDetail.slots.date') }}
+                <input type="date"
+                  [ngModel]="slot.date"
+                  (ngModelChange)="updateDraftSlot($index, 'date', $event)" />
+              </label>
+              <label class="field slotField">
+                {{ i18n.t('eventDetail.slots.from') }}
+                <input type="time"
+                  [ngModel]="slot.heureDebut"
+                  (ngModelChange)="updateDraftSlot($index, 'heureDebut', $event)" />
+              </label>
+              <label class="field slotField">
+                {{ i18n.t('eventDetail.slots.to') }}
+                <input type="time"
+                  [ngModel]="slot.heureFin"
+                  (ngModelChange)="updateDraftSlot($index, 'heureFin', $event)" />
+              </label>
+              @if (draft()!.slots.length > 1) {
+                <button type="button" class="btnSmall danger slotRemove" (click)="removeDraftSlot($index)">✕</button>
+              }
+            </div>
+          }
         </div>
 
         <label class="field">

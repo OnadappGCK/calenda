@@ -238,8 +238,8 @@ export class AdminController {
   }
 
   @Post('merge/martigues/apply')
-  async applyMergeMartigues(@Body() body: { urls?: string[] }) {
-    return this.martiguesMerge.apply({ urls: body?.urls ?? [] });
+  async applyMergeMartigues(@Body() body: { urls?: string[]; toDeleteIds?: string[] }) {
+    return this.martiguesMerge.apply({ urls: body?.urls ?? [], toDeleteIds: body?.toDeleteIds ?? [] });
   }
 
   @Post('merge/salsa-olivier')
@@ -259,7 +259,7 @@ export class AdminController {
   }
 
   @Post('merge/salsa-olivier/apply')
-  async applyMergeSalsaOlivier(@Body() body: { urls?: string[] }) {
-    return this.salsaMerge.apply({ urls: body?.urls ?? [] });
+  async applyMergeSalsaOlivier(@Body() body: { urls?: string[]; toDeleteIds?: string[] }) {
+    return this.salsaMerge.apply({ urls: body?.urls ?? [], toDeleteIds: body?.toDeleteIds ?? [] });
   }
 }

@@ -18,7 +18,7 @@ import { AdminService } from '../../core/admin.service';
 import { AuthService } from '../../core/auth.service';
 import { categoryColor, resolveEventImageUrl, tagIcon as tagIconFn } from '../../core/event-ui';
 import { I18nService } from '../../core/i18n.service';
-import { EventCategory, EventsService, EventDto, EventTag, HighlightDto } from '../../core/events.service';
+import { EventCategory, EventsService, EventDto, EventSlotDto, EventTag, HighlightDto } from '../../core/events.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
 
@@ -36,8 +36,8 @@ type Draft = {
   tarif: string | null;
   contact: string;
   organisateurId: string;
-  dateDebutLocal: string;
-  dateFinLocal: string;
+  /** Créneaux horaires de l'événement en cours d'édition. */
+  slots: { date: string; heureDebut: string; heureFin: string }[];
   public: boolean;
   couleur: string | null;
 };
@@ -400,6 +400,47 @@ export class EventDetailPage implements OnInit, OnDestroy {
     return 'market';
   }
 
+  /** Construit les slots draft depuis un EventDto (utilise event.slots si dispo, sinon dateDebut/dateFin). */
+  private slotsFromEvent(e: EventDto): { date: string; heureDebut: string; heureFin: string }[] {
+    if (e.slots && e.slots.length > 0) {
+      return e.slots.map((s) => ({ date: s.date, heureDebut: s.heureDebut, heureFin: s.heureFin }));
+    }
+    const date = e.dateDebut ? e.dateDebut.slice(0, 10) : '';
+    const heureDebut = e.dateDebut ? e.dateDebut.slice(11, 16) : '09:00';
+    const heureFin = e.dateFin ? e.dateFin.slice(11, 16) : '18:00';
+    return date ? [{ date, heureDebut, heureFin }] : [];
+  }
+
+  addDraftSlot() {
+    const d = this.draft();
+    if (!d) return;
+    const last = d.slots[d.slots.length - 1];
+    const nextDate = last ? this.nextDayStr(last.date) : new Date().toISOString().slice(0, 10);
+    const heureDebut = last?.heureDebut ?? '09:00';
+    const heureFin = last?.heureFin ?? '18:00';
+    this.setDraft({ slots: [...d.slots, { date: nextDate, heureDebut, heureFin }] });
+  }
+
+  removeDraftSlot(idx: number) {
+    const d = this.draft();
+    if (!d || d.slots.length <= 1) return;
+    const slots = d.slots.filter((_, i) => i !== idx);
+    this.setDraft({ slots });
+  }
+
+  updateDraftSlot(idx: number, field: 'date' | 'heureDebut' | 'heureFin', value: string) {
+    const d = this.draft();
+    if (!d) return;
+    const slots = d.slots.map((s, i) => (i === idx ? { ...s, [field]: value } : s));
+    this.setDraft({ slots });
+  }
+
+  private nextDayStr(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }
+
   private formatDateTimeLocal(iso: string | null | undefined) {
     if (!iso) return '';
     const d = new Date(iso);
@@ -466,8 +507,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
       tarif: e.tarif ?? null,
       contact: (e.contact ?? '').trim(),
       organisateurId: '',
-      dateDebutLocal: this.formatDateTimeLocal(e.dateDebut),
-      dateFinLocal: this.formatDateTimeLocal(e.dateFin),
+      slots: this.slotsFromEvent(e),
       public: e.public,
       couleur: e.couleur ?? null,
     });
@@ -538,7 +578,6 @@ export class EventDetailPage implements OnInit, OnDestroy {
     this.saveError.set(null);
 
     try {
-      const rawEnd = (d.dateFinLocal ?? '').trim();
       const rawContact = (d.contact ?? '').trim();
       const payload: any = {
         titre: d.titre.trim(),
@@ -548,8 +587,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
         adresse: d.adresse.trim(),
         latitude: d.latitude,
         longitude: d.longitude,
-        dateDebut: this.toIsoFromLocal(d.dateDebutLocal),
-        dateFin: rawEnd ? this.toIsoFromLocal(rawEnd) : null,
+        slots: d.slots,
       };
 
       const theme = this.cleanText(d.theme);

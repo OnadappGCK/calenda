@@ -407,7 +407,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       return {
         idx,
         minutesFromStart,
-        label: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`,
+        label: mm === 0 ? `${hh}h` : '30',
         isHour: mm === 0,
       };
     });
@@ -437,8 +437,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   newCaracteristiques: EventTag[] = [];
   newImageUrl = '';
   newContact = '';
-  newDateDebut = '';
-  newDateFin = '';
+  newSlots: { date: string; heureDebut: string; heureFin: string }[] = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
 
   newHoneypot = '';
 
@@ -579,10 +578,20 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   readonly eventsByDay = computed(() => {
     const map = new Map<string, EventDto[]>();
     for (const e of this.events()) {
-      const key = this.localKeyFromIso(e.dateDebut);
-      const arr = map.get(key) ?? [];
-      arr.push(e);
-      map.set(key, arr);
+      const startKey = this.localKeyFromIso(e.dateDebut);
+      const endKey = e.dateFin ? this.localKeyFromIso(e.dateFin) : startKey;
+      let cur = startKey;
+      const added = new Set<string>();
+      while (cur <= endKey) {
+        if (!added.has(cur)) {
+          const arr = map.get(cur) ?? [];
+          arr.push(e);
+          map.set(cur, arr);
+          added.add(cur);
+        }
+        cur = this.nextDayKey(cur);
+        if (cur > endKey) break;
+      }
     }
     for (const [k, arr] of map.entries()) {
       arr.sort((a, b) => a.dateDebut.localeCompare(b.dateDebut) || a.titre.localeCompare(b.titre));
@@ -1249,7 +1258,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     // Villes fixées en tête, puis tri par fréquence décroissante
     return all
       .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.count - a.count)
-      .slice(0, 12);
+      .slice(0, 10);
   }
 
   /** Active un filtre suggéré et relance le chargement. */
@@ -1664,6 +1673,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
     await this.auth.ensureLoaded();
 
+    const date = this.selectedDate ?? new Date().toISOString().slice(0, 10);
+    if (this.newSlots.length === 1 && !this.newSlots[0].date) {
+      this.newSlots = [{ date, heureDebut: '09:00', heureFin: '18:00' }];
+    }
+
     this.showPropose = true;
 
     if (!this.newContact.trim()) {
@@ -1685,9 +1699,23 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.proposeGateOpen = false;
   }
 
+  addNewSlot() {
+    const last = this.newSlots[this.newSlots.length - 1];
+    const nextDate = last?.date ? this.nextDayKey(last.date) : '';
+    this.newSlots = [...this.newSlots, { date: nextDate, heureDebut: last?.heureDebut ?? '09:00', heureFin: last?.heureFin ?? '18:00' }];
+  }
+
+  removeNewSlot(idx: number) {
+    if (this.newSlots.length <= 1) return;
+    this.newSlots = this.newSlots.filter((_, i) => i !== idx);
+  }
+
+  updateNewSlot(idx: number, field: 'date' | 'heureDebut' | 'heureFin', value: string) {
+    this.newSlots = this.newSlots.map((s, i) => (i === idx ? { ...s, [field]: value } : s));
+  }
+
   /** Soumet un événement proposé via l'API puis réinitialise le formulaire et recharge. */
   async submitPropose() {
-    const rawEnd = (this.newDateFin ?? '').trim();
     const rawContact = (this.newContact ?? '').trim();
     const payload: any = {
       titre: this.newTitre,
@@ -1699,8 +1727,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       longitude: this.newLongitude,
       caracteristiques: this.newCaracteristiques.slice(0, 3),
       imageUrl: this.newImageUrl ? this.newImageUrl : undefined,
-      dateDebut: new Date(this.newDateDebut).toISOString(),
-      dateFin: rawEnd ? new Date(rawEnd).toISOString() : null,
+      slots: this.newSlots.filter((s) => s.date).map((s) => ({
+        date: s.date,
+        heureDebut: s.heureDebut,
+        heureFin: s.heureFin,
+      })),
       honeypot: this.newHoneypot,
     };
 
@@ -1722,8 +1753,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.newCaracteristiques = [];
     this.newImageUrl = '';
     this.newContact = '';
-    this.newDateDebut = '';
-    this.newDateFin = '';
+    this.newSlots = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
     this.newHoneypot = '';
 
     this.closePropose();

@@ -1,4 +1,6 @@
-import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { EventSlotDto } from './event-slot.dto';
 import { EventCategory } from '../../common/enums/event-category.enum';
 import { EventTag } from '../../common/enums/event-tag.enum';
 
@@ -70,12 +72,21 @@ export class UpdateEventDto {
   @IsUUID()
   organisateurId?: string;
 
-  /** Date/heure de début (ISO, optionnel). */
+  /**
+   * Créneaux horaires (remplace tous les slots existants si fournis).
+   */
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EventSlotDto)
+  slots?: EventSlotDto[];
+
+  /** Date/heure de début (ISO, optionnel) — utilisé si slots absent. */
   @IsOptional()
   @IsDateString()
   dateDebut?: string;
 
-  /** Date/heure de fin (ISO, optionnel). */
+  /** Date/heure de fin (ISO, optionnel) — utilisé si slots absent. */
   @IsOptional()
   @IsDateString()
   dateFin?: string | null;

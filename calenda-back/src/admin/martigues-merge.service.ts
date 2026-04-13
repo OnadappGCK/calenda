@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Between, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
 import { Event } from '../events/event.entity';
+import { EventSlot } from '../events/event-slot.entity';
 import { User } from '../users/user.entity';
 
 type MergeOptions = {
@@ -17,6 +18,7 @@ type MergeResult = {
   dedupedUrls: number;
   created: number;
   skippedExisting: number;
+  deleted: number;
   failed: number;
 };
 
@@ -32,6 +34,7 @@ type PreviewResult = {
   skippedPast: number;
   failed: number;
   urls: string[];
+  toDelete: { id: string; titre: string; dateDebut: string; dateFin: string | null }[];
   failures: { url: string; reason: string }[];
   debugSamples: {
     status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
@@ -50,6 +53,7 @@ type ApplyResult = {
   created: number;
   skippedExisting: number;
   skippedPast: number;
+  deleted: number;
   failed: number;
   debugSamples: {
     status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
@@ -67,6 +71,7 @@ export class MartiguesMergeService {
 
   constructor(
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
+    @InjectRepository(EventSlot) private readonly slotsRepo: Repository<EventSlot>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
   ) {}
 
@@ -82,17 +87,20 @@ export class MartiguesMergeService {
         dedupedUrls: preview.dedupedUrls,
         created: preview.wouldCreate,
         skippedExisting: preview.skippedExisting,
+        deleted: 0,
         failed: preview.failed,
       };
     }
 
-    const apply = await this.apply({ urls: preview.urls });
+    const toDeleteIds = preview.toDelete.map((e) => e.id);
+    const apply = await this.apply({ urls: preview.urls, toDeleteIds });
     return {
       scannedPages: preview.scannedPages,
       foundUrls: preview.foundUrls,
       dedupedUrls: preview.dedupedUrls,
       created: apply.created,
       skippedExisting: apply.skippedExisting,
+      deleted: apply.deleted,
       failed: preview.failed + apply.failed,
     };
   }
@@ -109,6 +117,7 @@ export class MartiguesMergeService {
     let skippedPast = 0;
     const failures: { url: string; reason: string }[] = [];
     const debugSamples: PreviewResult['debugSamples'] = [];
+    const titresVus = new Set<string>();
 
     const now = new Date();
 
@@ -140,6 +149,7 @@ export class MartiguesMergeService {
         }
 
         parsed++;
+        titresVus.add(detail.titre);
 
         const endForPast = this.effectiveEndForPastCheck(detail.dateDebut, detail.dateFin);
         if (endForPast < now) {
@@ -248,6 +258,22 @@ export class MartiguesMergeService {
       `martigues_preview_done pages=${pages} parsed=${parsed} addable=${wouldCreate} skippedPast=${skippedPast} skippedExisting=${skippedExisting} failed=${failed}`,
     );
 
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const futureDbEvents = await this.eventsRepo.find({
+      where: { origin: EventOrigin.MARTIGUES_SITE, dateDebut: MoreThanOrEqual(yesterday) },
+    });
+    const toDelete = futureDbEvents
+      .filter((ev) => !titresVus.has(ev.titre))
+      .map((ev) => ({
+        id: ev.id,
+        titre: ev.titre,
+        dateDebut: ev.dateDebut.toISOString(),
+        dateFin: ev.dateFin ? ev.dateFin.toISOString() : null,
+      }));
+
+    this.logger.log(`martigues_preview_toDelete count=${toDelete.length}`);
+
     return {
       scannedPages: pages,
       foundUrls: allUrls.length,
@@ -259,17 +285,20 @@ export class MartiguesMergeService {
       skippedExisting,
       skippedPast,
       failed,
+      toDelete,
       urls,
       failures,
       debugSamples,
     };
   }
 
-  async apply(payload: { urls: string[] }): Promise<ApplyResult> {
+  async apply(payload: { urls: string[]; toDeleteIds?: string[] }): Promise<ApplyResult> {
     const uniqueUrls = [...new Set(payload.urls ?? [])];
+    const toDeleteIds = [...new Set(payload.toDeleteIds ?? [])];
     let created = 0;
     let skippedExisting = 0;
     let skippedPast = 0;
+    let deleted = 0;
     let failed = 0;
     const debugSamples: ApplyResult['debugSamples'] = [];
 
@@ -353,7 +382,21 @@ export class MartiguesMergeService {
           organisateur: null,
         });
 
-        await this.eventsRepo.save(ev);
+        const saved = await this.eventsRepo.save(ev);
+
+        if (detail.slots && detail.slots.length > 0) {
+          const slotEntities = detail.slots.map((s, i) =>
+            this.slotsRepo.create({
+              eventId: saved.id,
+              date: s.date,
+              heureDebut: s.heureDebut,
+              heureFin: s.heureFin,
+              ordre: i,
+            }),
+          );
+          await this.slotsRepo.save(slotEntities);
+        }
+
         created++;
 
         if (debugSamples.length < 20) {
@@ -380,8 +423,20 @@ export class MartiguesMergeService {
       }
     }
 
+    for (const id of toDeleteIds) {
+      try {
+        await this.slotsRepo.delete({ eventId: id });
+        await this.eventsRepo.delete(id);
+        deleted++;
+        this.logger.log(`martigues_apply_deleted id=${id}`);
+      } catch {
+        this.logger.warn(`martigues_apply_delete_failed id=${id}`);
+        failed++;
+      }
+    }
+
     this.logger.log(
-      `martigues_apply_done processed=${uniqueUrls.length} created=${created} skippedPast=${skippedPast} skippedExisting=${skippedExisting} failed=${failed}`,
+      `martigues_apply_done processed=${uniqueUrls.length} created=${created} deleted=${deleted} skippedPast=${skippedPast} skippedExisting=${skippedExisting} failed=${failed}`,
     );
 
     return {
@@ -389,6 +444,7 @@ export class MartiguesMergeService {
       created,
       skippedExisting,
       skippedPast,
+      deleted,
       failed,
       debugSamples,
     };
@@ -776,6 +832,53 @@ export class MartiguesMergeService {
     return this.extractOpeningHoursTextFromPageText(pageText);
   }
 
+  /**
+   * Génère un slot par jour entre dateDebut et dateFin.
+   * Tente d'extraire les heures depuis le texte d'ouverture, sinon utilise les heures de dateDebut/dateFin.
+   */
+  private generateSlots(
+    dateDebut: Date,
+    dateFin: Date | null,
+    openingText: string | null,
+  ): { date: string; heureDebut: string; heureFin: string }[] {
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const toKey = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    const toHM = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+
+    const hr = openingText ? this.extractHoursRange(openingText) : null;
+    let hDebutStr: string;
+    let hFinStr: string;
+
+    if (hr) {
+      hDebutStr = `${pad2(hr.start.hh)}:${pad2(hr.start.mm)}`;
+      hFinStr = `${pad2(hr.end.hh)}:${pad2(hr.end.mm)}`;
+    } else {
+      const h = dateDebut.getHours();
+      hDebutStr = (h === 12 || h === 0) ? '09:00' : toHM(dateDebut);
+      const endKey = dateFin ? toKey(dateFin) : toKey(dateDebut);
+      const sameDay = dateFin && toKey(dateFin) === toKey(dateDebut);
+      if (dateFin && sameDay) {
+        const ef = dateFin.getHours();
+        const em = dateFin.getMinutes();
+        hFinStr = (ef === 23 && em === 59) ? '23:59' : toHM(dateFin);
+      } else {
+        hFinStr = '18:00';
+      }
+      void endKey;
+    }
+
+    const endKey = dateFin ? toKey(dateFin) : toKey(dateDebut);
+    const slots: { date: string; heureDebut: string; heureFin: string }[] = [];
+    const cur = new Date(dateDebut.getFullYear(), dateDebut.getMonth(), dateDebut.getDate());
+
+    while (toKey(cur) <= endKey && slots.length < 365) {
+      slots.push({ date: toKey(cur), heureDebut: hDebutStr, heureFin: hFinStr });
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    return slots.length > 0 ? slots : [{ date: toKey(dateDebut), heureDebut: hDebutStr, heureFin: hFinStr }];
+  }
+
   private parseDetailResult(sourceUrl: string, html: string): {
     detail: null | {
       titre: string;
@@ -785,6 +888,7 @@ export class MartiguesMergeService {
       contact: string | null;
       dateDebut: Date;
       dateFin: Date | null;
+      slots: { date: string; heureDebut: string; heureFin: string }[];
       ville: string;
       lieu: string;
       adresse: string | null;
@@ -937,8 +1041,9 @@ export class MartiguesMergeService {
 
     const categorie = this.guessCategory(sourceUrl, titre);
 
+    const opening = this.extractOpeningHoursText(html);
+
     if (!range && dateDebut) {
-      const opening = this.extractOpeningHoursText(html);
       const hr = opening ? this.extractHoursRange(opening) : null;
       if (hr) {
         dateDebut.setHours(hr.start.hh, hr.start.mm, 0, 0);
@@ -947,14 +1052,15 @@ export class MartiguesMergeService {
         if (end <= dateDebut) end.setDate(end.getDate() + 1);
         dateFin = end;
       } else if (opening) {
-        const startOnly = this.extractTime(opening, /à\s*partir\s*de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)/i);
+        const startOnly = this.extractTime(opening, /à\s*partir\s*de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)\s*/i);
         if (startOnly) {
           dateDebut.setHours(startOnly.hh, startOnly.mm, 0, 0);
-          // no end time mentioned => keep dateFin null
           dateFin = null;
         }
       }
     }
+
+    const slots = this.generateSlots(dateDebut, dateFin, opening);
 
     return {
       detail: {
@@ -965,6 +1071,7 @@ export class MartiguesMergeService {
         contact,
         dateDebut,
         dateFin,
+        slots,
         ville,
         lieu,
         adresse,

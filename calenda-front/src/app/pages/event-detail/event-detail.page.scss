@@ -565,6 +565,65 @@
   }
 }
 
+.slotsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.35rem 0;
+}
+
+.slotChip {
+  background: $overlay-1;
+  border: 1px solid $border-1;
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.83rem;
+  white-space: nowrap;
+}
+
+.slotsSection {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.slotsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.slotsLabel {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.slotRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 0.5rem;
+  align-items: end;
+  background: $overlay-1;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid $border-1;
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.slotField {
+  font-size: 0.82rem;
+}
+
+.slotRemove {
+  align-self: flex-end;
+  margin-bottom: 0.1rem;
+}
+
 .highlightSection {
   margin-top: 0.75rem;
   border: 1px solid $border-1;

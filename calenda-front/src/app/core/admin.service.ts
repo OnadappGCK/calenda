@@ -119,6 +119,7 @@ export class AdminService {
       skippedPast: number;
       failed: number;
       urls: string[];
+      toDelete: { id: string; titre: string; dateDebut: string; dateFin: string | null }[];
       failures: { url: string; reason: string }[];
       debugSamples: {
         status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
@@ -133,12 +134,13 @@ export class AdminService {
     }>(`${this.apiBaseUrl}/admin/merge/martigues/preview`, { params: query });
   }
 
-  applyMergeMartigues(body: { urls: string[] }) {
+  applyMergeMartigues(body: { urls: string[]; toDeleteIds?: string[] }) {
     return this.http.post<{
       processed: number;
       created: number;
       skippedExisting: number;
       skippedPast: number;
+      deleted: number;
       failed: number;
       debugSamples: {
         status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
@@ -167,6 +169,7 @@ export class AdminService {
       skippedPast: number;
       failed: number;
       urls: string[];
+      toDelete: { id: string; titre: string; dateDebut: string; dateFin: string | null }[];
       failures: { url: string; reason: string }[];
       debugSamples: {
         status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
@@ -181,12 +184,13 @@ export class AdminService {
     }>(`${this.apiBaseUrl}/admin/merge/salsa-olivier/preview`, { params: query });
   }
 
-  applyMergeSalsaOlivier(body: { urls: string[] }) {
+  applyMergeSalsaOlivier(body: { urls: string[]; toDeleteIds?: string[] }) {
     return this.http.post<{
       processed: number;
       created: number;
       skippedExisting: number;
       skippedPast: number;
+      deleted: number;
       failed: number;
       debugSamples: {
         status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';

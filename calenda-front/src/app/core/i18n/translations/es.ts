@@ -126,6 +126,13 @@ export const es: TranslationTree = {
     noChange: '(no cambiar)',
     public: 'Publico',
     tagsMax3: 'Etiquetas (max 3)',
+    slots: {
+      title: 'Franjas horarias',
+      add: 'Añadir franja',
+      date: 'Fecha',
+      from: 'Inicio',
+      to: 'Fin',
+    },
     boost: {
       btn: 'Destacar ⭐',
       title: 'Dale más visibilidad a tu evento',

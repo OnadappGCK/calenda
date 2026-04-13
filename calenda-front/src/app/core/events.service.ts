@@ -11,6 +11,15 @@ export type EventTag = 'MUSIQUE' | 'DANSE' | 'PLEIN AIR' | 'RENCONTRE' | 'FEU D�
 /** Origine d'un événement (création manuelle ou import externe). */
 export type EventOrigin = 'MANUAL' | 'MARTIGUES_SITE' | 'SALSA_OLIVIER';
 
+/** DTO d'un créneau horaire. */
+export type EventSlotDto = {
+  id: string;
+  date: string;
+  heureDebut: string;
+  heureFin: string;
+  ordre: number;
+};
+
 /** DTO d'une mise en avant. */
 export type HighlightDto = {
   id: string;
@@ -43,6 +52,7 @@ export type EventDto = {
   dateFin: string | null;
   public: boolean;
   couleur: string | null;
+  slots?: EventSlotDto[];
   highlights?: HighlightDto[];
   organisateur: { id: string; pseudo: string; email: string; isAdmin?: boolean } | null;
 };
@@ -91,7 +101,8 @@ export class EventsService {
     imageUrl?: string | null;
     tarif?: string | null;
     contact?: string | null;
-    dateDebut: string;
+    slots?: { date: string; heureDebut: string; heureFin: string }[];
+    dateDebut?: string;
     dateFin?: string | null;
     honeypot?: string;
   }) {
@@ -115,6 +126,7 @@ export class EventsService {
       tarif?: string | null;
       contact?: string | null;
       organisateurId?: string;
+      slots?: { date: string; heureDebut: string; heureFin: string }[];
       dateDebut?: string;
       dateFin?: string | null;
       public?: boolean;

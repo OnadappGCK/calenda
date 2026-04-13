@@ -126,6 +126,13 @@ export const de: TranslationTree = {
     noChange: '(nicht andern)',
     public: 'Offentlich',
     tagsMax3: 'Tags (max. 3)',
+    slots: {
+      title: 'Zeitfenster',
+      add: 'Zeitfenster hinzufügen',
+      date: 'Datum',
+      from: 'Beginn',
+      to: 'Ende',
+    },
     boost: {
       btn: 'Hervorheben ⭐',
       title: 'Gib deiner Veranstaltung mehr Sichtbarkeit',
