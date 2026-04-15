@@ -96,6 +96,28 @@
     </div>
   }
 
+  <div class="sortieSectionWrap">
+    <h2 class="sectionTitle">💡 Idée de sortie ?</h2>
+    <div class="sortieButtons">
+      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'RESTAURANT' }">
+        <span class="sortieBtnIcon">🍽️</span>
+        <span>Pour manger</span>
+      </a>
+      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'SORTIE' }">
+        <span class="sortieBtnIcon">🎭</span>
+        <span>Pour sortir</span>
+      </a>
+      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'BAR' }">
+        <span class="sortieBtnIcon">🍸</span>
+        <span>Pour boire un coup</span>
+      </a>
+      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'ACTIVITE' }">
+        <span class="sortieBtnIcon">🏃</span>
+        <span>Pour s'activer</span>
+      </a>
+    </div>
+  </div>
+
   <div class="newsHeader">
     <h2 class="sectionTitle">{{ i18n.t('home.news') }}</h2>
     <a class="btn" routerLink="/news">{{ i18n.t('home.seeAll') }}</a>

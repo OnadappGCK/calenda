@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, MoreThanOrEqual, Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
+import { EtablissementType } from '../common/enums/etablissement-type.enum';
+import { EtablissementsService } from '../etablissements/etablissements.service';
 import { Event } from '../events/event.entity';
 import { EventSlot } from '../events/event-slot.entity';
 
@@ -90,6 +92,7 @@ export class CarryLeRouetMergeService {
   constructor(
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
     @InjectRepository(EventSlot) private readonly slotsRepo: Repository<EventSlot>,
+    private readonly etablissementsService: EtablissementsService,
   ) {}
 
   // ─── Public API ────────────────────────────────────────────────────────────
@@ -321,6 +324,24 @@ export class CarryLeRouetMergeService {
           continue;
         }
 
+        if (parsedRes.isEverydayActivity) {
+          await this.etablissementsService.upsertFromSource(sourceUrl, {
+            nom: detail.titre,
+            description: detail.description,
+            imageUrl: detail.imageUrl,
+            adresse: detail.adresse,
+            ville: detail.ville,
+            contact: detail.contact,
+            type: EtablissementType.ACTIVITE,
+            tags: [],
+            latitude: detail.latitude,
+            longitude: detail.longitude,
+          });
+          created++;
+          this.logger.log(`carry_apply_everyday_activite url=${sourceUrl} titre=${JSON.stringify(detail.titre)}`);
+          continue;
+        }
+
         const ev = this.eventsRepo.create({
           titre: detail.titre,
           description: detail.description,
@@ -485,6 +506,7 @@ export class CarryLeRouetMergeService {
       longitude: number | null;
       categorie: EventCategory;
     };
+    isEverydayActivity: boolean;
     reason: string;
   } {
     const jsonLd = this.extractJsonLdEvent(html);
@@ -496,7 +518,7 @@ export class CarryLeRouetMergeService {
       .replace(/\s*[-|]\s*Office de Tourisme\s*$/i, '');
 
     const titre = this.decodeHtml((jsonLd?.name ?? fallbackTitleRaw) || '').trim();
-    if (!titre) return { detail: null, reason: 'missing_title' };
+    if (!titre) return { detail: null, isEverydayActivity: false, reason: 'missing_title' };
 
     const ogDesc = this.matchMeta(html, 'og:description');
     const presDesc = this.extractPresentationText(html);
@@ -553,7 +575,7 @@ export class CarryLeRouetMergeService {
       null;
 
     if (!dateDebut) {
-      return { detail: null, reason: 'missing_dates' };
+      return { detail: null, isEverydayActivity: false, reason: 'missing_dates' };
     }
 
     const ville = 'Carry-le-Rouet';
@@ -629,6 +651,7 @@ export class CarryLeRouetMergeService {
     }
 
     const slots = this.generateSlots(dateDebut, dateFin, opening);
+    const isEverydayActivity = this.isEverydayPattern(opening, dateDebut, dateFin);
 
     return {
       detail: {
@@ -647,6 +670,7 @@ export class CarryLeRouetMergeService {
         longitude: typeof longitude === 'number' ? longitude : null,
         categorie,
       },
+      isEverydayActivity,
       reason: 'ok',
     };
   }
@@ -695,6 +719,14 @@ export class CarryLeRouetMergeService {
     }
 
     return slots.length > 0 ? slots : [{ date: toKey(dateDebut), heureDebut: hDebutStr, heureFin: hFinStr }];
+  }
+
+  private isEverydayPattern(openingText: string | null, dateDebut: Date, dateFin: Date | null): boolean {
+    if (!openingText) return false;
+    if (!/tous les jours|chaque jour|ouvert tous/i.test(openingText)) return false;
+    if (!dateFin) return false;
+    const diffDays = (dateFin.getTime() - dateDebut.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays > 14;
   }
 
   private extractDaysOfWeek(text: string): Set<number> | null {

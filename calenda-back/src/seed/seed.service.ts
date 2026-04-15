@@ -9,6 +9,8 @@ import { EventTag } from '../common/enums/event-tag.enum';
 import { Event } from '../events/event.entity';
 import { News } from '../news/news.entity';
 import { User } from '../users/user.entity';
+import { Etablissement } from '../etablissements/etablissement.entity';
+import { EtablissementType } from '../common/enums/etablissement-type.enum';
 
 @Injectable()
 /**
@@ -21,6 +23,7 @@ export class SeedService {
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
     @InjectRepository(News) private readonly newsRepo: Repository<News>,
+    @InjectRepository(Etablissement) private readonly etablissementsRepo: Repository<Etablissement>,
   ) {}
 
   /** Seed des comptes de dev (admin/organisateur) selon `SEED_ADMIN` / `SEED_ORGANISATEUR`. */
@@ -538,5 +541,139 @@ export class SeedService {
     }
 
     await this.newsRepo.save(toInsert.map((n) => this.newsRepo.create(n)));
+  }
+
+  async seedDevEtablissements() {
+    const count = await this.etablissementsRepo.count();
+    if (count > 0) return;
+
+    const demo: Partial<Etablissement>[] = [
+      {
+        nom: 'La Table de la Mer',
+        type: EtablissementType.RESTAURANT,
+        description: 'Restaurant de poissons et fruits de mer frais, face au port de Carry-le-Rouet. Terrasse ensoleillée avec vue sur la mer.',
+        adresse: '3 Quai du Port, Carry-le-Rouet',
+        ville: 'Carry-le-Rouet',
+        tags: ['🐟 Poissons', '🦞 Fruits de mer', '🌅 Vue mer', '🍷 Cave à vins', '☀️ Terrasse'],
+        imageUrl: null,
+        latitude: 43.332,
+        longitude: 5.152,
+        featured: true,
+        public: true,
+      },
+      {
+        nom: 'Chez Mémé Michèle',
+        type: EtablissementType.RESTAURANT,
+        description: 'Cuisine provençale authentique dans un cadre chaleureux. Daube, tian, pieds paquets… tout est fait maison.',
+        adresse: '12 Rue de la République, Martigues',
+        ville: 'Martigues',
+        tags: ['🥘 Provençal', '🏠 Fait maison', '🫒 Huile d\'olive', '👵 Cuisine du terroir'],
+        imageUrl: null,
+        latitude: 43.4,
+        longitude: 5.05,
+        public: true,
+      },
+      {
+        nom: 'Le Bouchon d\'Istres',
+        type: EtablissementType.RESTAURANT,
+        description: 'Bistrot convivial proposant tapas, planches et spécialités du marché. Brunch le dimanche.',
+        adresse: '7 Place Voltaire, Istres',
+        ville: 'Istres',
+        tags: ['🍢 Tapas', '🧀 Planches', '☕ Brunch', '🍺 Bières artisanales'],
+        imageUrl: null,
+        public: true,
+      },
+      {
+        nom: 'Le Caveau du Frioul',
+        type: EtablissementType.BAR,
+        description: 'Bar à vins et cocktails dans une cave voûtée. Sélection de vins naturels, bières artisanales et spiritueux locaux.',
+        adresse: '5 Rue des Pêcheurs, Sausset-les-Pins',
+        ville: 'Sausset-les-Pins',
+        tags: ['🍷 Vins naturels', '🍸 Cocktails', '🎵 Musique live', '🕯️ Ambiance'],
+        imageUrl: null,
+        latitude: 43.33,
+        longitude: 5.11,
+        featured: true,
+        public: true,
+      },
+      {
+        nom: 'Le Mojito Bleu',
+        type: EtablissementType.BAR,
+        description: 'Bar de plage avec terrasse face à la mer. Cocktails tropicaux, tapas et soirées DJ en été.',
+        adresse: 'Plage de la Couronne, Martigues',
+        ville: 'Martigues',
+        tags: ['🍹 Cocktails', '🏖️ Plage', '🎧 DJ', '🌴 Tropical', '☀️ Terrasse'],
+        imageUrl: null,
+        public: true,
+      },
+      {
+        nom: 'La Brasserie du Port',
+        type: EtablissementType.BAR,
+        description: 'Brasserie traditionnelle au cœur du port. Pression locale, planches charcuterie, matchs diffusés.',
+        adresse: '1 Quai du Vieux Port, Carry-le-Rouet',
+        ville: 'Carry-le-Rouet',
+        tags: ['🍺 Pression', '⚽ Sport', '🧀 Planches', '🎲 Jeux de société'],
+        imageUrl: null,
+        public: true,
+      },
+      {
+        nom: 'Cinéma L\'Étoile',
+        type: EtablissementType.SORTIE,
+        description: 'Cinéma indépendant proposant des films d\'art et essai, des avant-premières et des ciné-débats chaque mois.',
+        adresse: '22 Avenue Général de Gaulle, Martigues',
+        ville: 'Martigues',
+        tags: ['🎬 Cinéma', '🎞️ Art & Essai', '🗣️ Ciné-débat', '🌍 Films du monde'],
+        imageUrl: null,
+        featured: true,
+        public: true,
+      },
+      {
+        nom: 'Escape Game Azur',
+        type: EtablissementType.SORTIE,
+        description: 'Escape game thématique avec 4 salles disponibles. Idéal pour les groupes, familles et team-building.',
+        adresse: '14 Rue de la Jetée, Carry-le-Rouet',
+        ville: 'Carry-le-Rouet',
+        tags: ['🔐 Escape game', '👨‍👩‍👧 Famille', '🧩 Enigmes', '🏆 Team building'],
+        imageUrl: null,
+        public: true,
+      },
+      {
+        nom: 'Club de Voile Mistral',
+        type: EtablissementType.ACTIVITE,
+        description: 'École de voile proposant cours débutants et perfectionnement, location de catamarans et sorties en mer.',
+        adresse: 'Port de Plaisance, Sausset-les-Pins',
+        ville: 'Sausset-les-Pins',
+        tags: ['⛵ Voile', '🌊 Mer', '🏄 Nautique', '👶 Débutants', '📚 Formation'],
+        imageUrl: null,
+        latitude: 43.329,
+        longitude: 5.1,
+        featured: true,
+        public: true,
+      },
+      {
+        nom: 'Yoga sur la Plage',
+        type: EtablissementType.ACTIVITE,
+        description: 'Séances de yoga et méditation sur la plage tous les matins en saison. Tous niveaux bienvenus.',
+        adresse: 'Plage des Tamaris, Carry-le-Rouet',
+        ville: 'Carry-le-Rouet',
+        tags: ['🧘 Yoga', '🌅 Plein air', '🧠 Méditation', '🌿 Bien-être', '☀️ Matinal'],
+        imageUrl: null,
+        public: true,
+      },
+      {
+        nom: 'VTT Calanques Tour',
+        type: EtablissementType.ACTIVITE,
+        description: 'Randonnées VTT guidées dans les calanques et massifs environnants. Location de VTT électriques disponible.',
+        adresse: 'Place du Marché, Carry-le-Rouet',
+        ville: 'Carry-le-Rouet',
+        tags: ['🚵 VTT', '🏔️ Randonnée', '⚡ Électrique', '🌿 Nature', '📸 Panorama'],
+        imageUrl: null,
+        public: true,
+      },
+    ];
+
+    await this.etablissementsRepo.save(
+      demo.map((d) => this.etablissementsRepo.create(d)),
+    );
   }
 }

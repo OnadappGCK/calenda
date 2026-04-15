@@ -12,6 +12,8 @@ import { LoginPage } from './pages/login/login.page';
 import { NewsPage } from './pages/news/news.page';
 import { ProfilePage } from './pages/profile/profile.page';
 import { RegisterPage } from './pages/register/register.page';
+import { PlacesPage } from './pages/places/places.page';
+import { PlaceDetailPage } from './pages/place-detail/place-detail.page';
 
 export const routes: Routes = [
   { path: '', component: HomePage },
@@ -21,6 +23,8 @@ export const routes: Routes = [
   { path: 'register', component: RegisterPage },
   { path: 'calendar', component: CalendarPage },
   { path: 'events/:id', component: EventDetailPage },
+  { path: 'places', component: PlacesPage },
+  { path: 'places/:id', component: PlaceDetailPage },
   { path: 'favorites', component: FavoritesPage, canActivate: [requireAuthGuard] },
   { path: 'profile', component: ProfilePage, canActivate: [requireAuthGuard] },
   { path: 'admin/pending-events', component: AdminPendingPage, canActivate: [requireAdminGuard] },

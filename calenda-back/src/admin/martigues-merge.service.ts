@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
+import { EtablissementType } from '../common/enums/etablissement-type.enum';
+import { EtablissementsService } from '../etablissements/etablissements.service';
 import { Event } from '../events/event.entity';
 import { EventSlot } from '../events/event-slot.entity';
 import { User } from '../users/user.entity';
@@ -73,6 +75,7 @@ export class MartiguesMergeService {
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
     @InjectRepository(EventSlot) private readonly slotsRepo: Repository<EventSlot>,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    private readonly etablissementsService: EtablissementsService,
   ) {}
 
   async merge(options?: MergeOptions): Promise<MergeResult> {
@@ -356,6 +359,24 @@ export class MartiguesMergeService {
               `martigues_apply_sample status=existing url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin ? detail.dateFin.toISOString() : 'null'}`,
             );
           }
+          continue;
+        }
+
+        if (parsedRes.isEverydayActivity) {
+          await this.etablissementsService.upsertFromSource(sourceUrl, {
+            nom: detail.titre,
+            description: detail.description,
+            imageUrl: detail.imageUrl,
+            adresse: detail.adresse,
+            ville: detail.ville,
+            contact: detail.contact,
+            type: EtablissementType.ACTIVITE,
+            tags: [],
+            latitude: detail.latitude,
+            longitude: detail.longitude,
+          });
+          created++;
+          this.logger.log(`martigues_apply_everyday_activite url=${sourceUrl} titre=${JSON.stringify(detail.titre)}`);
           continue;
         }
 
@@ -931,6 +952,7 @@ export class MartiguesMergeService {
       longitude: number | null;
       categorie: EventCategory;
     };
+    isEverydayActivity: boolean;
     reason: string;
   } {
     const jsonLd = this.extractJsonLdEvent(html);
@@ -941,7 +963,7 @@ export class MartiguesMergeService {
 
     const titre = this.decodeHtml((jsonLd?.name ?? fallbackTitleRaw) || '').trim();
     if (!titre) {
-      return { detail: null, reason: 'missing_title' };
+      return { detail: null, isEverydayActivity: false, reason: 'missing_title' };
     }
 
     const ogDesc = this.matchMeta(html, 'og:description');
@@ -1017,6 +1039,7 @@ export class MartiguesMergeService {
         .join(';');
       return {
         detail: null,
+        isEverydayActivity: false,
         reason: `missing_dates ${hintIso} ${hintYmd} ${hintFrSlash} ${hintFrLong} candidates=${candidates} jsonldTypes=${jsonldTypes} startRaw=${startRaw} endRaw=${endRaw} startMicro=${startMicroRaw} endMicro=${endMicroRaw} sample=${sample}`,
       };
     }
@@ -1096,6 +1119,7 @@ export class MartiguesMergeService {
     }
 
     const slots = this.generateSlots(dateDebut, dateFin, opening);
+    const isEverydayActivity = this.isEverydayPattern(opening, dateDebut, dateFin);
 
     return {
       detail: {
@@ -1114,8 +1138,17 @@ export class MartiguesMergeService {
         longitude: typeof longitude === 'number' ? longitude : null,
         categorie,
       },
+      isEverydayActivity,
       reason: 'ok',
     };
+  }
+
+  private isEverydayPattern(openingText: string | null, dateDebut: Date, dateFin: Date | null): boolean {
+    if (!openingText) return false;
+    if (!/tous les jours|chaque jour|ouvert tous/i.test(openingText)) return false;
+    if (!dateFin) return false;
+    const diffDays = (dateFin.getTime() - dateDebut.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays > 14;
   }
 
   private effectiveEndForPastCheck(dateDebut: Date, dateFin: Date | null) {

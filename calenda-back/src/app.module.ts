@@ -15,6 +15,8 @@ import { Highlight } from './events/highlight.entity';
 import { EventsModule } from './events/events.module';
 import { News } from './news/news.entity';
 import { NewsModule } from './news/news.module';
+import { Etablissement } from './etablissements/etablissement.entity';
+import { EtablissementsModule } from './etablissements/etablissements.module';
 import { SeedModule } from './seed/seed.module';
 import { User } from './users/user.entity';
 import { UsersModule } from './users/users.module';
@@ -45,7 +47,7 @@ import { UsersModule } from './users/users.module';
             username: config.get<string>('DB_USER') ?? 'postgres',
             password: config.get<string>('DB_PASS') ?? '',
             database: config.get<string>('DB_NAME') ?? 'calenda',
-            entities: [User, Event, EventSlot, News, Highlight],
+            entities: [User, Event, EventSlot, News, Highlight, Etablissement],
             synchronize,
             uuidExtension: 'pgcrypto' as const,
             installExtensions: true,
@@ -55,7 +57,7 @@ import { UsersModule } from './users/users.module';
         return {
           type: 'sqlite' as const,
           database: config.get<string>('SQLITE_PATH') ?? 'calenda.sqlite',
-          entities: [User, Event, EventSlot, News, Highlight],
+          entities: [User, Event, EventSlot, News, Highlight, Etablissement],
           synchronize,
         };
       },
@@ -66,6 +68,7 @@ import { UsersModule } from './users/users.module';
     EventsModule,
     NewsModule,
     AdminModule,
+    EtablissementsModule,
     SeedModule,
   ],
   controllers: [AppController],

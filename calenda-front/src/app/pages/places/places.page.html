@@ -1,0 +1,199 @@
+<div class="placesPage">
+
+  <!-- Type tabs -->
+  <div class="typeTabs">
+    @for (t of TYPES; track t) {
+      <button
+        class="typeTab"
+        [class.active]="selectedType() === t"
+        type="button"
+        (click)="selectType(t)"
+      >
+        <span class="typeTabIcon">{{ TYPE_ICONS[t] }}</span>
+        <span class="typeTabLabel">{{ TYPE_LABELS[t] }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="container pageContent">
+
+    <!-- Admin: bouton créer -->
+    @if (isAdmin()) {
+      <div class="adminBar">
+        @if (!showCreateForm) {
+          <button class="btn btnPrimary" type="button" (click)="openCreateForm()">
+            + Ajouter un établissement
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Formulaire création admin -->
+    @if (showCreateForm) {
+      <div class="createForm">
+        <h3>Nouvel établissement</h3>
+        <div class="formGrid">
+          <label class="field">
+            Nom *
+            <input type="text" [(ngModel)]="newNom" placeholder="Nom de l'établissement" />
+          </label>
+          <label class="field">
+            Type
+            <select [(ngModel)]="newType">
+              @for (t of TYPES; track t) {
+                <option [value]="t">{{ TYPE_ICONS[t] }} {{ TYPE_LABELS[t] }}</option>
+              }
+            </select>
+          </label>
+          <label class="field fieldFull">
+            Description
+            <textarea [(ngModel)]="newDescription" rows="3" placeholder="Décrivez l'établissement…"></textarea>
+          </label>
+          <label class="field">
+            Adresse
+            <input type="text" [(ngModel)]="newAdresse" placeholder="Ex: 3 Rue de la Mer" />
+          </label>
+          <label class="field">
+            Ville
+            <input type="text" [(ngModel)]="newVille" placeholder="Ex: Carry-le-Rouet" />
+          </label>
+          <label class="field">
+            Contact
+            <input type="text" [(ngModel)]="newContact" placeholder="Email ou téléphone" />
+          </label>
+          <label class="field">
+            Horaires
+            <input type="text" [(ngModel)]="newHoraires" placeholder="Ex: Mar-Dim 12h-22h" />
+          </label>
+          <label class="field fieldFull">
+            URL image
+            <input type="text" [(ngModel)]="newImageUrl" placeholder="https://…" />
+          </label>
+        </div>
+
+        <!-- Tags -->
+        <div class="tagsSection">
+          <div class="tagsLabel">Tags (emoji + mot)</div>
+          <div class="tagsSelected">
+            @for (tag of newTags; track tag) {
+              <span class="tagChip tagChipSelected">
+                {{ tag }}
+                <button type="button" class="tagRemove" (click)="removeNewTag(tag)">✕</button>
+              </span>
+            }
+          </div>
+          <div class="tagInputRow">
+            <input
+              type="text"
+              [(ngModel)]="newTagInput"
+              placeholder="🍕 Pizza"
+              (keydown.enter)="addTagFromInput()"
+            />
+            <button type="button" class="btn btnSmall" (click)="addTagFromInput()">Ajouter</button>
+          </div>
+          @if (allTagsForForm().length > 0) {
+            <div class="existingTagsLabel">Tags existants (cliquer pour ajouter) :</div>
+            <div class="existingTags">
+              @for (item of allTagsForForm(); track item.tag) {
+                <button
+                  type="button"
+                  class="tagChip"
+                  [class.tagChipSelected]="newTags.includes(item.tag)"
+                  (click)="addExistingTag(item.tag)"
+                >{{ item.tag }} <span class="tagCount">×{{ item.count }}</span></button>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="formActions">
+          <button class="btn btnPrimary" type="button" [disabled]="saving || !newNom.trim()" (click)="submitCreate()">
+            {{ saving ? 'Enregistrement…' : 'Créer' }}
+          </button>
+          <button class="btn" type="button" (click)="cancelCreate()">Annuler</button>
+        </div>
+      </div>
+    }
+
+    <!-- Titre -->
+    <h2 class="pageTitle">{{ typeLabel() }}</h2>
+
+    <!-- Featured -->
+    @if (featuredPlace()) {
+      <a class="featuredCard" [routerLink]="['/places', featuredPlace()!.id]">
+        @if (placeImageUrl(featuredPlace()!)) {
+          <div class="featuredImg" [style.background-image]="'url(' + placeImageUrl(featuredPlace()!) + ')'"></div>
+        } @else {
+          <div class="featuredImgPlaceholder">{{ TYPE_ICONS[featuredPlace()!.type] }}</div>
+        }
+        <div class="featuredBody">
+          <div class="featuredBadge">{{ TYPE_ICONS[featuredPlace()!.type] }} À la une</div>
+          <div class="featuredNom">{{ featuredPlace()!.nom }}</div>
+          @if (featuredPlace()!.ville) {
+            <div class="featuredVille">📍 {{ featuredPlace()!.ville }}</div>
+          }
+          @if (featuredPlace()!.description) {
+            <div class="featuredDesc">{{ featuredPlace()!.description }}</div>
+          }
+          <div class="featuredTags">
+            @for (tag of (featuredPlace()!.tags ?? []).slice(0, 4); track tag) {
+              <span class="tagChip">{{ tag }}</span>
+            }
+          </div>
+        </div>
+      </a>
+    }
+
+    <!-- Tag filters -->
+    @if (topTags().length > 0) {
+      <div class="filtersRow">
+        @for (item of topTags(); track item.tag) {
+          <button
+            type="button"
+            class="filterTag"
+            [class.active]="isTagSelected(item.tag)"
+            (click)="toggleTag(item.tag)"
+          >{{ item.tag }}</button>
+        }
+        @if (selectedTags().size > 0) {
+          <button type="button" class="filterTag filterClear" (click)="selectedTags.set(new Set())">✕ Effacer</button>
+        }
+      </div>
+    }
+
+    <!-- Grid -->
+    @if (loading()) {
+      <div class="loading">Chargement…</div>
+    } @else if (gridPlaces().length === 0 && !featuredPlace()) {
+      <div class="empty">Aucun établissement dans cette catégorie pour l'instant.</div>
+    } @else {
+      <div class="placesGrid">
+        @for (place of gridPlaces(); track place.id) {
+          <a class="placeCard" [routerLink]="['/places', place.id]">
+            @if (placeImageUrl(place)) {
+              <div class="placeCardImg" [style.background-image]="'url(' + placeImageUrl(place) + ')'"></div>
+            } @else {
+              <div class="placeCardImgPlaceholder">{{ TYPE_ICONS[place.type] }}</div>
+            }
+            <div class="placeCardBody">
+              <div class="placeCardNom">{{ place.nom }}</div>
+              @if (place.ville) {
+                <div class="placeCardVille">📍 {{ place.ville }}</div>
+              }
+              @if (place.description) {
+                <div class="placeCardDesc">{{ place.description }}</div>
+              }
+              <div class="placeCardTags">
+                @for (tag of (place.tags ?? []).slice(0, 3); track tag) {
+                  <span class="tagChip">{{ tag }}</span>
+                }
+              </div>
+            </div>
+            <div class="placeCardAction">Voir plus →</div>
+          </a>
+        }
+      </div>
+    }
+
+  </div>
+</div>

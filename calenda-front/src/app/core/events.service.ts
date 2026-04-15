@@ -9,7 +9,7 @@ export type EventCategory = 'Danse' | 'Concert' | 'Spectacle' | 'Feux d\u2019art
 export type EventTag = 'MUSIQUE' | 'DANSE' | 'PLEIN AIR' | 'RENCONTRE' | 'FEU D’ARTIFICE' | 'SPORT' | 'MARCHÉ' | 'COMPÉTITION' | 'HUMOUR' | 'ART' | 'VISITE';
 
 /** Origine d'un événement (création manuelle ou import externe). */
-export type EventOrigin = 'MANUAL' | 'MARTIGUES_SITE' | 'SALSA_OLIVIER';
+export type EventOrigin = 'MANUAL' | 'MARTIGUES_SITE' | 'SALSA_OLIVIER' | 'CARRY_LE_ROUET';
 
 /** DTO d'un créneau horaire. */
 export type EventSlotDto = {

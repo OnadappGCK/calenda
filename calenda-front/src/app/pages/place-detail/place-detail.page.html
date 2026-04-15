@@ -1,0 +1,115 @@
+@if (loading()) {
+  <div class="loadingPage">Chargement…</div>
+} @else if (error() || !place()) {
+  <div class="errorPage">{{ error() ?? 'Établissement introuvable' }}</div>
+} @else {
+  <div class="detailPage">
+
+    <!-- Hero image -->
+    @if (placeImageUrl(place()!)) {
+      <div class="heroImg" [style.background-image]="'url(' + placeImageUrl(place()!) + ')'">
+        <div class="heroOverlay"></div>
+        <div class="heroContent">
+          <div class="heroBadge">{{ typeIcon() }} {{ typeLabel() }}</div>
+          <h1 class="heroTitle">{{ place()!.nom }}</h1>
+          @if (place()!.ville) {
+            <div class="heroVille">📍 {{ place()!.ville }}</div>
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="heroPlaceholder">
+        <div class="heroPlaceholderIcon">{{ typeIcon() }}</div>
+        <div class="heroBadge">{{ typeLabel() }}</div>
+        <h1 class="heroTitle">{{ place()!.nom }}</h1>
+        @if (place()!.ville) {
+          <div class="heroVille">📍 {{ place()!.ville }}</div>
+        }
+      </div>
+    }
+
+    <div class="container pageContent">
+      <div class="detailGrid">
+
+        <!-- Left: infos -->
+        <div class="detailMain">
+          @if (place()!.description) {
+            <section class="detailSection">
+              <h2 class="sectionTitle">Description</h2>
+              <p class="detailDesc">{{ place()!.description }}</p>
+            </section>
+          }
+
+          @if ((place()!.tags ?? []).length > 0) {
+            <section class="detailSection">
+              <h2 class="sectionTitle">Tags</h2>
+              <div class="detailTags">
+                @for (tag of place()!.tags; track tag) {
+                  <span class="tagChip">{{ tag }}</span>
+                }
+              </div>
+            </section>
+          }
+
+          @if (place()!.horaires) {
+            <section class="detailSection">
+              <h2 class="sectionTitle">🕐 Horaires</h2>
+              <p class="detailInfo">{{ place()!.horaires }}</p>
+            </section>
+          }
+
+          @if (place()!.contact) {
+            <section class="detailSection">
+              <h2 class="sectionTitle">📞 Contact</h2>
+              <p class="detailInfo">{{ place()!.contact }}</p>
+            </section>
+          }
+
+          @if (place()!.adresse) {
+            <section class="detailSection">
+              <h2 class="sectionTitle">📍 Adresse</h2>
+              <p class="detailInfo">{{ place()!.adresse }}@if (place()!.ville) { — {{ place()!.ville }}}</p>
+            </section>
+          }
+        </div>
+
+        <!-- Right: map + CTA -->
+        <aside class="detailSide">
+          @if (googleMapsUrl()) {
+            <a class="btnMaps" [href]="googleMapsUrl()!" target="_blank" rel="noopener">
+              🗺️ Ouvrir dans Google Maps
+            </a>
+          }
+
+          @if (mapUrl()) {
+            <div class="mapWrapper">
+              <iframe
+                [src]="mapUrl()!"
+                class="mapFrame"
+                loading="lazy"
+                title="Carte"
+                referrerpolicy="no-referrer"
+              ></iframe>
+            </div>
+          }
+
+          @if (!mapUrl() && place()!.adresse) {
+            <div class="mapFallback">
+              <div class="mapFallbackIcon">🗺️</div>
+              <div>{{ place()!.adresse }}</div>
+              @if (place()!.ville) { <div>{{ place()!.ville }}</div> }
+            </div>
+          }
+
+          @if (place()!.sourceUrl) {
+            <a class="btnSource" [href]="place()!.sourceUrl!" target="_blank" rel="noopener">
+              Voir la source
+            </a>
+          }
+        </aside>
+
+      </div>
+    </div>
+
+  </div>
+}

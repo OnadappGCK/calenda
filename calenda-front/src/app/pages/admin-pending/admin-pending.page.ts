@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { AdminService } from '../../core/admin.service';
 import { EventDto, EventOrigin } from '../../core/events.service';
 
-type MergeSourceId = 'MARTIGUES_TOURISME' | 'SALSA_OLIVIER_13';
+type MergeSourceId = 'MARTIGUES_TOURISME' | 'SALSA_OLIVIER_13' | 'CARRY_LE_ROUET';
 type MergeSource = { id: MergeSourceId; label: string; description: string };
 
 const MERGE_SOURCES: MergeSource[] = [
@@ -18,6 +18,11 @@ const MERGE_SOURCES: MergeSource[] = [
     id: 'SALSA_OLIVIER_13',
     label: 'Salsa d’Olivier (dpt 13)',
     description: "Import depuis salsa.faurax.fr (Bouches-du-Rhône). Le paramètre 'pages' correspond à ~50 événements par tranche.",
+  },
+  {
+    id: 'CARRY_LE_ROUET',
+    label: 'OT Carry-le-Rouet',
+    description: 'Import depuis otcarrylerouet.fr (agenda événements, og:image, en attente).',
   },
 ];
 
@@ -39,6 +44,7 @@ export class AdminPendingPage implements OnInit {
     MANUAL: 'Manuel',
     MARTIGUES_SITE: 'Import: Martigues site',
     SALSA_OLIVIER: 'Import: Salsa Olivier',
+    CARRY_LE_ROUET: 'Import: OT Carry-le-Rouet',
   };
 
   readonly items = signal<EventDto[]>([]);
@@ -274,7 +280,9 @@ export class AdminPendingPage implements OnInit {
           ? await this.adminService.previewMergeMartigues({ pages: this.mergePages }).toPromise()
           : this.mergeSource === 'SALSA_OLIVIER_13'
             ? await this.adminService.previewMergeSalsaOlivier({ pages: this.mergePages }).toPromise()
-          : null;
+            : this.mergeSource === 'CARRY_LE_ROUET'
+              ? await this.adminService.previewMergeCarryLeRouet({ pages: this.mergePages }).toPromise()
+              : null;
 
       console.log('[Merge] preview response', res);
       console.log('[Merge] preview debugSamples', res?.debugSamples);
@@ -305,7 +313,9 @@ export class AdminPendingPage implements OnInit {
           ? await this.adminService.applyMergeMartigues({ urls: preview.urls, toDeleteIds }).toPromise()
           : this.mergeSource === 'SALSA_OLIVIER_13'
             ? await this.adminService.applyMergeSalsaOlivier({ urls: preview.urls, toDeleteIds }).toPromise()
-          : null;
+            : this.mergeSource === 'CARRY_LE_ROUET'
+              ? await this.adminService.applyMergeCarryLeRouet({ urls: preview.urls, toDeleteIds }).toPromise()
+              : null;
 
       console.log('[Merge] apply response', res);
       console.log('[Merge] apply debugSamples', res?.debugSamples);
