@@ -104,10 +104,17 @@
       </div>
       @if ((event()!.slots ?? []).length > 0) {
         <div class="slotsList">
-          @for (s of event()!.slots!; track s.id) {
+          @for (s of visibleSlots(); track s.id) {
             <span class="slotChip">📅 {{ s.date | date:'EEE d MMM':undefined:dateLocale() }} · {{ s.heureDebut }}–{{ s.heureFin }}</span>
           }
         </div>
+        @if (hiddenSlotsCount() > 0) {
+          @if (!slotsExpanded()) {
+            <button class="slotToggle" type="button" (click)="slotsExpanded.set(true)">Voir tous les créneaux (+{{ hiddenSlotsCount() }})</button>
+          } @else {
+            <button class="slotToggle" type="button" (click)="slotsExpanded.set(false)">Voir moins</button>
+          }
+        }
       } @else {
         <div class="meta">
           {{ event()!.dateDebut | date: 'short':undefined:dateLocale() }} → {{ event()!.dateFin ? (event()!.dateFin | date: 'short':undefined:dateLocale()) : i18n.t('common.notMentioned') }}

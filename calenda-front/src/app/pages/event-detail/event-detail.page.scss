@@ -581,6 +581,23 @@
   white-space: nowrap;
 }
 
+.slotToggle {
+  margin-top: 0.3rem;
+  background: none;
+  border: 1px solid $border-1;
+  border-radius: 999px;
+  padding: 0.25rem 1rem;
+  font-size: 0.8rem;
+  color: $text-muted-2;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: $overlay-1;
+    color: $text-muted-1;
+  }
+}
+
 .slotsSection {
   margin-top: 0.5rem;
   display: flex;

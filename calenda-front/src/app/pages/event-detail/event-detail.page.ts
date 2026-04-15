@@ -99,6 +99,19 @@ export class EventDetailPage implements OnInit, OnDestroy {
     return this.favoriteIds().has(e.id);
   });
 
+  readonly slotsExpanded = signal(false);
+  private readonly SLOTS_PREVIEW = 5;
+
+  readonly visibleSlots = computed(() => {
+    const slots = this.event()?.slots ?? [];
+    if (this.slotsExpanded() || slots.length <= this.SLOTS_PREVIEW) return slots;
+    return slots.slice(0, this.SLOTS_PREVIEW);
+  });
+
+  readonly hiddenSlotsCount = computed(() =>
+    Math.max(0, (this.event()?.slots?.length ?? 0) - this.SLOTS_PREVIEW),
+  );
+
   readonly lightboxOpen = signal(false);
   readonly imageEditorOpen = signal(false);
   private prevBodyOverflow: string | null = null;

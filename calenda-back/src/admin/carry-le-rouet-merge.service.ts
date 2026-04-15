@@ -683,15 +683,46 @@ export class CarryLeRouetMergeService {
     }
 
     const endKey = dateFin ? toKey(dateFin) : toKey(dateDebut);
+    const allowedDays = openingText ? this.extractDaysOfWeek(openingText) : null;
     const slots: { date: string; heureDebut: string; heureFin: string }[] = [];
     const cur = new Date(dateDebut.getFullYear(), dateDebut.getMonth(), dateDebut.getDate());
 
     while (toKey(cur) <= endKey && slots.length < 365) {
-      slots.push({ date: toKey(cur), heureDebut: hDebutStr, heureFin: hFinStr });
+      if (!allowedDays || allowedDays.has(cur.getDay())) {
+        slots.push({ date: toKey(cur), heureDebut: hDebutStr, heureFin: hFinStr });
+      }
       cur.setDate(cur.getDate() + 1);
     }
 
     return slots.length > 0 ? slots : [{ date: toKey(dateDebut), heureDebut: hDebutStr, heureFin: hFinStr }];
+  }
+
+  private extractDaysOfWeek(text: string): Set<number> | null {
+    const src = (text ?? '').toLowerCase();
+    if (/tous les jours|chaque jour/i.test(src)) return null;
+    const dayOrder = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+    const dayToNum: Record<string, number> = {
+      lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6, dimanche: 0,
+    };
+    const rangeRe = /\bdu\s+(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+au\s+(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/i;
+    const rm = rangeRe.exec(src);
+    if (rm) {
+      const startIdx = dayOrder.indexOf((rm[1] ?? '').toLowerCase());
+      const endIdx = dayOrder.indexOf((rm[2] ?? '').toLowerCase());
+      if (startIdx >= 0 && endIdx >= 0) {
+        const found = new Set<number>();
+        const len = ((endIdx - startIdx + 7) % 7) + 1;
+        for (let i = 0; i < len; i++) {
+          found.add(dayToNum[dayOrder[(startIdx + i) % 7]]);
+        }
+        return found;
+      }
+    }
+    const found = new Set<number>();
+    for (const name of dayOrder) {
+      if (new RegExp(`\\b${name}\\b`).test(src)) found.add(dayToNum[name]);
+    }
+    return found.size > 0 ? found : null;
   }
 
   // ─── HTML utilities (same CMS as Martigues / Tourinsoft) ───────────────────
