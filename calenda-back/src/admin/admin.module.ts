@@ -8,11 +8,12 @@ import { User } from '../users/user.entity';
 import { AdminController } from './admin.controller';
 import { MartiguesMergeService } from './martigues-merge.service';
 import { SalsaOlivierMergeService } from './salsa-olivier-merge.service';
+import { CarryLeRouetMergeService } from './carry-le-rouet-merge.service';
 
 @Module({
   imports: [CommonModule, EventsModule, TypeOrmModule.forFeature([Event, EventSlot, User])],
   controllers: [AdminController],
-  providers: [MartiguesMergeService, SalsaOlivierMergeService],
+  providers: [MartiguesMergeService, SalsaOlivierMergeService, CarryLeRouetMergeService],
 })
 /** Module Admin (endpoints réservés au rôle ADMIN). */
 export class AdminModule {}
