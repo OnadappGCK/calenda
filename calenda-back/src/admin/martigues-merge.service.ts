@@ -862,7 +862,7 @@ export class MartiguesMergeService {
         const em = dateFin.getMinutes();
         hFinStr = (ef === 23 && em === 59) ? '23:59' : toHM(dateFin);
       } else {
-        hFinStr = '18:00';
+        hFinStr = '23:59';
       }
       void endKey;
     }

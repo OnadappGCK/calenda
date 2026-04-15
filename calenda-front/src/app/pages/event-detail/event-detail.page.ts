@@ -420,7 +420,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
     }
     const date = e.dateDebut ? e.dateDebut.slice(0, 10) : '';
     const heureDebut = e.dateDebut ? e.dateDebut.slice(11, 16) : '09:00';
-    const heureFin = e.dateFin ? e.dateFin.slice(11, 16) : '18:00';
+    const heureFin = e.dateFin ? e.dateFin.slice(11, 16) : '23:59';
     return date ? [{ date, heureDebut, heureFin }] : [];
   }
 
