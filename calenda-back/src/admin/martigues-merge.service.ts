@@ -1,8 +1,11 @@
+import { normalizePhone } from './merge-utils';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
+import { EventTag } from '../common/enums/event-tag.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
+import { guessTags } from '../common/utils/guess-tags.util';
 import { EtablissementType } from '../common/enums/etablissement-type.enum';
 import { EtablissementsService } from '../etablissements/etablissements.service';
 import { Event } from '../events/event.entity';
@@ -184,25 +187,22 @@ export class MartiguesMergeService {
           withDescription++;
         }
 
-        const start = new Date(detail.dateDebut);
-        const end = new Date(detail.dateDebut);
-        start.setMinutes(start.getMinutes() - 1);
-        end.setMinutes(end.getMinutes() + 1);
+        const dayStart = new Date(detail.dateDebut);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(detail.dateDebut);
+        dayEnd.setHours(23, 59, 59, 999);
 
         const existing = await this.eventsRepo.findOne({
           where: {
             origin: EventOrigin.MARTIGUES_SITE,
             titre: detail.titre,
-            dateDebut: Between(start, end),
+            dateDebut: Between(dayStart, dayEnd),
           },
         });
 
         if (existing) {
-          if (!existing.contact && detail.contact) {
-            existing.contact = detail.contact;
-            await this.eventsRepo.save(existing);
-          }
           skippedExisting++;
+          urls.push(sourceUrl);
 
           if (debugSamples.length < 20) {
             debugSamples.push({
@@ -337,26 +337,36 @@ export class MartiguesMergeService {
           continue;
         }
 
-        const start = new Date(detail.dateDebut);
-        const end = new Date(detail.dateDebut);
-        start.setMinutes(start.getMinutes() - 1);
-        end.setMinutes(end.getMinutes() + 1);
+        const applyDayStart = new Date(detail.dateDebut);
+        applyDayStart.setHours(0, 0, 0, 0);
+        const applyDayEnd = new Date(detail.dateDebut);
+        applyDayEnd.setHours(23, 59, 59, 999);
 
         const existing = await this.eventsRepo.findOne({
           where: {
             origin: EventOrigin.MARTIGUES_SITE,
             titre: detail.titre,
-            dateDebut: Between(start, end),
+            dateDebut: Between(applyDayStart, applyDayEnd),
           },
         });
 
         if (existing) {
+          await this.slotsRepo.delete({ eventId: existing.id });
+          if (detail.slots.length > 0) {
+            const slotEntities = detail.slots.map((s, i) =>
+              this.slotsRepo.create({ eventId: existing.id, date: s.date, heureDebut: s.heureDebut, heureFin: s.heureFin, ordre: i }),
+            );
+            await this.slotsRepo.save(slotEntities);
+          }
+          if (detail.imageUrl && !existing.imageUrl) {
+            existing.imageUrl = detail.imageUrl;
+            await this.eventsRepo.save(existing);
+          }
           skippedExisting++;
-
           if (sampleLogged < 10) {
             sampleLogged++;
             this.logger.log(
-              `martigues_apply_sample status=existing url=${sourceUrl} titre=${JSON.stringify(detail.titre)} debut=${detail.dateDebut.toISOString()} fin=${detail.dateFin ? detail.dateFin.toISOString() : 'null'}`,
+              `martigues_apply_sample status=existing_updated url=${sourceUrl} titre=${JSON.stringify(detail.titre)}`,
             );
           }
           continue;
@@ -370,6 +380,9 @@ export class MartiguesMergeService {
             adresse: detail.adresse,
             ville: detail.ville,
             contact: detail.contact,
+            horaires: detail.horaires,
+            heureOuverture: detail.heureOuverture,
+            heureFermeture: detail.heureFermeture,
             type: EtablissementType.ACTIVITE,
             tags: [],
             latitude: detail.latitude,
@@ -391,7 +404,7 @@ export class MartiguesMergeService {
           latitude: detail.latitude,
           longitude: detail.longitude,
           theme: null,
-          caracteristiques: null,
+          caracteristiques: detail.caracteristiques.length ? detail.caracteristiques : null,
           imageUrl: detail.imageUrl,
           tarif: detail.tarif ?? 'Non renseigné',
           contact: detail.contact,
@@ -629,6 +642,29 @@ export class MartiguesMergeService {
       .trim();
   }
 
+  private extractFirstContentImage(html: string): string | null {
+    const content = html
+      .replace(/<header[\s\S]*?<\/header>/gi, '')
+      .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+      .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '');
+    const skipRe = /logo|icon|sprite|avatar|picto|blank|placeholder|favicon/i;
+    const figRe = /<figure[\s\S]*?<img\b[^>]*?\bsrc=['"]([^'"\s]+)['"][^>]*>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = figRe.exec(content))) {
+      const src = m[1];
+      if (src && !skipRe.test(src)) return src;
+    }
+    const re = /<img\b[^>]*?\bsrc=['"]([^'"\s]+)['"][^>]*>/gi;
+    while ((m = re.exec(content))) {
+      const src = m[1];
+      if (!src || skipRe.test(src)) continue;
+      if (!/\.(?:jpg|jpeg|png|webp)(\?[^'"]*)?$/i.test(src)) continue;
+      return src;
+    }
+    return null;
+  }
+
   private htmlToText(html: string) {
     const cleaned = (html ?? '')
       .replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -643,6 +679,7 @@ export class MartiguesMergeService {
     const noTags = withBreaks.replace(/<[^>]+>/g, ' ');
     const decoded = this.decodeHtml(noTags);
     return decoded
+      .replace(/[\u2018\u2019\u201A\u201B\u02BC]/g, "'")
       .replace(/\r/g, '')
       .split('\n')
       .map((l) => l.replace(/\s+/g, ' ').trim())
@@ -673,7 +710,7 @@ export class MartiguesMergeService {
 
     for (let i = 0; i < lines.length; i++) {
       const n = norm(lines[i]);
-      if (!n.startsWith(startLower)) continue;
+      if (!n.includes(startLower)) continue;
 
       const out: string[] = [];
       const m = startLineRe.exec(lines[i]);
@@ -793,7 +830,7 @@ export class MartiguesMergeService {
       ]) ?? html;
 
     const emailFromHref = this.matchFirstGroup(sectionHtml, /href=['"]mailto:([^'"\s>]+)/i);
-    const telFromHref = this.matchFirstGroup(sectionHtml, /href=['"]tel:([^'"\s>]+)/i);
+    const telFromHref = this.matchFirstGroup(sectionHtml, /href=['"]tel:([^'"]+)['"]/i);
 
     const sectionText = this.htmlToText(sectionHtml);
     const emailFromText = this.matchFirstGroup(
@@ -805,8 +842,7 @@ export class MartiguesMergeService {
     const emailRaw = (emailFromHref ?? emailFromText ?? '').trim();
     const email = emailRaw ? emailRaw.split('?')[0]?.trim() || '' : '';
 
-    const phoneRaw = (telFromHref ?? telFromText ?? '').trim();
-    const phone = phoneRaw ? phoneRaw.split('?')[0]?.trim() || '' : '';
+    const phone = normalizePhone((telFromHref ?? telFromText ?? '').split('?')[0] ?? '');
 
     if (!email && !phone) return null;
     return `email : ${email || 'non mentionné'} Téléphone : ${phone || 'non mentionné'}`;
@@ -853,6 +889,75 @@ export class MartiguesMergeService {
     return this.extractOpeningHoursTextFromPageText(pageText);
   }
 
+  private extractHoursFromJsonLd(html: string): { hDebut: string; hFin: string } | null {
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    // 1. schema.org JSON-LD opens/closes
+    const opensM = /"opens"\s*:\s*"(\d{1,2}:\d{2})"/i.exec(html);
+    const closesM = /"closes"\s*:\s*"(\d{1,2}:\d{2})"/i.exec(html);
+    if (opensM && closesM) return { hDebut: opensM[1], hFin: closesM[1] };
+    // 2. Common Tourinsoft/CMS keys anywhere in HTML
+    const startKeys = ["HoraireDebut", "heureOuverture", "heuredebut", "ouverture"];
+    const endKeys   = ["HoraireFin",   "heureFermeture", "heurefin",  "fermeture"];
+    for (let i = 0; i < startKeys.length; i++) {
+      const sm = new RegExp(`["']${startKeys[i]}["']\\s*:\\s*["'](\\d{1,2}[h:]\\d{0,2})["']`, 'i').exec(html);
+      const em = new RegExp(`["']${endKeys[i]}["']\\s*:\\s*["'](\\d{1,2}[h:]\\d{0,2})["']`, 'i').exec(html);
+      if (sm && em) {
+        const s = this.parseTimeStr(sm[1]); const e = this.parseTimeStr(em[1]);
+        if (s && e) return { hDebut: `${pad2(s.hh)}:${pad2(s.mm)}`, hFin: `${pad2(e.hh)}:${pad2(e.mm)}` };
+      }
+    }
+    // 3. French format anywhere in raw HTML: "de 7h \u00e0 12h30"
+    const frM = /\bde\s+(\d{1,2})h(\d{0,2})\s+[a\u00e0]\s+(\d{1,2})h(\d{0,2})\b/i.exec(html);
+    if (frM) {
+      const hh1 = parseInt(frM[1]); const mm1 = parseInt(frM[2] || '0');
+      const hh2 = parseInt(frM[3]); const mm2 = parseInt(frM[4] || '0');
+      if (hh1 >= 4 && hh1 < 20 && hh2 > hh1)
+        return { hDebut: `${pad2(hh1)}:${pad2(mm1)}`, hFin: `${pad2(hh2)}:${pad2(mm2)}` };
+    }
+    return null;
+  }
+
+  private parseTimeStr(s: string): { hh: number; mm: number } | null {
+    const m = /^(\d{1,2})[h:](\d{0,2})$/.exec((s ?? '').trim());
+    if (!m) return null;
+    const hh = parseInt(m[1]); const mm = parseInt(m[2] || '0');
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return { hh, mm };
+  }
+
+  private extractDaysFromJsonLd(html: string): Set<number> | null {
+    const dayMap: Record<string, number> = {
+      monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 0,
+    };
+    const arrM = /"dayOfWeek"\s*:\s*\[([^\]]+)\]/i.exec(html);
+    const rawValues: string[] = [];
+    if (arrM) {
+      const matches = arrM[1].match(/"([^"]+)"/g) ?? [];
+      rawValues.push(...matches.map((v) => v.replace(/"/g, '')));
+    } else {
+      const singleM = /"dayOfWeek"\s*:\s*"([^"]+)"/i.exec(html);
+      if (singleM) rawValues.push(singleM[1]);
+    }
+    const days = new Set<number>();
+    for (const v of rawValues) {
+      const key = v.toLowerCase().replace(/.*\//, '');
+      const num = dayMap[key];
+      if (num !== undefined) days.add(num);
+    }
+    return days.size > 0 ? days : null;
+  }
+
+  private extractOpeningHoursFromFullText(pageText: string): string | null {
+    const dayRe = /\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|tous les jours|chaque jour)\b/i;
+    const hourRe = /\bde\s+\d{1,2}\s*h/i;
+    const lines = pageText.split('\n');
+    for (const line of lines) {
+      const t = line.trim();
+      if (dayRe.test(t) && hourRe.test(t) && t.length >= 20 && t.length <= 300) return t;
+    }
+    return null;
+  }
+
   /**
    * Génère un slot par jour entre dateDebut et dateFin.
    * Tente d'extraire les heures depuis le texte d'ouverture, sinon utilise les heures de dateDebut/dateFin.
@@ -861,6 +966,9 @@ export class MartiguesMergeService {
     dateDebut: Date,
     dateFin: Date | null,
     openingText: string | null,
+    dayFallbackText?: string | null,
+    hoursOverride?: { hDebut: string; hFin: string } | null,
+    daysOverride?: Set<number> | null,
   ): { date: string; heureDebut: string; heureFin: string }[] {
     const pad2 = (n: number) => String(n).padStart(2, '0');
     const toKey = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -873,9 +981,12 @@ export class MartiguesMergeService {
     if (hr) {
       hDebutStr = `${pad2(hr.start.hh)}:${pad2(hr.start.mm)}`;
       hFinStr = `${pad2(hr.end.hh)}:${pad2(hr.end.mm)}`;
+    } else if (hoursOverride) {
+      hDebutStr = hoursOverride.hDebut;
+      hFinStr = hoursOverride.hFin;
     } else {
       const h = dateDebut.getHours();
-      hDebutStr = (h === 12 || h === 0) ? '09:00' : toHM(dateDebut);
+      hDebutStr = (h === 12 || h === 0 || h === 1) ? '09:00' : toHM(dateDebut);
       const endKey = dateFin ? toKey(dateFin) : toKey(dateDebut);
       const sameDay = dateFin && toKey(dateFin) === toKey(dateDebut);
       if (dateFin && sameDay) {
@@ -889,7 +1000,9 @@ export class MartiguesMergeService {
     }
 
     const endKey = dateFin ? toKey(dateFin) : toKey(dateDebut);
-    const allowedDays = openingText ? this.extractDaysOfWeek(openingText) : null;
+    const allowedDays = openingText
+      ? this.extractDaysOfWeek(openingText)
+      : daysOverride ?? (dayFallbackText ? this.extractDaysOfWeek(dayFallbackText) : null);
     const slots: { date: string; heureDebut: string; heureFin: string }[] = [];
     const cur = new Date(dateDebut.getFullYear(), dateDebut.getMonth(), dateDebut.getDate());
 
@@ -930,7 +1043,7 @@ export class MartiguesMergeService {
     }
     const found = new Set<number>();
     for (const name of dayOrder) {
-      if (new RegExp(`\\b${name}\\b`).test(src)) found.add(dayToNum[name]);
+      if (new RegExp(`\\b${name}s?\\b`).test(src)) found.add(dayToNum[name]);
     }
     return found.size > 0 ? found : null;
   }
@@ -951,6 +1064,10 @@ export class MartiguesMergeService {
       latitude: number | null;
       longitude: number | null;
       categorie: EventCategory;
+      caracteristiques: EventTag[];
+      horaires: string | null;
+      heureOuverture: string | null;
+      heureFermeture: string | null;
     };
     isEverydayActivity: boolean;
     reason: string;
@@ -975,7 +1092,10 @@ export class MartiguesMergeService {
       .sort((a, b) => b.length - a.length)[0];
 
     const ogImage = this.matchMeta(html, 'og:image');
-    const imageUrl = (this.firstString(jsonLd?.image) ?? ogImage ?? null)?.trim() || null;
+    const contentImage = this.extractFirstContentImage(html);
+    const imageUrl = (this.firstString(jsonLd?.image) ?? ogImage ?? contentImage ?? null)
+      ? this.decodeHtml((this.firstString(jsonLd?.image) ?? ogImage ?? contentImage)!).trim() || null
+      : null;
 
     const tarif = this.cleanTarifText(this.extractTarifText(html)) ?? 'Non renseigné';
 
@@ -1098,8 +1218,9 @@ export class MartiguesMergeService {
     const adresse = (adresseFromHtml || adresseFromJsonLd || adresseFallback || lieu || 'Martigues').trim() || null;
 
     const categorie = this.guessCategory(sourceUrl, titre);
+    const caracteristiques = guessTags(titre, description ?? '');
 
-    const opening = this.extractOpeningHoursText(html);
+    const opening = this.extractOpeningHoursText(html) ?? this.extractOpeningHoursFromFullText(pageText);
 
     if (!range && dateDebut) {
       const hr = opening ? this.extractHoursRange(opening) : null;
@@ -1118,8 +1239,14 @@ export class MartiguesMergeService {
       }
     }
 
-    const slots = this.generateSlots(dateDebut, dateFin, opening);
+    const jsonLdHours = this.extractHoursFromJsonLd(html);
+    const jsonLdDays = this.extractDaysFromJsonLd(html);
+    const slots = this.generateSlots(dateDebut, dateFin, opening, presDesc ?? description ?? null, jsonLdHours, jsonLdDays);
     const isEverydayActivity = this.isEverydayPattern(opening, dateDebut, dateFin);
+    const hr = opening ? this.extractHoursRange(opening) : null;
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const heureOuverture = hr ? `${pad2(hr.start.hh)}:${pad2(hr.start.mm)}` : null;
+    const heureFermeture = hr ? `${pad2(hr.end.hh)}:${pad2(hr.end.mm)}` : null;
 
     return {
       detail: {
@@ -1137,6 +1264,10 @@ export class MartiguesMergeService {
         latitude: typeof latitude === 'number' ? latitude : null,
         longitude: typeof longitude === 'number' ? longitude : null,
         categorie,
+        caracteristiques,
+        horaires: opening,
+        heureOuverture,
+        heureFermeture,
       },
       isEverydayActivity,
       reason: 'ok',
@@ -1788,13 +1919,14 @@ export class MartiguesMergeService {
 
   private guessCategory(sourceUrl: string, titre: string): EventCategory {
     const t = titre.toLowerCase();
-    if (t.includes('exposition')) return EventCategory.EXPOSITION;
-    if (t.includes('concert')) return EventCategory.CONCERT;
-    if (t.includes('danse') || t.includes('salsa')) return EventCategory.DANSE;
-    if (t.includes('artifice') || t.includes('pyro') || t.includes('feux')) return EventCategory.FEUX_D_ARTIFICE;
-
-    if (sourceUrl.includes('/evenements/culture/')) return EventCategory.SPECTACLE;
-
-    return EventCategory.AUTRE;
+    if (/(exposition|galerie|mus[eé]e)/i.test(t)) return EventCategory.ARTS_EXPOS;
+    if (/(concert|spectacle|th[eé][aâ]tre|humour|cin[eé]ma)/i.test(t)) return EventCategory.CULTURE_SPECTACLE;
+    if (/(soir[eé]e|danse|festival|afterwork|salsa|tango|bachata)/i.test(t)) return EventCategory.VIE_SOCIALE;
+    if (/(sport|bien.?[eê]tre|atelier|cours\b)/i.test(t)) return EventCategory.ACTIVITES;
+    if (/(march[eé]|brocante|salon\b)/i.test(t)) return EventCategory.VIE_LOCALE;
+    if (/(enfants?|famille|kids|jeunesse)/i.test(t)) return EventCategory.FAMILLE;
+    if (/(feux.?d.?artifice|feu.?d.?artifice|feu.?dartifice|pyrotechnie)/i.test(t)) return EventCategory.SPECIAL;
+    if (sourceUrl.includes('/evenements/culture/')) return EventCategory.CULTURE_SPECTACLE;
+    return EventCategory.SPECIAL;
   }
 }

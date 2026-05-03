@@ -80,7 +80,8 @@ export class EventsService {
   async findAll(query: ListEventsQueryDto, user: RequestUser) {
     const qb = this.eventsRepo
       .createQueryBuilder('event')
-      .leftJoinAndSelect('event.organisateur', 'organisateur');
+      .leftJoinAndSelect('event.organisateur', 'organisateur')
+      .leftJoinAndSelect('event.slots', 'slots');
 
     const includePending = !!(query.includePending && this.canSeeNonPublic(user));
 

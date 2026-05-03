@@ -48,6 +48,7 @@ export class AdminPendingPage implements OnInit {
   };
 
   readonly items = signal<EventDto[]>([]);
+  readonly pendingEtabs = signal<any[]>([]);
 
   readonly selectedIds = signal<Set<string>>(new Set());
 
@@ -156,9 +157,23 @@ export class AdminPendingPage implements OnInit {
 
   /** Recharge la liste des événements en attente depuis l'API. */
   async reload() {
-    const items = await this.adminService.pendingEvents().toPromise();
+    const [items, etabs] = await Promise.all([
+      this.adminService.pendingEvents().toPromise(),
+      this.adminService.pendingEtablissements().toPromise(),
+    ]);
     this.items.set(items ?? []);
+    this.pendingEtabs.set(etabs ?? []);
     this.selectedIds.set(new Set());
+  }
+
+  async validateEtab(id: string) {
+    await this.adminService.validateEtablissement(id).toPromise();
+    await this.reload();
+  }
+
+  async deleteEtab(id: string) {
+    await this.adminService.deleteEtablissement(id).toPromise();
+    await this.reload();
   }
 
   /** Ouvre/ferme l'affichage détaillé d'une carte (UI seulement). */

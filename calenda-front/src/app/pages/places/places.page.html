@@ -1,6 +1,12 @@
 <div class="placesPage">
 
-  <!-- Type tabs -->
+  <!-- Hero band: type title full-width -->
+  <div class="typeHeroBand">
+    <span class="typeHeroIcon">{{ TYPE_ICONS[selectedType()] }}</span>
+    <h1 class="typeHeroTitle">{{ TYPE_LABELS_HERO[selectedType()] }}</h1>
+  </div>
+
+  <!-- Type tabs: full-width -->
   <div class="typeTabs">
     @for (t of TYPES; track t) {
       <button
@@ -70,8 +76,6 @@
             <input type="text" [(ngModel)]="newImageUrl" placeholder="https://…" />
           </label>
         </div>
-
-        <!-- Tags -->
         <div class="tagsSection">
           <div class="tagsLabel">Tags (emoji + mot)</div>
           <div class="tagsSelected">
@@ -83,29 +87,20 @@
             }
           </div>
           <div class="tagInputRow">
-            <input
-              type="text"
-              [(ngModel)]="newTagInput"
-              placeholder="🍕 Pizza"
-              (keydown.enter)="addTagFromInput()"
-            />
+            <input type="text" [(ngModel)]="newTagInput" placeholder="🍕 Pizza" (keydown.enter)="addTagFromInput()" />
             <button type="button" class="btn btnSmall" (click)="addTagFromInput()">Ajouter</button>
           </div>
           @if (allTagsForForm().length > 0) {
-            <div class="existingTagsLabel">Tags existants (cliquer pour ajouter) :</div>
+            <div class="existingTagsLabel">Tags existants :</div>
             <div class="existingTags">
               @for (item of allTagsForForm(); track item.tag) {
-                <button
-                  type="button"
-                  class="tagChip"
-                  [class.tagChipSelected]="newTags.includes(item.tag)"
-                  (click)="addExistingTag(item.tag)"
-                >{{ item.tag }} <span class="tagCount">×{{ item.count }}</span></button>
+                <button type="button" class="tagChip" [class.tagChipSelected]="newTags.includes(item.tag)" (click)="addExistingTag(item.tag)">
+                  {{ item.tag }} <span class="tagCount">×{{ item.count }}</span>
+                </button>
               }
             </div>
           }
         </div>
-
         <div class="formActions">
           <button class="btn btnPrimary" type="button" [disabled]="saving || !newNom.trim()" (click)="submitCreate()">
             {{ saving ? 'Enregistrement…' : 'Créer' }}
@@ -115,85 +110,200 @@
       </div>
     }
 
-    <!-- Titre -->
-    <h2 class="pageTitle">{{ typeLabel() }}</h2>
+    <!-- Layout principal -->
+    <div class="contentLayout">
 
-    <!-- Featured -->
-    @if (featuredPlace()) {
-      <a class="featuredCard" [routerLink]="['/places', featuredPlace()!.id]">
-        @if (placeImageUrl(featuredPlace()!)) {
-          <div class="featuredImg" [style.background-image]="'url(' + placeImageUrl(featuredPlace()!) + ')'"></div>
-        } @else {
-          <div class="featuredImgPlaceholder">{{ TYPE_ICONS[featuredPlace()!.type] }}</div>
-        }
-        <div class="featuredBody">
-          <div class="featuredBadge">{{ TYPE_ICONS[featuredPlace()!.type] }} À la une</div>
-          <div class="featuredNom">{{ featuredPlace()!.nom }}</div>
-          @if (featuredPlace()!.ville) {
-            <div class="featuredVille">📍 {{ featuredPlace()!.ville }}</div>
+      <!-- Sidebar gauche (desktop) / cachée mobile -->
+      <aside class="sidebar">
+        <div class="filterPanel">
+          <div class="filterSearch">
+            <input type="text" class="searchInput" [value]="searchName()" (input)="searchName.set($any($event.target).value)" placeholder="🔍 Nom…" />
+            <input type="text" class="searchInput searchInputAddr" [value]="searchAddress()" (input)="searchAddress.set($any($event.target).value)" placeholder="📍 Adresse, ville…" />
+            @if (topCities().length > 0) {
+              <div class="cityChips">
+                @for (v of topCities(); track v) {
+                  <button type="button" class="cityChip" [class.active]="searchAddress() === v" (click)="selectCity(v)">
+                    {{ v }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+          @if (topTags().length > 0) {
+            <div class="filterTagsSection">
+              <div class="filterTagsTitle">Filtrer par tag</div>
+              <div class="filterTagsRow">
+                @for (item of topTags(); track item.tag) {
+                  <button type="button" class="filterTag" [class.active]="isTagSelected(item.tag)" (click)="toggleTag(item.tag)">
+                    {{ item.tag }}
+                  </button>
+                }
+                @if (selectedTags().size > 0) {
+                  <button type="button" class="filterTag filterClear" (click)="clearTags()">✕ Effacer</button>
+                }
+              </div>
+            </div>
           }
-          @if (featuredPlace()!.description) {
-            <div class="featuredDesc">{{ featuredPlace()!.description }}</div>
-          }
-          <div class="featuredTags">
-            @for (tag of (featuredPlace()!.tags ?? []).slice(0, 4); track tag) {
-              <span class="tagChip">{{ tag }}</span>
+          <div class="filterTimeSection">
+            <div class="filterTagsTitle">Ouvert à</div>
+            <input
+              type="time"
+              class="timeInput"
+              [value]="filterOpenAt()"
+              (input)="filterOpenAt.set($any($event.target).value)"
+            />
+            @if (filterOpenAt()) {
+              <button type="button" class="filterTag filterClear" (click)="filterOpenAt.set('')">✕ Effacer</button>
             }
           </div>
         </div>
-      </a>
-    }
+      </aside>
 
-    <!-- Tag filters -->
-    @if (topTags().length > 0) {
-      <div class="filtersRow">
-        @for (item of topTags(); track item.tag) {
-          <button
-            type="button"
-            class="filterTag"
-            [class.active]="isTagSelected(item.tag)"
-            (click)="toggleTag(item.tag)"
-          >{{ item.tag }}</button>
-        }
-        @if (selectedTags().size > 0) {
-          <button type="button" class="filterTag filterClear" (click)="selectedTags.set(new Set())">✕ Effacer</button>
-        }
-      </div>
-    }
+      <!-- Zone principale -->
+      <div class="mainArea">
 
-    <!-- Grid -->
-    @if (loading()) {
-      <div class="loading">Chargement…</div>
-    } @else if (gridPlaces().length === 0 && !featuredPlace()) {
-      <div class="empty">Aucun établissement dans cette catégorie pour l'instant.</div>
-    } @else {
-      <div class="placesGrid">
-        @for (place of gridPlaces(); track place.id) {
-          <a class="placeCard" [routerLink]="['/places', place.id]">
-            @if (placeImageUrl(place)) {
-              <div class="placeCardImg" [style.background-image]="'url(' + placeImageUrl(place) + ')'"></div>
+        <!-- ⭐⭐ Premium 2 — grande bannière -->
+        @if (premium2Place()) {
+          <a class="fp2Card" [routerLink]="['/places', premium2Place()!.id]">
+            @if (placeImageUrl(premium2Place()!)) {
+              <div class="fp2Bg" [style.background-image]="'url(' + placeImageUrl(premium2Place()!) + ')'"></div>
             } @else {
-              <div class="placeCardImgPlaceholder">{{ TYPE_ICONS[place.type] }}</div>
+              <div class="fp2BgPlaceholder">{{ TYPE_ICONS[premium2Place()!.type] }}</div>
             }
-            <div class="placeCardBody">
-              <div class="placeCardNom">{{ place.nom }}</div>
-              @if (place.ville) {
-                <div class="placeCardVille">📍 {{ place.ville }}</div>
-              }
-              @if (place.description) {
-                <div class="placeCardDesc">{{ place.description }}</div>
-              }
-              <div class="placeCardTags">
-                @for (tag of (place.tags ?? []).slice(0, 3); track tag) {
+            <div class="fp2Content">
+              <div class="fp2Badge">⭐⭐ Premium</div>
+              <div class="fp2Nom">{{ premium2Place()!.nom }}</div>
+              @if (premium2Place()!.ville) { <div class="fp2Ville">📍 {{ premium2Place()!.ville }}</div> }
+              @if (premium2Place()!.description) { <div class="fp2Desc">{{ premium2Place()!.description }}</div> }
+              <div class="fp2Tags">
+                @for (tag of (premium2Place()!.tags ?? []).slice(0, 5); track tag) {
                   <span class="tagChip">{{ tag }}</span>
                 }
               </div>
             </div>
-            <div class="placeCardAction">Voir plus →</div>
           </a>
         }
-      </div>
-    }
+
+        <!-- ⭐ Premium 1 — carte moyenne -->
+        @if (premium1Place()) {
+          <a class="fp1Card" [routerLink]="['/places', premium1Place()!.id]">
+            @if (placeImageUrl(premium1Place()!)) {
+              <div class="fp1Img" [style.background-image]="'url(' + placeImageUrl(premium1Place()!) + ')'"></div>
+            } @else {
+              <div class="fp1ImgPlaceholder">{{ TYPE_ICONS[premium1Place()!.type] }}</div>
+            }
+            <div class="fp1Body">
+              <div class="fp1Badge">⭐ À la une</div>
+              <div class="fp1Nom">{{ premium1Place()!.nom }}</div>
+              @if (premium1Place()!.ville) { <div class="fp1Ville">📍 {{ premium1Place()!.ville }}</div> }
+              @if (premium1Place()!.description) { <div class="fp1Desc">{{ premium1Place()!.description }}</div> }
+              <div class="fp1Tags">
+                @for (tag of (premium1Place()!.tags ?? []).slice(0, 4); track tag) {
+                  <span class="tagChip">{{ tag }}</span>
+                }
+              </div>
+            </div>
+          </a>
+        }
+
+        <!-- Normal featured row -->
+        @if (normalFeaturedPlaces().length > 0) {
+          <div class="normalFeaturedRow">
+            @for (p of normalFeaturedPlaces(); track p.id) {
+              <a class="normalFeaturedCard" [routerLink]="['/places', p.id]">
+                @if (placeImageUrl(p)) {
+                  <div class="nfImg" [style.background-image]="'url(' + placeImageUrl(p) + ')'"></div>
+                } @else {
+                  <div class="nfImgPlaceholder">{{ TYPE_ICONS[p.type] }}</div>
+                }
+                <div class="nfBody">
+                  <div class="nfBadge">✨ À découvrir</div>
+                  <div class="nfNom">{{ p.nom }}</div>
+                  @if (p.ville) { <div class="nfVille">📍 {{ p.ville }}</div> }
+                </div>
+              </a>
+            }
+          </div>
+        }
+
+        <!-- Sidebar inline (mobile uniquement, après à-la-une) -->
+        <div class="inlineSidebar">
+          <div class="filterPanel">
+            <div class="filterSearch">
+              <input type="text" class="searchInput" [value]="searchName()" (input)="searchName.set($any($event.target).value)" placeholder="🔍 Nom…" />
+              <input type="text" class="searchInput searchInputAddr" [value]="searchAddress()" (input)="searchAddress.set($any($event.target).value)" placeholder="📍 Adresse, ville…" />
+              @if (topCities().length > 0) {
+                <div class="cityChips">
+                  @for (v of topCities(); track v) {
+                    <button type="button" class="cityChip" [class.active]="searchAddress() === v" (click)="selectCity(v)">
+                      {{ v }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+            @if (topTags().length > 0) {
+              <div class="filterTagsSection">
+                <div class="filterTagsTitle">Filtrer par tag</div>
+                <div class="filterTagsRow">
+                  @for (item of topTags(); track item.tag) {
+                    <button type="button" class="filterTag" [class.active]="isTagSelected(item.tag)" (click)="toggleTag(item.tag)">
+                      {{ item.tag }}
+                    </button>
+                  }
+                  @if (selectedTags().size > 0) {
+                    <button type="button" class="filterTag filterClear" (click)="clearTags()">✕ Effacer</button>
+                  }
+                </div>
+              </div>
+            }
+            <div class="filterTimeSection">
+              <div class="filterTagsTitle">Ouvert à</div>
+              <input
+                type="time"
+                class="timeInput"
+                [value]="filterOpenAt()"
+                (input)="filterOpenAt.set($any($event.target).value)"
+              />
+              @if (filterOpenAt()) {
+                <button type="button" class="filterTag filterClear" (click)="filterOpenAt.set('')">✕ Effacer</button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid -->
+        @if (loading()) {
+          <div class="loading">Chargement…</div>
+        } @else if (gridPlaces().length === 0 && !premium2Place() && !premium1Place() && normalFeaturedPlaces().length === 0) {
+          <div class="empty">Aucun établissement dans cette catégorie pour l'instant.</div>
+        } @else {
+          <div class="placesGrid">
+            @for (place of gridPlaces(); track place.id) {
+              <a class="placeCard" [routerLink]="['/places', place.id]">
+                @if (placeImageUrl(place)) {
+                  <div class="placeCardImg" [style.background-image]="'url(' + placeImageUrl(place) + ')'"></div>
+                } @else {
+                  <div class="placeCardImgPlaceholder">{{ TYPE_ICONS[place.type] }}</div>
+                }
+                <div class="placeCardBody">
+                  <div class="placeCardNom">{{ place.nom }}</div>
+                  @if (place.ville) { <div class="placeCardVille">📍 {{ place.ville }}</div> }
+                  @if (place.description) { <div class="placeCardDesc">{{ place.description }}</div> }
+                  <div class="placeCardTags">
+                    @for (tag of (place.tags ?? []).slice(0, 3); track tag) {
+                      <span class="tagChip">{{ tag }}</span>
+                    }
+                  </div>
+                </div>
+                <div class="placeCardAction">Voir plus →</div>
+              </a>
+            }
+          </div>
+        }
+
+      </div><!-- /mainArea -->
+    </div><!-- /contentLayout -->
 
   </div>
 </div>

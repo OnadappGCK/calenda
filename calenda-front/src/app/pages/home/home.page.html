@@ -67,6 +67,28 @@
     </div>
   }
 
+  <div class="sortieSectionWrap">
+    <h2 class="sectionTitle">💡 Idée de sortie ?</h2>
+    <div class="sortieButtons">
+      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'RESTAURANT' }">
+        <span class="sortieBtnIcon">🍽️</span>
+        <span>Pour manger</span>
+      </a>
+      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'SORTIE' }">
+        <span class="sortieBtnIcon">🎭</span>
+        <span>Pour sortir</span>
+      </a>
+      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'BAR' }">
+        <span class="sortieBtnIcon">🍸</span>
+        <span>Pour boire un coup</span>
+      </a>
+      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'ACTIVITE' }">
+        <span class="sortieBtnIcon">🏃</span>
+        <span>Pour s'activer</span>
+      </a>
+    </div>
+  </div>
+
   @if (eventsByCategory().length > 0) {
     <div class="categoriesSection">
       @for (entry of eventsByCategory(); track entry[0]) {
@@ -96,28 +118,6 @@
     </div>
   }
 
-  <div class="sortieSectionWrap">
-    <h2 class="sectionTitle">💡 Idée de sortie ?</h2>
-    <div class="sortieButtons">
-      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'RESTAURANT' }">
-        <span class="sortieBtnIcon">🍽️</span>
-        <span>Pour manger</span>
-      </a>
-      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'SORTIE' }">
-        <span class="sortieBtnIcon">🎭</span>
-        <span>Pour sortir</span>
-      </a>
-      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'BAR' }">
-        <span class="sortieBtnIcon">🍸</span>
-        <span>Pour boire un coup</span>
-      </a>
-      <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'ACTIVITE' }">
-        <span class="sortieBtnIcon">🏃</span>
-        <span>Pour s'activer</span>
-      </a>
-    </div>
-  </div>
-
   <div class="newsHeader">
     <h2 class="sectionTitle">{{ i18n.t('home.news') }}</h2>
     <a class="btn" routerLink="/news">{{ i18n.t('home.seeAll') }}</a>
@@ -127,7 +127,7 @@
     <div class="empty">{{ i18n.t('home.noNews') }}</div>
   } @else {
     <div class="newsGrid">
-      @for (n of news(); track n.id) {
+      @for (n of news().slice(0, 3); track n.id) {
         <article class="newsCard" routerLink="/news">
           @if (newsImageUrl(n.image)) {
             <div class="newsCardImg" [style.background-image]="'url(' + newsImageUrl(n.image) + ')'"></div>

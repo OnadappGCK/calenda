@@ -81,6 +81,18 @@ export class AdminService {
     return this.http.delete(`${this.apiBaseUrl}/admin/events/${id}`);
   }
 
+  pendingEtablissements() {
+    return this.http.get<any[]>(`${this.apiBaseUrl}/admin/pending-etablissements`);
+  }
+
+  validateEtablissement(id: string) {
+    return this.http.patch(`${this.apiBaseUrl}/admin/etablissements/${id}/validate`, {});
+  }
+
+  deleteEtablissement(id: string) {
+    return this.http.delete(`${this.apiBaseUrl}/admin/etablissements/${id}`);
+  }
+
   /** Liste les profils organisateurs (admin). */
   organizers() {
     return this.http.get<{ id: string; pseudo: string; email: string; isAdmin: boolean }[]>(

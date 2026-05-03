@@ -24,11 +24,13 @@
   padding-top: 80px;
 }
 
-@media screen and (max-width: 600px) {
+@media screen and (max-width: 768px) {
   .heroTop {
-    min-height: 340px;
+    min-height: auto;
     margin-bottom: 0;
-    padding-top: 48px;
+    padding-top: 3rem;
+    padding-bottom: 2.5rem;
+    align-items: center;
   }
 
   .heroText {
@@ -38,6 +40,16 @@
 
   .heroText h1 {
     font-size: 1.8rem;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .heroText h1 {
+    font-size: 1.5rem;
+  }
+
+  .pageContent {
+    padding-top: 1.25rem;
   }
 }
 
@@ -500,9 +512,9 @@
   align-items: center;
   gap: 0.5rem;
   padding: 1.1rem 0.75rem;
-  background: $bg-card;
+  background: $surface-1;
   border: 1px solid $border-1;
-  border-radius: $radius-lg;
+  border-radius: 1.25rem;
   text-decoration: none;
   color: $text-1;
   font-size: 0.9rem;
@@ -512,8 +524,8 @@
 
   &:hover {
     background: $overlay-1;
-    border-color: $accent-1;
-    color: $accent-1;
+    border-color: $brand-primary;
+    color: $brand-primary;
     transform: translateY(-2px);
     box-shadow: 0 4px 14px rgba(0,0,0,0.18);
   }

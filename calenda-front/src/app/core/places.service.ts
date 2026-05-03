@@ -18,8 +18,11 @@ export interface PlaceDto {
   sourceUrl: string | null;
   contact: string | null;
   horaires: string | null;
+  heureOuverture: string | null;
+  heureFermeture: string | null;
   public: boolean;
   featured: boolean;
+  featuredTier: number;
   createdAt: string;
 }
 
@@ -35,7 +38,10 @@ export interface CreatePlaceDto {
   longitude?: number | null;
   contact?: string | null;
   horaires?: string | null;
+  heureOuverture?: string | null;
+  heureFermeture?: string | null;
   featured?: boolean;
+  featuredTier?: number;
 }
 
 @Injectable({ providedIn: 'root' })

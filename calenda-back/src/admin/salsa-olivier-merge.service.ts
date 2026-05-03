@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, MoreThanOrEqual, Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
+import { EventTag } from '../common/enums/event-tag.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
 import { Event } from '../events/event.entity';
 import { EventSlot } from '../events/event-slot.entity';
@@ -385,7 +386,7 @@ export class SalsaOlivierMergeService {
           latitude: detail.latitude,
           longitude: detail.longitude,
           theme: null,
-          caracteristiques: null,
+          caracteristiques: detail.caracteristiques?.length ? detail.caracteristiques : null,
           imageUrl: detail.imageUrl,
           tarif: detail.tarif ?? 'Non renseigné',
           contact: detail.contact,
@@ -508,6 +509,7 @@ export class SalsaOlivierMergeService {
       latitude: number | null;
       longitude: number | null;
       categorie: EventCategory;
+      caracteristiques: EventTag[];
     };
     reason: string;
   } {
@@ -566,7 +568,8 @@ export class SalsaOlivierMergeService {
         adresse,
         latitude: null,
         longitude: null,
-        categorie: EventCategory.DANSE,
+        categorie: EventCategory.VIE_SOCIALE,
+        caracteristiques: [EventTag.DANSE, EventTag.MUSIQUE],
       },
       reason: 'ok',
     };

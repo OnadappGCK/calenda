@@ -13,8 +13,11 @@ export class CreateEtablissementDto {
   sourceUrl?: string | null;
   contact?: string | null;
   horaires?: string | null;
+  heureOuverture?: string | null;
+  heureFermeture?: string | null;
   public?: boolean;
   featured?: boolean;
+  featuredTier?: number;
 }
 
 export class UpdateEtablissementDto {
@@ -30,6 +33,9 @@ export class UpdateEtablissementDto {
   sourceUrl?: string | null;
   contact?: string | null;
   horaires?: string | null;
+  heureOuverture?: string | null;
+  heureFermeture?: string | null;
   public?: boolean;
   featured?: boolean;
+  featuredTier?: number;
 }

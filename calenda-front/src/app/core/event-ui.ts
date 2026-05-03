@@ -1,5 +1,19 @@
 import { EventCategory, EventTag } from './events.service';
 
+/** Convertit les anciennes valeurs de catégorie (stockées en DB) vers les nouvelles. */
+export function normalizeCategory(cat: string): EventCategory {
+  switch (cat) {
+    case 'Concert':
+    case 'Spectacle':           return 'Culture & spectacle';
+    case 'Danse':               return 'Vie sociale';
+    case 'Exposition':          return 'Arts & expos';
+    case "Feux d'artifice":
+    case 'Autre':               return 'Spécial';
+    case 'Famille':             return 'Famille';
+    default:                    return (cat as EventCategory);
+  }
+}
+
 function isHttpUrl(url: string) {
   return /^https?:\/\//i.test(url);
 }
@@ -11,23 +25,22 @@ function assetUrl(path: string) {
   return `/assets/${p}`;
 }
 
-export function defaultCategoryImageUrl(category: EventCategory): string {
-  switch (category) {
-    case 'Concert':
-    case 'Spectacle':
+export function defaultCategoryImageUrl(category: string): string {
+  const category2 = normalizeCategory(category);
+  switch (category2) {
+    case 'Culture & spectacle':
       return '/assets/img/categorie/SPECTACLE/spec1.png';
-    case 'Danse':
+    case 'Vie sociale':
       return '/assets/img/categorie/SPECTACLE/spec1.png';
-    case "Feux d’artifice":
+    case 'Spécial':
       return '/assets/img/categorie/FESTIVAL/fest1.png';
-    case 'Exposition':
+    case 'Arts & expos':
       return '/assets/img/categorie/EXPOSITION/expo1.png';
-    case 'Autre':
-      return '/assets/img/categorie/AUTRE/autre1.png';
     default:
       return '/assets/img/categorie/AUTRE/autre1.png';
   }
 }
+
 export function resolveEventImageUrl(category: EventCategory, imageUrl?: string | null): string {
   const raw = (imageUrl ?? '').trim();
   if (!raw) {
@@ -79,81 +92,73 @@ function relativeLuminance(hex: string) {
 }
 
 /** Retourne une couleur (hex) associée à une catégorie d'événement. */
-export function categoryColor(category: EventCategory): string {
-  switch (category) {
-    case 'Spectacle':
-      return '#4A90E2';
-    case 'Exposition':
-      return '#E85D5D';
-    case 'Concert':
-      return '#4A90E2';
-    case 'Danse':
-      return '#2FBF71';
-    case "Feux d’artifice":
-      return '#F5B841';
-    default:
-      return '#8E6AD8';
+export function categoryColor(category: string): string {
+  const c = normalizeCategory(category);
+  switch (c) {
+    case 'Culture & spectacle': return '#5C6BC0';
+    case 'Arts & expos':        return '#E85D5D';
+    case 'Vie sociale':         return '#2FBF71';
+    case 'Activités':          return '#FF7043';
+    case 'Vie locale':          return '#AB47BC';
+    case 'Famille':             return '#F06292';
+    case 'Spécial':            return '#F5B841';
+    default:                    return '#8E6AD8';
   }
 }
 
-export function categoryForegroundColor(category: EventCategory): string {
+export function categoryForegroundColor(category: string): string {
   const base = categoryColor(category);
   return relativeLuminance(base) > 0.58 ? '#0f172a' : '#ffffff';
 }
 
-export function categoryGradient(category: EventCategory): string {
+export function categoryGradient(category: string): string {
   const base = categoryColor(category);
   const light = mixHex(base, '#ffffff', 0.18);
   const dark = mixHex(base, '#000000', 0.08);
   return `linear-gradient(135deg, ${light} 0%, ${base} 55%, ${dark} 100%)`;
 }
 
-/** Retourne une icône textuelle associée à une catégorie d'événement. */
-export function categoryIcon(category: EventCategory): string {
-  switch (category) {
-    case 'Concert':
-      return '♪';
-    case 'Danse':
-      return '⌁';
-    case "Feux d’artifice":
-      return '*';
-    case 'Exposition':
-      return '▦';
-    case 'Spectacle':
-      return '▸';
-    default:
-      return '•';
+/** Retourne un emoji associé à une catégorie d'événement. */
+export function categoryIcon(category: string): string {
+  const c = normalizeCategory(category);
+  switch (c) {
+    case 'Culture & spectacle': return '🎭';
+    case 'Arts & expos':        return '🎨';
+    case 'Vie sociale':         return '💃';
+    case 'Activités':          return '🏃';
+    case 'Vie locale':          return '🛍️';
+    case 'Famille':             return '👨‍👩‍👧‍👦';
+    case 'Spécial':            return '🎆';
+    default:                    return '•';
   }
 }
 
 export function tagIcon(tag: EventTag | string): string {
   switch (tag) {
-    case 'MUSIQUE':
-      return '🎵';
-    case 'DANSE':
-      return '💃';
-    case 'PLEIN AIR':
-      return '☀️';
-    case 'RENCONTRE':
-      return '🤝';
-    case 'FEU D’ARTIFICE':
-      return '🔥';
-    case 'SPORT':
-      return '⚽';
-    case 'MARCHÉ':
-      return '🏠';
-    case 'COURSE':
-      return '🏁';
-    case 'COMPÉTITION':
-      return '🏆';
-    case 'HUMOUR':
-      return '😄';
-    case 'ART':
-      return '🎨';
-    case 'VISITE':
-      return '🔍';
-    default:
-      return '🏠';
+    case 'CONCERT':     return '🎤';
+    case 'SPORT':       return '⚽';
+    case 'DANSE':       return '💃';
+    case 'CONCOURS':    return '🏆';
+    case 'FEU_DARTIFICE': return '🎆';
+    case 'ENFANT':      return '�';
+    case 'FAMILLE':     return '👨‍👩‍👧';
+    case 'ADULTE':      return '🔞';
+    case 'TOUT_PUBLIC': return '�';
+    case 'PLEIN_AIR':   return '☀️';
+    case 'INTERIEUR':   return '🏠';
+    case 'MUSIQUE':     return '🎵';
+    case 'FESTIF':      return '�';
+    case 'CALME':       return '🌿';
+    case 'CULTUREL':    return '�';
+    case 'RENCONTRE':   return '🤝';
+    case 'NETWORKING':  return '💼';
+    case 'JOUR':        return '🌤️';
+    case 'NUIT':        return '🌙';
+    case 'FOOD':        return '�️';
+    case 'BOISSON':     return '🥂';
+    case 'DJ':          return '🎧';
+    case 'LIVE':        return '🎸';
+    default:            return '•';
   }
 }
 

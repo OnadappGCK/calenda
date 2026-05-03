@@ -226,9 +226,14 @@
         <div class="slotsSection">
           <div class="slotsHeader">
             <span class="slotsLabel">{{ i18n.t('eventDetail.slots.title') }}</span>
-            <button type="button" class="btnSmall" (click)="addDraftSlot()">
-              + {{ i18n.t('eventDetail.slots.add') }}
-            </button>
+            <div class="slotsHeaderActions">
+              <button type="button" class="btnSmall" (click)="openWeeklySlotForm()">
+                📅 Créneaux hebdomadaires
+              </button>
+              <button type="button" class="btnSmall" (click)="addDraftSlot()">
+                + {{ i18n.t('eventDetail.slots.add') }}
+              </button>
+            </div>
           </div>
           @for (slot of draft()!.slots; track $index) {
             <div class="slotRow">
@@ -366,6 +371,30 @@
           </div>
         }
 
+        @if (canEdit() && !isAdmin()) {
+          <div class="highlightSection">
+            <div class="highlightHeader">
+              <span class="highlightTitle">{{ i18n.t('eventDetail.highlight.title') }}</span>
+            </div>
+            @if (highlights().length === 0) {
+              <p class="highlightEmpty">{{ i18n.t('eventDetail.highlight.none') }}</p>
+            }
+            @for (h of highlights(); track h.id) {
+              <div class="highlightItem" [class.active]="isHighlightActive(h)">
+                <span class="highlightBadge" [class.premium]="h.priority > 0">
+                  {{ h.priority > 0 ? i18n.t('eventDetail.highlight.premium') : i18n.t('eventDetail.highlight.standard') }}
+                </span>
+                <span class="highlightDates">
+                  {{ h.startAt | date:'dd/MM/yy HH:mm' }} → {{ h.endAt | date:'dd/MM/yy HH:mm' }}
+                </span>
+                @if (isHighlightActive(h)) {
+                  <span class="highlightActive">● {{ i18n.t('eventDetail.highlight.activeNow') }}</span>
+                }
+              </div>
+            }
+          </div>
+        }
+
         <div class="field">
           {{ i18n.t('eventDetail.tagsMax3') }}
           <div class="tags">
@@ -456,6 +485,59 @@
 }
 
 </section>
+
+@if (weeklySlotForm()) {
+  <div class="modalBackdrop" (click)="closeWeeklySlotForm()"></div>
+  <div class="modal weeklyModal">
+    <h2 class="weeklyModalTitle">📅 Créneaux hebdomadaires</h2>
+
+    <div class="weeklyRow">
+      <label class="field">
+        Date de début
+        <input type="date" [ngModel]="weeklySlotForm()!.dateDebut"
+          (ngModelChange)="patchWeeklyForm({ dateDebut: $event })" />
+      </label>
+      <label class="field">
+        Date de fin
+        <input type="date" [ngModel]="weeklySlotForm()!.dateFin"
+          (ngModelChange)="patchWeeklyForm({ dateFin: $event })" />
+      </label>
+    </div>
+
+    <div class="weeklyRow">
+      <label class="field">
+        Heure de début
+        <input type="time" [ngModel]="weeklySlotForm()!.heureDebut"
+          (ngModelChange)="patchWeeklyForm({ heureDebut: $event })" />
+      </label>
+      <label class="field">
+        Heure de fin
+        <input type="time" [ngModel]="weeklySlotForm()!.heureFin"
+          (ngModelChange)="patchWeeklyForm({ heureFin: $event })" />
+      </label>
+    </div>
+
+    <div class="weeklyDayPicker">
+      @for (day of weekDays; track day.num) {
+        <button type="button"
+          class="dayBtn"
+          [class.active]="weeklySlotForm()!.days.has(day.num)"
+          (click)="toggleWeeklyDay(day.num)">
+          {{ day.label }}
+        </button>
+      }
+    </div>
+
+    @if (weeklySlotFormError()) {
+      <p class="editError">{{ weeklySlotFormError() }}</p>
+    }
+
+    <div class="weeklyActions">
+      <button class="btn" type="button" (click)="applyWeeklySlots()">Générer les créneaux</button>
+      <button class="btn btnSecondary" type="button" (click)="closeWeeklySlotForm()">Annuler</button>
+    </div>
+  </div>
+}
 
 @if (showDeleteConfirm()) {
   <div class="modalBackdrop" (click)="closeDeleteConfirm()"></div>

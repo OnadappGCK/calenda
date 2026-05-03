@@ -142,6 +142,25 @@ export class EventDetailPage implements OnInit, OnDestroy {
     return e.organisateur?.id === u.id;
   });
 
+  readonly weeklySlotForm = signal<{
+    dateDebut: string;
+    dateFin: string;
+    heureDebut: string;
+    heureFin: string;
+    days: Set<number>;
+  } | null>(null);
+  readonly weeklySlotFormError = signal<string | null>(null);
+
+  readonly weekDays = [
+    { num: 1, label: 'Lundi' },
+    { num: 2, label: 'Mardi' },
+    { num: 3, label: 'Mercredi' },
+    { num: 4, label: 'Jeudi' },
+    { num: 5, label: 'Vendredi' },
+    { num: 6, label: 'Samedi' },
+    { num: 0, label: 'Dimanche' },
+  ] as const;
+
   readonly boostOpen = signal(false);
   readonly boostDays = signal(30);
   readonly boostStartDate = signal('');
@@ -149,8 +168,14 @@ export class EventDetailPage implements OnInit, OnDestroy {
   readonly boostError = signal<string | null>(null);
   readonly boostSuccess = signal(false);
 
-  readonly categories: EventCategory[] = ['Danse', 'Concert', 'Spectacle', 'Feux d\u2019artifice', 'Exposition', 'Autre'];
-  readonly tags: EventTag[] = ['MUSIQUE', 'DANSE', 'PLEIN AIR', 'RENCONTRE', 'FEU D’ARTIFICE', 'SPORT', 'MARCHÉ', 'COMPÉTITION', 'HUMOUR', 'ART', 'VISITE'];
+  readonly categories: EventCategory[] = ['Culture & spectacle', 'Arts & expos', 'Vie sociale', 'Activités', 'Vie locale', 'Famille', 'Spécial'];
+  readonly tags: EventTag[] = [
+    'CONCERT', 'SPORT', 'DANSE', 'CONCOURS', 'FEU_DARTIFICE',
+    'ENFANT', 'FAMILLE', 'ADULTE', 'TOUT_PUBLIC',
+    'PLEIN_AIR', 'INTERIEUR', 'MUSIQUE', 'FESTIF', 'CALME',
+    'CULTUREL', 'RENCONTRE', 'NETWORKING',
+    'JOUR', 'NUIT', 'FOOD', 'BOISSON', 'DJ', 'LIVE',
+  ];
 
   readonly dateLocale = computed(() => {
     const lang = this.i18n.lang();
@@ -391,26 +416,26 @@ export class EventDetailPage implements OnInit, OnDestroy {
   }
 
   private categoryKey(category: EventCategory) {
-    if (category === 'Danse') return 'danse';
-    if (category === 'Concert') return 'concert';
-    if (category === 'Spectacle') return 'spectacle';
-    if (category === 'Feux d’artifice') return 'fireworks';
-    if (category === 'Exposition') return 'exhibition';
-    return 'other';
+    if (category === 'Culture & spectacle') return 'cultureSpectacle';
+    if (category === 'Arts & expos') return 'artsExpos';
+    if (category === 'Vie sociale') return 'vieSociale';
+    if (category === 'Activités') return 'activites';
+    if (category === 'Vie locale') return 'vieLocale';
+    if (category === 'Famille') return 'famille';
+    return 'special';
   }
 
   private tagKey(tag: EventTag) {
-    if (tag === 'MUSIQUE') return 'music';
-    if (tag === 'DANSE') return 'dance';
-    if (tag === 'PLEIN AIR') return 'outdoor';
-    if (tag === 'RENCONTRE') return 'social';
-    if (tag === 'FEU D’ARTIFICE') return 'fireworks';
-    if (tag === 'SPORT') return 'sport';
-    if (tag === 'COMPÉTITION') return 'competition';
-    if (tag === 'HUMOUR') return 'humour';
-    if (tag === 'ART') return 'art';
-    if (tag === 'VISITE') return 'visite';
-    return 'market';
+    const map: Record<string, string> = {
+      CONCERT: 'concert', SPORT: 'sport', DANSE: 'danse', CONCOURS: 'concours',
+      FEU_DARTIFICE: 'feuDartifice', ENFANT: 'enfant', FAMILLE: 'famille',
+      ADULTE: 'adulte', TOUT_PUBLIC: 'toutPublic', PLEIN_AIR: 'pleinAir',
+      INTERIEUR: 'interieur', MUSIQUE: 'musique', FESTIF: 'festif',
+      CALME: 'calme', CULTUREL: 'culturel', RENCONTRE: 'rencontre',
+      NETWORKING: 'networking', JOUR: 'jour', NUIT: 'nuit',
+      FOOD: 'food', BOISSON: 'boisson', DJ: 'dj', LIVE: 'live',
+    };
+    return map[tag] ?? tag.toLowerCase();
   }
 
   /** Construit les slots draft depuis un EventDto (utilise event.slots si dispo, sinon dateDebut/dateFin). */
@@ -422,6 +447,84 @@ export class EventDetailPage implements OnInit, OnDestroy {
     const heureDebut = e.dateDebut ? e.dateDebut.slice(11, 16) : '09:00';
     const heureFin = e.dateFin ? e.dateFin.slice(11, 16) : '23:59';
     return date ? [{ date, heureDebut, heureFin }] : [];
+  }
+
+  openWeeklySlotForm() {
+    const d = this.draft();
+    if (!d) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const last = d.slots[d.slots.length - 1];
+    this.weeklySlotFormError.set(null);
+    this.weeklySlotForm.set({
+      dateDebut: last?.date ?? today,
+      dateFin: last?.date ?? today,
+      heureDebut: last?.heureDebut ?? '09:00',
+      heureFin: last?.heureFin ?? '18:00',
+      days: new Set<number>(),
+    });
+    this.lockBodyScroll();
+  }
+
+  closeWeeklySlotForm() {
+    this.weeklySlotForm.set(null);
+    this.weeklySlotFormError.set(null);
+    this.unlockBodyScroll();
+  }
+
+  patchWeeklyForm(patch: Partial<{ dateDebut: string; dateFin: string; heureDebut: string; heureFin: string }>) {
+    const f = this.weeklySlotForm();
+    if (!f) return;
+    this.weeklySlotForm.set({ ...f, ...patch });
+  }
+
+  toggleWeeklyDay(num: number) {
+    const f = this.weeklySlotForm();
+    if (!f) return;
+    const days = new Set(f.days);
+    if (days.has(num)) days.delete(num); else days.add(num);
+    this.weeklySlotForm.set({ ...f, days });
+  }
+
+  applyWeeklySlots() {
+    const f = this.weeklySlotForm();
+    const d = this.draft();
+    if (!f || !d) return;
+
+    if (!f.dateDebut || !f.dateFin) {
+      this.weeklySlotFormError.set('Veuillez renseigner les dates de début et de fin.');
+      return;
+    }
+    if (f.dateFin < f.dateDebut) {
+      this.weeklySlotFormError.set('La date de fin doit être après la date de début.');
+      return;
+    }
+    if (f.days.size === 0) {
+      this.weeklySlotFormError.set('Sélectionnez au moins un jour de la semaine.');
+      return;
+    }
+
+    const generated: { date: string; heureDebut: string; heureFin: string }[] = [];
+    const cur = new Date(f.dateDebut + 'T00:00:00');
+    const end = new Date(f.dateFin + 'T00:00:00');
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    while (cur <= end && generated.length < 730) {
+      if (f.days.has(cur.getDay())) {
+        const key = `${cur.getFullYear()}-${pad2(cur.getMonth() + 1)}-${pad2(cur.getDate())}`;
+        generated.push({ date: key, heureDebut: f.heureDebut, heureFin: f.heureFin });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    if (generated.length === 0) {
+      this.weeklySlotFormError.set('Aucun créneau généré : aucune occurrence des jours sélectionnés dans cet intervalle.');
+      return;
+    }
+
+    const existingDates = new Set(d.slots.map((s) => s.date));
+    const newSlots = generated.filter((s) => !existingDates.has(s.date));
+    const merged = [...d.slots, ...newSlots].sort((a, b) => a.date.localeCompare(b.date));
+    this.setDraft({ slots: merged });
+    this.closeWeeklySlotForm();
   }
 
   addDraftSlot() {

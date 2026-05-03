@@ -6,7 +6,7 @@ export class Etablissement {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'text' })
   nom!: string;
 
   @Column({ type: 'text', nullable: true })
@@ -15,7 +15,7 @@ export class Etablissement {
   @Column({ type: 'text', nullable: true })
   adresse!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   ville!: string | null;
 
   @Column({ type: 'text', nullable: true })
@@ -42,11 +42,20 @@ export class Etablissement {
   @Column({ type: 'text', nullable: true })
   horaires!: string | null;
 
-  @Column({ default: true })
+  @Column({ type: 'text', nullable: true })
+  heureOuverture!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  heureFermeture!: string | null;
+
+  @Column({ type: 'boolean', default: true })
   public!: boolean;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   featured!: boolean;
+
+  @Column({ type: 'integer', default: 0 })
+  featuredTier!: number;
 
   @CreateDateColumn()
   createdAt!: Date;

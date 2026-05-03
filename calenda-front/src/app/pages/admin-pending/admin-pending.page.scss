@@ -83,18 +83,36 @@
   overflow-x: hidden;
 }
 
+.itemAdd {
+  background: rgba(39, 174, 96, 0.05);
+  border-color: #27ae60;
+}
+
 .itemDelete {
   background: rgba(231, 76, 60, 0.05);
   border-color: #e74c3c;
 }
 
-.deletionSection {
+.itemActivite {
+  background: rgba(52, 152, 219, 0.05);
+  border-color: #3498db;
+}
+
+.deletionSection,
+.etabSection {
   margin: 0.75rem 0;
 }
 
 .deletionSectionTitle {
   font-weight: 700;
   color: #c0392b;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.etabSectionTitle {
+  font-weight: 700;
+  color: #2980b9;
   margin-bottom: 0.5rem;
   font-size: 0.95rem;
 }
@@ -107,14 +125,26 @@
   flex-shrink: 0;
 }
 
+.activiteTag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2980b9;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .btnDeleteConfirm {
   background: #e74c3c;
   color: #fff;
   border-color: #c0392b;
+  &:hover { background: #c0392b; }
+}
 
-  &:hover {
-    background: #c0392b;
-  }
+.btnActiviteConfirm {
+  background: #3498db;
+  color: #fff;
+  border-color: #2980b9;
+  &:hover { background: #2980b9; }
 }
 
 .rowTop {

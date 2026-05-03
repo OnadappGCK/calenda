@@ -17,7 +17,7 @@ export class EtablissementsService {
   async list(type?: EtablissementType, tag?: string): Promise<Etablissement[]> {
     const qb = this.repo.createQueryBuilder('e').where('e.public = :pub', { pub: true });
     if (type) qb.andWhere('e.type = :type', { type });
-    qb.orderBy('e.featured', 'DESC').addOrderBy('e.createdAt', 'DESC');
+    qb.orderBy('e.featuredTier', 'DESC').addOrderBy('e.featured', 'DESC').addOrderBy('e.createdAt', 'DESC');
     const items = await qb.getMany();
     if (tag) return items.filter((e) => (e.tags ?? []).includes(tag));
     return items;
@@ -42,6 +42,16 @@ export class EtablissementsService {
   async update(id: string, dto: UpdateEtablissementDto): Promise<Etablissement> {
     const e = await this.findOne(id);
     Object.assign(e, dto);
+    return this.repo.save(e);
+  }
+
+  async listPending(): Promise<Etablissement[]> {
+    return this.repo.find({ where: { public: false }, order: { createdAt: 'DESC' } });
+  }
+
+  async validatePublic(id: string): Promise<Etablissement> {
+    const e = await this.findOne(id);
+    e.public = true;
     return this.repo.save(e);
   }
 
@@ -85,7 +95,7 @@ export class EtablissementsService {
       const saved = await this.repo.save(existing);
       return { created: false, etablissement: saved };
     }
-    const created = await this.create({ ...dto, public: true });
+    const created = await this.create({ ...dto, public: false });
     return { created: true, etablissement: created };
   }
 }

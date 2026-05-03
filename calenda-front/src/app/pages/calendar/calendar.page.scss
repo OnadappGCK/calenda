@@ -419,12 +419,46 @@
   background: $surface-1;
   cursor: pointer;
   padding: var(--cal-dayhead-padding);
-  display: grid;
-  gap: 0.15rem;
-  text-align: center;
-  align-content: center;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
   height: var(--cal-dayhead-height);
   min-width: 0;
+}
+
+// Weather emoji shown to the left of the day label.
+.dayWeatherIcon {
+  font-size: 1.05em;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.92;
+}
+
+// Weather bubble in the topbar: shows current city + today's weather emoji.
+.weatherBubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: $overlay-1;
+  border: 1px solid $border-1;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem 0.2rem 0.45rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: default;
+}
+
+.weatherBubbleIcon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.weatherBubbleName {
+  color: $text-muted-2;
+  font-weight: 600;
 }
 
 .dayHead.selected {
@@ -1214,6 +1248,12 @@
   &:hover { background: rgba(229,62,62,0.08); }
 }
 
+.slotFormActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .btnAddSlot {
   background: $surface-1;
   border: 1px dashed $border-1;
@@ -1222,9 +1262,88 @@
   cursor: pointer;
   font-size: 0.83rem;
   color: $text-muted-1;
-  width: 100%;
-  margin-bottom: 0.5rem;
+  flex: 1;
   &:hover { background: $overlay-1; }
+}
+
+.calWeeklyBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1200;
+}
+
+.calWeeklyModal {
+  position: fixed;
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1201;
+  background: $surface-1;
+  border: 1px solid $border-1;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  width: min(520px, 94vw);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.calWeeklyTitle {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.calWeeklyRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  @media (max-width: 420px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calWeeklyDayPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.calDayBtn {
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1.5px solid $border-1;
+  background: $surface-1;
+  color: $text-muted-1;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &:hover:not(.active) {
+    background: $overlay-1;
+    color: $text-1;
+  }
+
+  &.active {
+    background: $brand-primary;
+    border-color: $brand-primary;
+    color: #fff;
+  }
+}
+
+.calWeeklyError {
+  font-size: 0.82rem;
+  color: #e53e3e;
+  margin: 0 0 0.5rem;
+}
+
+.calWeeklyActions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 @media screen and (max-width: 820px) {

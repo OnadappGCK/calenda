@@ -739,6 +739,72 @@
   }
 }
 
+.slotsHeaderActions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.weeklyModal {
+  max-width: 520px;
+  padding: 1.5rem;
+}
+
+.weeklyModalTitle {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.weeklyRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  @media (max-width: 420px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.weeklyDayPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.dayBtn {
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1.5px solid $border-1;
+  background: $surface-1;
+  color: $text-muted-1;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &:hover:not(.active) {
+    background: $overlay-1;
+    color: $text-1;
+  }
+
+  &.active {
+    background: $brand-primary;
+    border-color: $brand-primary;
+    color: #fff;
+  }
+}
+
+.weeklyActions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
 .boostModal {
   max-width: 480px;
   text-align: center;

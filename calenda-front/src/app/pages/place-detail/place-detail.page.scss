@@ -45,7 +45,7 @@
 .heroBadge {
   font-size: 0.78rem;
   font-weight: 600;
-  color: $accent-1;
+  color: $brand-primary;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 0.25rem;
@@ -83,9 +83,9 @@
   display: block;
   text-align: center;
   padding: 0.75rem;
-  background: $accent-1;
+  background: $brand-primary;
   color: #fff;
-  border-radius: $radius-lg;
+  border-radius: 1.25rem;
   text-decoration: none;
   font-weight: 600;
   font-size: 0.95rem;
@@ -94,7 +94,7 @@
 }
 
 .mapWrapper {
-  border-radius: $radius-lg;
+  border-radius: 1.25rem;
   overflow: hidden;
   border: 1px solid $border-1;
 }
@@ -109,7 +109,7 @@
 .mapFallback {
   background: $overlay-1;
   border: 1px solid $border-1;
-  border-radius: $radius-lg;
+  border-radius: 1.25rem;
   padding: 1.25rem;
   text-align: center;
   font-size: 0.88rem;
@@ -125,10 +125,10 @@
   text-align: center;
   padding: 0.55rem;
   border: 1px solid $border-1;
-  border-radius: $radius-lg;
+  border-radius: 1.25rem;
   text-decoration: none;
   color: $text-muted-2;
   font-size: 0.82rem;
   transition: border-color 0.15s, color 0.15s;
-  &:hover { border-color: $accent-1; color: $accent-1; }
+  &:hover { border-color: $brand-primary; color: $brand-primary; }
 }

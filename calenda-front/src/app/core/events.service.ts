@@ -3,10 +3,22 @@ import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from './api.config';
 
 /** Catégories disponibles pour un événement (doit matcher le backend). */
-export type EventCategory = 'Danse' | 'Concert' | 'Spectacle' | 'Feux d\u2019artifice' | 'Exposition' | 'Autre';
+export type EventCategory =
+  | 'Culture & spectacle'
+  | 'Arts & expos'
+  | 'Vie sociale'
+  | 'Activités'
+  | 'Vie locale'
+  | 'Famille'
+  | 'Spécial';
 
 /** Caractéristiques disponibles pour un événement (max 3, doit matcher le backend). */
-export type EventTag = 'MUSIQUE' | 'DANSE' | 'PLEIN AIR' | 'RENCONTRE' | 'FEU D’ARTIFICE' | 'SPORT' | 'MARCHÉ' | 'COMPÉTITION' | 'HUMOUR' | 'ART' | 'VISITE';
+export type EventTag =
+  | 'CONCERT' | 'SPORT' | 'DANSE' | 'CONCOURS' | 'FEU_DARTIFICE'
+  | 'ENFANT' | 'FAMILLE' | 'ADULTE' | 'TOUT_PUBLIC'
+  | 'PLEIN_AIR' | 'INTERIEUR' | 'MUSIQUE' | 'FESTIF' | 'CALME'
+  | 'CULTUREL' | 'RENCONTRE' | 'NETWORKING'
+  | 'JOUR' | 'NUIT' | 'FOOD' | 'BOISSON' | 'DJ' | 'LIVE';
 
 /** Origine d'un événement (création manuelle ou import externe). */
 export type EventOrigin = 'MANUAL' | 'MARTIGUES_SITE' | 'SALSA_OLIVIER' | 'CARRY_LE_ROUET';

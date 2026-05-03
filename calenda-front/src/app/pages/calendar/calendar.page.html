@@ -14,6 +14,11 @@
         }
       </div>
 
+      <div class="weatherBubble" [title]="weatherCityLbl()">
+        <span class="weatherBubbleIcon">{{ currentWeatherEmoji() }}</span>
+        <span class="weatherBubbleName">{{ weatherCityLbl() }}</span>
+      </div>
+
       <div class="topRight">
         <label class="field datePick">
           <input type="date" [(ngModel)]="selectedDate" name="selectedDate" (change)="onDateChange()" />
@@ -93,6 +98,7 @@
                 [class.selected]="isTodayDay(d)"
                 (click)="selectedDate = dateKey(d); onDateChange()"
               >
+                <span class="dayWeatherIcon" [title]="weatherCityLbl()">{{ weatherEmoji(dateKey(d)) }}</span>
                 <div class="dayLabel">{{ d | date: 'EEEE d MMMM':undefined:dateLocale() }}</div>
               </button>
             }
@@ -136,8 +142,6 @@
                               </span>
                             }
                           </span>
-                        } @else {
-                          <span class="catMini" [title]="it.event.categorie">{{ categoryIcon(it.event.categorie) }}</span>
                         }
                       </div>
                     </button>
@@ -147,6 +151,8 @@
                       type="button"
                       [style.top.px]="it.topPx"
                       [style.height.px]="it.heightPx"
+                      [style.left.%]="it.leftPct"
+                      [style.width.%]="it.widthPct"
                       (click)="openSideForGroup(dateKey(d), it.eventIds)"
                     >
                       {{ it.count }} événements
@@ -186,6 +192,7 @@
               <div class="corner"></div>
 
               <button class="dayHead" type="button" (click)="openSideForDay(selectedDate)">
+                <span class="dayWeatherIcon" [title]="weatherCityLbl()">{{ weatherEmoji(selectedDate) }}</span>
                 <div class="dayLabel">{{ selectedDateObj() | date: 'EEEE d MMMM':undefined:dateLocale() }}</div>
               </button>
 
@@ -227,8 +234,6 @@
                               </span>
                             }
                           </span>
-                        } @else {
-                          <span class="catMini" [title]="it.event.categorie">{{ categoryIcon(it.event.categorie) }}</span>
                         }
                       </div>
                     </button>
@@ -238,6 +243,8 @@
                       type="button"
                       [style.top.px]="it.topPx"
                       [style.height.px]="it.heightPx"
+                      [style.left.%]="it.leftPct"
+                      [style.width.%]="it.widthPct"
                       (click)="openSideForGroup(selectedDate, it.eventIds)"
                     >
                       {{ it.count }} événements
@@ -307,8 +314,6 @@
                         </span>
                       }
                     </span>
-                  } @else {
-                    <span class="catMini" [title]="e.categorie">{{ categoryIcon(e.categorie) }}</span>
                   }
                   <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
                 </div>
@@ -452,12 +457,13 @@
       <label>
         Catégorie *
         <select [(ngModel)]="newCategorie" name="newCategorie" (ngModelChange)="onNewCategorieChange()">
-          <option value="Danse">Danse</option>
-          <option value="Concert">Concert</option>
-          <option value="Spectacle">Spectacle</option>
-          <option value="Feux d'artifice">Feux d'artifice</option>
-          <option value="Exposition">Exposition</option>
-          <option value="Autre">Autre</option>
+          <option value="Culture & spectacle">🎭 Culture &amp; spectacle</option>
+          <option value="Arts & expos">🎨 Arts &amp; expos</option>
+          <option value="Vie sociale">💃 Vie sociale</option>
+          <option value="Activités">🏃 Activités</option>
+          <option value="Vie locale">🛍️ Vie locale</option>
+          <option value="Famille">👨‍👩‍👧‍👦 Famille</option>
+          <option value="Spécial">🎆 Spécial</option>
         </select>
       </label>
       <label>
@@ -504,9 +510,14 @@
         }
       </div>
     }
-    <button type="button" class="btnAddSlot" (click)="addNewSlot()">
-      + {{ i18n.t('eventDetail.slots.add') }}
-    </button>
+    <div class="slotFormActions">
+      <button type="button" class="btnAddSlot" (click)="addNewSlot()">
+        + {{ i18n.t('eventDetail.slots.add') }}
+      </button>
+      <button type="button" class="btnAddSlot" (click)="openNewWeeklyForm()">
+        📅 Créneaux hebdomadaires
+      </button>
+    </div>
 
     <div class="formDivider">Lieu</div>
     <div class="grid">
@@ -663,6 +674,59 @@
     <div class="actions">
       <button class="btn btnPrimary" type="button" (click)="applyFilters()">Rechercher</button>
       <button class="btn" type="button" (click)="reset()">Réinitialiser</button>
+    </div>
+  </div>
+}
+
+@if (newWeeklyForm) {
+  <div class="calWeeklyBackdrop" (click)="closeNewWeeklyForm()"></div>
+  <div class="calWeeklyModal">
+    <h2 class="calWeeklyTitle">📅 Créneaux hebdomadaires</h2>
+
+    <div class="calWeeklyRow">
+      <label class="field">
+        Date de début
+        <input type="date" [ngModel]="newWeeklyForm.dateDebut"
+          (ngModelChange)="patchNewWeeklyForm({ dateDebut: $event })" />
+      </label>
+      <label class="field">
+        Date de fin
+        <input type="date" [ngModel]="newWeeklyForm.dateFin"
+          (ngModelChange)="patchNewWeeklyForm({ dateFin: $event })" />
+      </label>
+    </div>
+
+    <div class="calWeeklyRow">
+      <label class="field">
+        Heure de début
+        <input type="time" [ngModel]="newWeeklyForm.heureDebut"
+          (ngModelChange)="patchNewWeeklyForm({ heureDebut: $event })" />
+      </label>
+      <label class="field">
+        Heure de fin
+        <input type="time" [ngModel]="newWeeklyForm.heureFin"
+          (ngModelChange)="patchNewWeeklyForm({ heureFin: $event })" />
+      </label>
+    </div>
+
+    <div class="calWeeklyDayPicker">
+      @for (day of slotWeekDays; track day.num) {
+        <button type="button"
+          class="calDayBtn"
+          [class.active]="newWeeklyForm.days.has(day.num)"
+          (click)="toggleNewWeeklyDay(day.num)">
+          {{ day.label }}
+        </button>
+      }
+    </div>
+
+    @if (newWeeklyFormError) {
+      <p class="calWeeklyError">{{ newWeeklyFormError }}</p>
+    }
+
+    <div class="calWeeklyActions">
+      <button class="btn btnPrimary" type="button" (click)="applyNewWeeklySlots()">Générer les créneaux</button>
+      <button class="btn" type="button" (click)="closeNewWeeklyForm()">Annuler</button>
     </div>
   </div>
 }

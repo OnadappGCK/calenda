@@ -13,6 +13,13 @@ const TYPE_LABELS: Record<PlaceType, string> = {
   ACTIVITE: 'Activité',
 };
 
+const TYPE_LABELS_HERO: Record<PlaceType, string> = {
+  RESTAURANT: 'POUR MANGER',
+  SORTIE: 'POUR SORTIR',
+  BAR: 'POUR BOIRE UN COUP',
+  ACTIVITE: "POUR S'ACTIVER",
+};
+
 const TYPE_ICONS: Record<PlaceType, string> = {
   RESTAURANT: '🍽️',
   SORTIE: '🎭',
@@ -36,30 +43,80 @@ export class PlacesPage implements OnInit {
   protected readonly i18n = inject(I18nService);
 
   readonly TYPE_LABELS = TYPE_LABELS;
+  readonly TYPE_LABELS_HERO = TYPE_LABELS_HERO;
   readonly TYPE_ICONS = TYPE_ICONS;
   readonly TYPES: PlaceType[] = ['RESTAURANT', 'SORTIE', 'BAR', 'ACTIVITE'];
 
   readonly selectedType = signal<PlaceType>('RESTAURANT');
   readonly selectedTags = signal<Set<string>>(new Set());
+  readonly searchName = signal('');
+  readonly searchAddress = signal('');
+  readonly filterOpenAt = signal('');  // HH:MM
   readonly allPlaces = signal<PlaceDto[]>([]);
   readonly topTags = signal<{ tag: string; count: number }[]>([]);
   readonly loading = signal(true);
 
-  readonly filteredPlaces = computed(() => {
-    const tags = this.selectedTags();
+  readonly topCities = computed(() => {
     const places = this.allPlaces().filter((p) => p.type === this.selectedType());
-    if (tags.size === 0) return places;
-    return places.filter((p) => [...tags].every((t) => (p.tags ?? []).includes(t)));
+    const counts = new Map<string, number>();
+    for (const p of places) {
+      if (p.ville) counts.set(p.ville, (counts.get(p.ville) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([ville]) => ville);
   });
 
-  readonly featuredPlace = computed(() =>
-    this.filteredPlaces().find((p) => p.featured) ?? this.filteredPlaces()[0] ?? null,
+  readonly filteredPlaces = computed(() => {
+    const tags = this.selectedTags();
+    const name = this.searchName().toLowerCase().trim();
+    const addr = this.searchAddress().toLowerCase().trim();
+    const openAt = this.filterOpenAt().trim();
+    let places = this.allPlaces().filter((p) => p.type === this.selectedType());
+    if (tags.size > 0) {
+      places = places.filter((p) => [...tags].every((t) => (p.tags ?? []).includes(t)));
+    }
+    if (name) {
+      places = places.filter((p) => p.nom.toLowerCase().includes(name));
+    }
+    if (addr) {
+      places = places.filter(
+        (p) =>
+          (p.adresse ?? '').toLowerCase().includes(addr) ||
+          (p.ville ?? '').toLowerCase().includes(addr),
+      );
+    }
+    if (openAt) {
+      places = places.filter((p) => {
+        const ouv = p.heureOuverture;
+        const fer = p.heureFermeture;
+        if (!ouv || !fer) return true;
+        return openAt >= ouv && openAt <= fer;
+      });
+    }
+    return places;
+  });
+
+  readonly premium2Place = computed(() =>
+    this.filteredPlaces().find((p) => p.featuredTier >= 3) ?? null,
+  );
+
+  readonly premium1Place = computed(() =>
+    this.filteredPlaces().find((p) => p.featuredTier === 2) ?? null,
+  );
+
+  readonly normalFeaturedPlaces = computed(() =>
+    this.filteredPlaces().filter((p) => p.featuredTier === 1),
   );
 
   readonly gridPlaces = computed(() => {
-    const featured = this.featuredPlace();
-    if (!featured) return this.filteredPlaces();
-    return this.filteredPlaces().filter((p) => p.id !== featured.id);
+    const excludeIds = new Set([
+      ...(this.premium2Place() ? [this.premium2Place()!.id] : []),
+      ...(this.premium1Place() ? [this.premium1Place()!.id] : []),
+      ...this.normalFeaturedPlaces().map((p) => p.id),
+    ]);
+    return this.filteredPlaces().filter((p) => !excludeIds.has(p.id));
   });
 
   readonly typeLabel = computed(() => TYPE_LABELS[this.selectedType()]);
@@ -94,8 +151,15 @@ export class PlacesPage implements OnInit {
   async selectType(type: PlaceType) {
     this.selectedType.set(type);
     this.selectedTags.set(new Set());
+    this.searchName.set('');
+    this.searchAddress.set('');
+    this.filterOpenAt.set('');
     await this.router.navigate([], { queryParams: { type }, replaceUrl: true });
     await this.loadTags();
+  }
+
+  selectCity(ville: string) {
+    this.searchAddress.set(ville);
   }
 
   private async loadPlaces() {
@@ -126,6 +190,10 @@ export class PlacesPage implements OnInit {
 
   isTagSelected(tag: string) {
     return this.selectedTags().has(tag);
+  }
+
+  clearTags() {
+    this.selectedTags.set(new Set());
   }
 
   placeImageUrl(p: PlaceDto): string | null {

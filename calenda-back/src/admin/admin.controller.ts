@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminGuard } from '../common/guards/admin.guard';
 import { ListEventsQueryDto } from '../events/dto/list-events.query';
 import { EventsService } from '../events/events.service';
+import { EtablissementsService } from '../etablissements/etablissements.service';
 import { User } from '../users/user.entity';
 import { MartiguesMergeService } from './martigues-merge.service';
 import { SalsaOlivierMergeService } from './salsa-olivier-merge.service';
@@ -22,6 +23,7 @@ import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
 export class AdminController {
   constructor(
     private readonly eventsService: EventsService,
+    private readonly etablissementsService: EtablissementsService,
     private readonly martiguesMerge: MartiguesMergeService,
     private readonly salsaMerge: SalsaOlivierMergeService,
     private readonly carryMerge: CarryLeRouetMergeService,
@@ -59,6 +61,21 @@ export class AdminController {
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
     };
+  }
+
+  @Get('pending-etablissements')
+  async pendingEtablissements() {
+    return this.etablissementsService.listPending();
+  }
+
+  @Patch('etablissements/:id/validate')
+  async validateEtablissement(@Param('id') id: string) {
+    return this.etablissementsService.validatePublic(id);
+  }
+
+  @Delete('etablissements/:id')
+  async removeEtablissement(@Param('id') id: string) {
+    return this.etablissementsService.remove(id);
   }
 
   @Get('pending-events')

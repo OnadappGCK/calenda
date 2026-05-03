@@ -58,7 +58,38 @@
     </div>
   }
 
-  @if (filteredItems().length === 0 && pendingDeletions().length === 0) {
+  @if (pendingEtabs().length > 0) {
+    <div class="etabSection">
+      <div class="etabSectionTitle">🏢 Établissements activité à valider ({{ pendingEtabs().length }})</div>
+      <div class="list">
+        @for (et of pendingEtabs(); track et.id) {
+          <div class="item itemActivite">
+            <div class="rowTop">
+              <div class="rowLeft">
+                <span class="activiteTag">🔵 Activité</span>
+                <div class="title">{{ et.nom }}</div>
+              </div>
+            </div>
+            @if (et.adresse || et.ville) {
+              <div class="meta">📍 {{ et.adresse }}{{ et.adresse && et.ville ? ' · ' : '' }}{{ et.ville }}</div>
+            }
+            @if (et.horaires) {
+              <div class="meta">🕐 {{ et.horaires }}</div>
+            }
+            @if (et.sourceUrl) {
+              <div class="meta"><a [href]="et.sourceUrl" target="_blank">{{ et.sourceUrl }}</a></div>
+            }
+            <div class="actions">
+              <button class="btn btnActiviteConfirm" type="button" (click)="validateEtab(et.id)">Valider</button>
+              <button class="btn" type="button" (click)="deleteEtab(et.id)">Supprimer</button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (filteredItems().length === 0 && pendingDeletions().length === 0 && pendingEtabs().length === 0) {
     <p>Aucun événement en attente.</p>
   } @else if (filteredItems().length > 0) {
     @if (selectedCount() > 0) {
@@ -77,7 +108,7 @@
 
     <div class="list">
       @for (e of filteredItems(); track e.id) {
-        <div class="item">
+        <div class="item itemAdd">
           <div class="rowTop">
             <div class="rowLeft">
               <label class="selectBox">
