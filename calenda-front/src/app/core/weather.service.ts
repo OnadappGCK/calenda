@@ -17,6 +17,72 @@ const KNOWN_CITIES: Record<string, { lat: number; lon: number; label: string }> 
 
 const DEFAULT_CITY_KEY = 'sausset';
 
+/**
+ * Calcule la phase lunaire pour une date donnée (clé YYYY-MM-DD) et retourne l'emoji correspondant.
+ * Algorithme purement mathématique : aucune API requise.
+ * Référence lunaison : 6 jan 2000 18:14 UTC (nouvelle lune connue).
+ * Cycle synodique : 29.53058867 jours.
+ */
+const SYNODIC = 29.53058867;
+const REF_NEW_MOON = Date.UTC(2000, 0, 6, 18, 14, 0);
+
+function lunarPhase(dateKey: string): number {
+  const elapsed = (new Date(`${dateKey}T12:00:00Z`).getTime() - REF_NEW_MOON) / 86_400_000;
+  return ((elapsed % SYNODIC) + SYNODIC) % SYNODIC;
+}
+
+/**
+ * Retourne l'emoji de phase lunaire avec des seuils serrés :
+ * - Nouvelle lune / pleine lune : ±1 jour
+ * - Premier / dernier quartier  : ±1.5 jours
+ * - Croissants et gibbeux entre les jalons
+ */
+export function moonPhaseEmoji(dateKey: string): string {
+  const p   = lunarPhase(dateKey);
+  const Q1  = SYNODIC * 0.25;  // ~7.38 j
+  const FM  = SYNODIC * 0.5;   // ~14.77 j
+  const Q3  = SYNODIC * 0.75;  // ~22.15 j
+  if (p < 1.0 || p >= SYNODIC - 1.0)          return '🌑'; // nouvelle lune
+  if (Math.abs(p - FM) < 1.0)                   return '�'; // pleine lune  (±1 j → max 2 jours)
+  if (Math.abs(p - Q1) < 1.5)                   return '🌓'; // 1er quartier
+  if (Math.abs(p - Q3) < 1.5)                   return '�'; // dernier quartier
+  if (p < Q1)  return '�'; // croissant montant
+  if (p < FM)  return '�'; // gibbeuse montante
+  if (p < Q3)  return '�'; // gibbeuse descendante
+  return '🌘';               // croissant descendant
+}
+
+/**
+ * Retourne true si ce jour est le jour calendaire le plus proche de la pleine lune
+ * (la phase à midi UTC est à moins de 0.5 j du pic, soit ~12 h de chaque côté).
+ */
+export function isFullMoonPeak(dateKey: string): boolean {
+  const p    = lunarPhase(dateKey);
+  const diff = Math.abs(p - SYNODIC * 0.5);
+  return diff < 0.5;
+}
+
+/** SVG géométrique pur (cercles + arcs) — aucune dépendance de police, fonctionne partout. */
+export function moonPhaseIconUrl(dateKey: string): string {
+  const p   = lunarPhase(dateKey);
+  const idx = Math.round(p / SYNODIC * 8) % 8;
+  const lit = '#FFD700', dark = '#1a2a4a';
+  const R = 10, C = 12, rx = 5;
+  const base = `<circle cx="${C}" cy="${C}" r="${R}" fill="${dark}" stroke="#4a6080" stroke-width="0.5"/>`;
+  const paths: Record<number, string> = {
+    0: '',
+    1: `<path d="M${C},${C-R} A${R},${R},0,0,1,${C},${C+R} A${rx},${R},0,0,1,${C},${C-R}Z" fill="${lit}"/>`,
+    2: `<path d="M${C},${C-R} A${R},${R},0,0,1,${C},${C+R} L${C},${C-R}Z" fill="${lit}"/>`,
+    3: `<path d="M${C},${C-R} A${R},${R},0,0,1,${C},${C+R} A${rx},${R},0,0,0,${C},${C-R}Z" fill="${lit}"/>`,
+    4: `<circle cx="${C}" cy="${C}" r="${R}" fill="${lit}"/>`,
+    5: `<path d="M${C},${C-R} A${R},${R},0,0,0,${C},${C+R} A${rx},${R},0,0,1,${C},${C-R}Z" fill="${lit}"/>`,
+    6: `<path d="M${C},${C-R} A${R},${R},0,0,0,${C},${C+R} L${C},${C-R}Z" fill="${lit}"/>`,
+    7: `<path d="M${C},${C-R} A${R},${R},0,0,0,${C},${C+R} A${rx},${R},0,0,0,${C},${C-R}Z" fill="${lit}"/>`,
+  };
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${base}${paths[idx] ?? ''}</svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 /** Convertit un code météo WMO en emoji. */
 export function weatherCodeToEmoji(code: number | null | undefined): string {
   if (code == null) return '—';

@@ -29,7 +29,7 @@ import {
 import { FavoritesService } from '../../core/favorites.service';
 import { I18nService } from '../../core/i18n.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
-import { WeatherService, WeatherDay, weatherCodeToEmoji } from '../../core/weather.service';
+import { WeatherService, WeatherDay, weatherCodeToEmoji, moonPhaseEmoji, moonPhaseIconUrl, isFullMoonPeak } from '../../core/weather.service';
 
 type ImageChoice = { label: string; value: string };
 
@@ -961,6 +961,18 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   currentWeatherEmoji(): string {
     return this.weatherEmoji(this.todayLocalKey());
+  }
+
+  moonPhase(dateKey: string): string {
+    return moonPhaseEmoji(dateKey);
+  }
+
+  isFullMoon(dateKey: string): boolean {
+    return isFullMoonPeak(dateKey);
+  }
+
+  moonPhaseUrl(dateKey: string): string {
+    return moonPhaseIconUrl(dateKey);
   }
 
   private async reloadFavorites() {

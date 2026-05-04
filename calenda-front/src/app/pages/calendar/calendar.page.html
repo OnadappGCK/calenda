@@ -176,7 +176,8 @@
             </div>
             @for (d of weekDays(); track dateKey(d)) {
               <button class="nightBtn" type="button" (click)="openSideNightForDay(dateKey(d))">
-                {{ nightEventsLabel(nightCount(dateKey(d))) }}
+                <img class="moonPhaseImg" [class.fullMoonGlow]="isFullMoon(dateKey(d))" [src]="moonPhaseUrl(dateKey(d))" alt="" />
+                <span class="nightLabel">{{ nightEventsLabel(nightCount(dateKey(d))) }}</span>
               </button>
             }
             </div>
@@ -266,7 +267,8 @@
                 <div class="timeEnd">{{ endTimeLabel() }}</div>
               </div>
               <button class="nightBtn" type="button" (click)="openSideNightForDay(selectedDate)">
-                {{ nightEventsLabel(nightCount(selectedDate)) }}
+                <img class="moonPhaseImg" [class.fullMoonGlow]="isFullMoon(selectedDate)" [src]="moonPhaseUrl(selectedDate)" alt="" />
+                <span class="nightLabel">{{ nightEventsLabel(nightCount(selectedDate)) }}</span>
               </button>
             </div>
           </div>
