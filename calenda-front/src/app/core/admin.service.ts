@@ -81,8 +81,16 @@ export class AdminService {
     return this.http.delete(`${this.apiBaseUrl}/admin/events/${id}`);
   }
 
+  allEtablissements() {
+    return this.http.get<any[]>(`${this.apiBaseUrl}/admin/etablissements`);
+  }
+
   pendingEtablissements() {
     return this.http.get<any[]>(`${this.apiBaseUrl}/admin/pending-etablissements`);
+  }
+
+  updateEtablissement(id: string, dto: Record<string, any>) {
+    return this.http.patch<any>(`${this.apiBaseUrl}/admin/etablissements/${id}`, dto);
   }
 
   validateEtablissement(id: string) {

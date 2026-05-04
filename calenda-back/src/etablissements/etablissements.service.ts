@@ -45,6 +45,10 @@ export class EtablissementsService {
     return this.repo.save(e);
   }
 
+  async listAll(): Promise<Etablissement[]> {
+    return this.repo.find({ order: { createdAt: 'DESC' } });
+  }
+
   async listPending(): Promise<Etablissement[]> {
     return this.repo.find({ where: { public: false }, order: { createdAt: 'DESC' } });
   }

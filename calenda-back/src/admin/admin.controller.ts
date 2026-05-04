@@ -63,9 +63,19 @@ export class AdminController {
     };
   }
 
+  @Get('etablissements')
+  async allEtablissements() {
+    return this.etablissementsService.listAll();
+  }
+
   @Get('pending-etablissements')
   async pendingEtablissements() {
     return this.etablissementsService.listPending();
+  }
+
+  @Patch('etablissements/:id')
+  async updateEtablissement(@Param('id') id: string, @Body() dto: any) {
+    return this.etablissementsService.update(id, dto);
   }
 
   @Patch('etablissements/:id/validate')

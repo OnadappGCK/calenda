@@ -145,6 +145,148 @@
   }
 </section>
 
+<!-- ═══════════════════════════════════════════════
+     Section : Tous les établissements (gestion)
+════════════════════════════════════════════════ -->
+<div class="etabAllSection">
+  <div class="etabAllHeader">
+    <span class="etabAllTitle">🏢 Établissements ({{ allEtabs().length }})</span>
+    <div class="etabAllActions">
+      <input class="etabSearch" type="search" placeholder="Rechercher…"
+             [value]="etabSearchQ()" (input)="etabSearchQ.set($any($event.target).value)" />
+      <button class="btn" type="button" (click)="showAllEtabs.set(!showAllEtabs())">
+        {{ showAllEtabs() ? 'Masquer' : 'Afficher' }}
+      </button>
+    </div>
+  </div>
+
+  @if (showAllEtabs()) {
+    <div class="list etabAllList">
+      @for (et of filteredAllEtabs(); track et.id) {
+        <div class="item" [class.itemEtabEdit]="editingEtabId() === et.id">
+
+          @if (editingEtabId() === et.id && etabDraft()) {
+            <!-- ── Formulaire d'édition inline ────────────────── -->
+            <div class="etabEditForm">
+              <div class="etabEditGrid">
+                <label class="field">
+                  Nom *
+                  <input type="text" [value]="etabDraft()!.nom"
+                         (input)="setEtabDraft('nom', $any($event.target).value)" />
+                </label>
+                <label class="field">
+                  Type
+                  <select [value]="etabDraft()!.type"
+                          (change)="setEtabDraft('type', $any($event.target).value)">
+                    <option value="RESTAURANT">Restaurant</option>
+                    <option value="BAR">Bar</option>
+                    <option value="SORTIE">Sortie</option>
+                    <option value="ACTIVITE">Activité</option>
+                  </select>
+                </label>
+                <label class="field">
+                  Ville
+                  <input type="text" [value]="etabDraft()!.ville"
+                         (input)="setEtabDraft('ville', $any($event.target).value)" />
+                </label>
+                <label class="field">
+                  Adresse
+                  <input type="text" [value]="etabDraft()!.adresse"
+                         (input)="setEtabDraft('adresse', $any($event.target).value)" />
+                </label>
+                <label class="field">
+                  Contact
+                  <input type="text" [value]="etabDraft()!.contact"
+                         (input)="setEtabDraft('contact', $any($event.target).value)" />
+                </label>
+                <label class="field">
+                  Horaires
+                  <input type="text" [value]="etabDraft()!.horaires"
+                         (input)="setEtabDraft('horaires', $any($event.target).value)" />
+                </label>
+                <label class="field">
+                  Image URL
+                  <input type="url" [value]="etabDraft()!.imageUrl"
+                         (input)="setEtabDraft('imageUrl', $any($event.target).value)" />
+                </label>
+                <label class="field">
+                  Source URL
+                  <input type="url" [value]="etabDraft()!.sourceUrl"
+                         (input)="setEtabDraft('sourceUrl', $any($event.target).value)" />
+                </label>
+                <label class="field">
+                  Tags <small>(virgule-séparés)</small>
+                  <input type="text" [value]="etabDraft()!.tags"
+                         (input)="setEtabDraft('tags', $any($event.target).value)" />
+                </label>
+                <label class="field">
+                  Tier featured
+                  <input type="number" min="0" max="10" [value]="etabDraft()!.featuredTier"
+                         (input)="setEtabDraft('featuredTier', +$any($event.target).value)" />
+                </label>
+              </div>
+              <label class="field etabEditFullRow">
+                Description
+                <textarea rows="4" [value]="etabDraft()!.description"
+                          (input)="setEtabDraft('description', $any($event.target).value)"></textarea>
+              </label>
+              <div class="etabEditBools">
+                <label class="checkLabel">
+                  <input type="checkbox" [checked]="etabDraft()!.featured"
+                         (change)="setEtabDraft('featured', $any($event.target).checked)" />
+                  Featured
+                </label>
+                <label class="checkLabel">
+                  <input type="checkbox" [checked]="etabDraft()!.public"
+                         (change)="setEtabDraft('public', $any($event.target).checked)" />
+                  Public (visible)
+                </label>
+              </div>
+              @if (etabSaveError()) {
+                <div class="etabError">{{ etabSaveError() }}</div>
+              }
+              <div class="actions">
+                <button class="btn btnSave" type="button" (click)="saveEtab()" [disabled]="etabSaving()">
+                  {{ etabSaving() ? 'Sauvegarde…' : 'Sauvegarder' }}
+                </button>
+                <button class="btn" type="button" (click)="cancelEditEtab()">Annuler</button>
+              </div>
+            </div>
+
+          } @else {
+            <!-- ── Vue résumé ─────────────────────────────────── -->
+            <div class="rowTop">
+              <div class="rowLeft">
+                <span class="etabTypeBadge">{{ et.type }}</span>
+                <div class="title">{{ et.nom }}</div>
+                @if (!et.public) { <span class="draftBadge">brouillon</span> }
+              </div>
+            </div>
+            @if (et.ville || et.adresse) {
+              <div class="meta">📍 {{ et.adresse }}{{ et.adresse && et.ville ? ' · ' : '' }}{{ et.ville }}</div>
+            }
+            @if (et.horaires) { <div class="meta">🕐 {{ et.horaires }}</div> }
+            @if ((et.tags ?? []).length > 0) {
+              <div class="meta">🏷 {{ (et.tags ?? []).join(', ') }}</div>
+            }
+            <div class="actions">
+              <button class="btn btnEdit" type="button" (click)="startEditEtab(et)">Modifier</button>
+              @if (!et.public) {
+                <button class="btn btnActiviteConfirm" type="button" (click)="validateEtab(et.id)">Valider</button>
+              }
+              <button class="btn btnDeleteConfirm" type="button" (click)="deleteEtab(et.id)">Supprimer</button>
+            </div>
+          }
+        </div>
+      }
+
+      @if (filteredAllEtabs().length === 0) {
+        <p class="meta">Aucun établissement trouvé.</p>
+      }
+    </div>
+  }
+</div>
+
 @if (confirm()) {
   <div class="modalBackdrop" (click)="closeConfirm()"></div>
   <div class="modal">

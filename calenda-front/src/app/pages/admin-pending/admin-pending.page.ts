@@ -5,6 +5,24 @@ import { RouterLink } from '@angular/router';
 import { AdminService } from '../../core/admin.service';
 import { EventDto, EventOrigin } from '../../core/events.service';
 
+type PlaceType = 'RESTAURANT' | 'SORTIE' | 'BAR' | 'ACTIVITE';
+
+type EtabDraft = {
+  nom: string;
+  description: string;
+  adresse: string;
+  ville: string;
+  type: PlaceType;
+  contact: string;
+  horaires: string;
+  imageUrl: string;
+  sourceUrl: string;
+  tags: string;
+  featured: boolean;
+  featuredTier: number;
+  public: boolean;
+};
+
 type MergeSourceId = 'MARTIGUES_TOURISME' | 'SALSA_OLIVIER_13' | 'CARRY_LE_ROUET';
 type MergeSource = { id: MergeSourceId; label: string; description: string };
 
@@ -49,6 +67,24 @@ export class AdminPendingPage implements OnInit {
 
   readonly items = signal<EventDto[]>([]);
   readonly pendingEtabs = signal<any[]>([]);
+  readonly allEtabs = signal<any[]>([]);
+  readonly showAllEtabs = signal<boolean>(false);
+  readonly editingEtabId = signal<string | null>(null);
+  readonly etabDraft = signal<EtabDraft | null>(null);
+  readonly etabSaving = signal<boolean>(false);
+  readonly etabSaveError = signal<string | null>(null);
+  readonly etabSearchQ = signal<string>('');
+
+  readonly filteredAllEtabs = computed(() => {
+    const q = this.etabSearchQ().toLowerCase().trim();
+    if (!q) return this.allEtabs();
+    return this.allEtabs().filter(
+      (e) =>
+        e.nom?.toLowerCase().includes(q) ||
+        e.ville?.toLowerCase().includes(q) ||
+        e.type?.toLowerCase().includes(q),
+    );
+  });
 
   readonly selectedIds = signal<Set<string>>(new Set());
 
@@ -157,13 +193,79 @@ export class AdminPendingPage implements OnInit {
 
   /** Recharge la liste des événements en attente depuis l'API. */
   async reload() {
-    const [items, etabs] = await Promise.all([
+    const [items, etabs, allEtabs] = await Promise.all([
       this.adminService.pendingEvents().toPromise(),
       this.adminService.pendingEtablissements().toPromise(),
+      this.adminService.allEtablissements().toPromise(),
     ]);
     this.items.set(items ?? []);
     this.pendingEtabs.set(etabs ?? []);
+    this.allEtabs.set(allEtabs ?? []);
     this.selectedIds.set(new Set());
+  }
+
+  startEditEtab(et: any) {
+    this.editingEtabId.set(et.id);
+    this.etabSaveError.set(null);
+    this.etabDraft.set({
+      nom: et.nom ?? '',
+      description: et.description ?? '',
+      adresse: et.adresse ?? '',
+      ville: et.ville ?? '',
+      type: et.type ?? 'SORTIE',
+      contact: et.contact ?? '',
+      horaires: et.horaires ?? '',
+      imageUrl: et.imageUrl ?? '',
+      sourceUrl: et.sourceUrl ?? '',
+      tags: (et.tags ?? []).join(', '),
+      featured: et.featured ?? false,
+      featuredTier: et.featuredTier ?? 0,
+      public: et.public ?? true,
+    });
+  }
+
+  cancelEditEtab() {
+    this.editingEtabId.set(null);
+    this.etabDraft.set(null);
+    this.etabSaveError.set(null);
+  }
+
+  setEtabDraft(field: keyof EtabDraft, value: any) {
+    const d = this.etabDraft();
+    if (!d) return;
+    this.etabDraft.set({ ...d, [field]: value });
+  }
+
+  async saveEtab() {
+    const id = this.editingEtabId();
+    const d = this.etabDraft();
+    if (!id || !d) return;
+    this.etabSaving.set(true);
+    this.etabSaveError.set(null);
+    try {
+      const payload = {
+        nom: d.nom.trim(),
+        description: d.description.trim() || null,
+        adresse: d.adresse.trim() || null,
+        ville: d.ville.trim() || null,
+        type: d.type,
+        contact: d.contact.trim() || null,
+        horaires: d.horaires.trim() || null,
+        imageUrl: d.imageUrl.trim() || null,
+        sourceUrl: d.sourceUrl.trim() || null,
+        tags: d.tags.split(',').map((t) => t.trim()).filter(Boolean),
+        featured: d.featured,
+        featuredTier: Number(d.featuredTier) || 0,
+        public: d.public,
+      };
+      const updated = await this.adminService.updateEtablissement(id, payload).toPromise();
+      this.allEtabs.update((list) => list.map((e) => (e.id === id ? updated : e)));
+      this.cancelEditEtab();
+    } catch (err: any) {
+      this.etabSaveError.set(err?.error?.message ?? 'Erreur lors de la sauvegarde');
+    } finally {
+      this.etabSaving.set(false);
+    }
   }
 
   async validateEtab(id: string) {
