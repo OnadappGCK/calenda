@@ -201,6 +201,25 @@
   flex-wrap: wrap;
 }
 
+.featuredBadgeReadOnly {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.9rem;
+  background: rgba(var(--brand-rgb, 16,185,129), 0.1);
+  border: 1px solid $brand-primary;
+  border-radius: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $brand-primary;
+  margin-top: 0.5rem;
+}
+.featuredDates {
+  font-weight: 400;
+  color: $text-muted-1;
+  font-size: 0.8rem;
+}
+
 .checkLabel {
   display: flex;
   align-items: center;

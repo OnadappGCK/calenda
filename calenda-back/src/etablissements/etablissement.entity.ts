@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { EtablissementType } from '../common/enums/etablissement-type.enum';
+import { User } from '../users/user.entity';
 
 @Entity('etablissements')
 export class Etablissement {
@@ -62,6 +63,10 @@ export class Etablissement {
 
   @Column({ type: 'text', nullable: true })
   featuredEnd!: string | null;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
+  @JoinColumn({ name: 'proprietaireId' })
+  proprietaire!: User | null;
 
   @CreateDateColumn()
   createdAt!: Date;

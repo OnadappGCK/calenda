@@ -6,7 +6,7 @@ import { API_BASE_URL } from '../../core/api.config';
 import { AdminService } from '../../core/admin.service';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n.service';
-import { PlacesService, PlaceDto, PlaceType } from '../../core/places.service';
+import { PlacesService, PlaceDto, PlaceType, CreatePlaceDto } from '../../core/places.service';
 
 type PlaceDraft = {
   nom: string;
@@ -101,6 +101,8 @@ export class PlaceDetailPage implements OnInit {
   }
 
   get isAdmin(): boolean { return this.auth.user()?.isAdmin ?? false; }
+  get isOwner(): boolean { return !!this.auth.user() && this.place()?.proprietaireId === this.auth.user()!.id; }
+  get canEdit(): boolean { return this.isAdmin || this.isOwner; }
 
   startEdit() {
     const p = this.place();
@@ -162,8 +164,25 @@ export class PlaceDetailPage implements OnInit {
         featuredEnd: d.featuredEnd.trim() || null,
         public: d.public,
       };
-      const updated = await this.adminSvc.updateEtablissement(id, payload).toPromise();
-      this.place.set(updated as PlaceDto);
+      let updated: PlaceDto;
+      if (this.isAdmin) {
+        updated = await this.adminSvc.updateEtablissement(id, payload).toPromise() as PlaceDto;
+      } else {
+        const ownerPayload: Partial<CreatePlaceDto> = {
+          nom: payload.nom,
+          description: payload.description,
+          adresse: payload.adresse,
+          ville: payload.ville,
+          type: payload.type,
+          contact: payload.contact,
+          horaires: payload.horaires,
+          imageUrl: payload.imageUrl,
+          sourceUrl: payload.sourceUrl,
+          tags: payload.tags,
+        };
+        updated = await this.svc.update(id, ownerPayload).toPromise() as PlaceDto;
+      }
+      this.place.set(updated);
       this.cancelEdit();
     } catch (err: any) {
       this.saveError.set(err?.error?.message ?? 'Erreur lors de la sauvegarde');

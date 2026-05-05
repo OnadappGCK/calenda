@@ -234,6 +234,27 @@
                   <input type="date" [value]="etabDraft()!.featuredEnd"
                          (input)="setEtabDraft('featuredEnd', $any($event.target).value)" />
                 </label>
+                <label class="field etabEditFullRow">
+                  Propriétaire (pseudo)
+                  <input type="text" [value]="etabUserSearch()"
+                         (input)="searchEtabUsers($any($event.target).value)"
+                         placeholder="Rechercher un utilisateur…" />
+                  @if (etabUserSearching()) { <small>Recherche…</small> }
+                  @if (etabDraft()!.proprietaireId) {
+                    <small>ID sélectionné : {{ etabDraft()!.proprietaireId }}
+                      <button type="button" (click)="selectEtabUser({id:'',pseudo:''})">✕</button>
+                    </small>
+                  }
+                  @if (etabUserResults().length > 0) {
+                    <div class="userDropdown">
+                      @for (u of etabUserResults(); track u.id) {
+                        <button type="button" class="userDropdownItem" (click)="selectEtabUser(u)">
+                          {{ u.pseudo }} <small>{{ u.email }}</small>
+                        </button>
+                      }
+                    </div>
+                  }
+                </label>
               </div>
               <label class="field etabEditFullRow">
                 Description

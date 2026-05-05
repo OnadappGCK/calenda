@@ -25,6 +25,8 @@ export interface PlaceDto {
   featuredTier: number;
   featuredStart: string | null;
   featuredEnd: string | null;
+  proprietaireId: string | null;
+  proprietairePseudo: string | null;
   createdAt: string;
 }
 
@@ -38,6 +40,7 @@ export interface CreatePlaceDto {
   tags?: string[];
   latitude?: number | null;
   longitude?: number | null;
+  sourceUrl?: string | null;
   contact?: string | null;
   horaires?: string | null;
   heureOuverture?: string | null;

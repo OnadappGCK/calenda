@@ -29,7 +29,7 @@
     }
 
     <!-- Barre admin -->
-    @if (isAdmin) {
+    @if (canEdit) {
       <div class="adminBar">
         @if (!editing()) {
           <button class="adminBtn" type="button" (click)="startEdit()">✏️ Modifier l'établissement</button>
@@ -90,39 +90,55 @@
               Tags <small>(virgule-séparés)</small>
               <input type="text" [value]="draft()!.tags" (input)="setDraft('tags', $any($event.target).value)" />
             </label>
-            <label class="editField">
-              Tier featured
-              <input type="number" min="0" max="10" [value]="draft()!.featuredTier"
-                     (input)="setDraft('featuredTier', +$any($event.target).value)" />
-            </label>
-            <label class="editField">
-              Mise en avant — début
-              <input type="date" [value]="draft()!.featuredStart"
-                     (input)="setDraft('featuredStart', $any($event.target).value)" />
-            </label>
-            <label class="editField">
-              Mise en avant — fin
-              <input type="date" [value]="draft()!.featuredEnd"
-                     (input)="setDraft('featuredEnd', $any($event.target).value)" />
-            </label>
+            @if (isAdmin) {
+              <label class="editField">
+                Tier featured
+                <input type="number" min="0" max="10" [value]="draft()!.featuredTier"
+                       (input)="setDraft('featuredTier', +$any($event.target).value)" />
+              </label>
+              <label class="editField">
+                Mise en avant — début
+                <input type="date" [value]="draft()!.featuredStart"
+                       (input)="setDraft('featuredStart', $any($event.target).value)" />
+              </label>
+              <label class="editField">
+                Mise en avant — fin
+                <input type="date" [value]="draft()!.featuredEnd"
+                       (input)="setDraft('featuredEnd', $any($event.target).value)" />
+              </label>
+            }
           </div>
           <label class="editField editFullRow">
             Description
             <textarea rows="5" [value]="draft()!.description"
                       (input)="setDraft('description', $any($event.target).value)"></textarea>
           </label>
-          <div class="editBools">
-            <label class="checkLabel">
-              <input type="checkbox" [checked]="draft()!.featured"
-                     (change)="setDraft('featured', $any($event.target).checked)" />
-              Featured
-            </label>
-            <label class="checkLabel">
-              <input type="checkbox" [checked]="draft()!.public"
-                     (change)="setDraft('public', $any($event.target).checked)" />
-              Public (visible)
-            </label>
-          </div>
+          @if (isAdmin) {
+            <div class="editBools">
+              <label class="checkLabel">
+                <input type="checkbox" [checked]="draft()!.featured"
+                       (change)="setDraft('featured', $any($event.target).checked)" />
+                Featured
+              </label>
+              <label class="checkLabel">
+                <input type="checkbox" [checked]="draft()!.public"
+                       (change)="setDraft('public', $any($event.target).checked)" />
+                Public (visible)
+              </label>
+            </div>
+          }
+          @if (!isAdmin && place()!.featuredTier > 0) {
+            <div class="featuredBadgeReadOnly">
+              @if (place()!.featuredTier >= 3) { ⭐⭐ Premium }
+              @else if (place()!.featuredTier === 2) { ⭐ À la une }
+              @else { ✨ Sélection }
+              @if (place()!.featuredStart || place()!.featuredEnd) {
+                <span class="featuredDates">
+                  {{ place()!.featuredStart ?? '…' }} → {{ place()!.featuredEnd ?? '…' }}
+                </span>
+              }
+            </div>
+          }
         </div>
       }
 

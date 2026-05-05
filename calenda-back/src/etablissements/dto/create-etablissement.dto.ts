@@ -20,6 +20,7 @@ export class CreateEtablissementDto {
   featuredTier?: number;
   featuredStart?: string | null;
   featuredEnd?: string | null;
+  proprietaireId?: string | null;
 }
 
 export class UpdateEtablissementDto {
@@ -42,4 +43,5 @@ export class UpdateEtablissementDto {
   featuredTier?: number;
   featuredStart?: string | null;
   featuredEnd?: string | null;
+  proprietaireId?: string | null;
 }

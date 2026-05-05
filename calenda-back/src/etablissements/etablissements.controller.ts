@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -50,9 +51,10 @@ export class EtablissementsController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, AdminGuard)
-  update(@Param('id') id: string, @Body() dto: UpdateEtablissementDto) {
-    return this.svc.update(id, dto);
+  @UseGuards(JwtAuthGuard)
+  update(@Param('id') id: string, @Body() dto: UpdateEtablissementDto, @Req() req: any) {
+    const user = (req as any).user as { id: string; isAdmin: boolean };
+    return this.svc.updateByUser(id, dto, user.id, user.isAdmin);
   }
 
   @Delete(':id')

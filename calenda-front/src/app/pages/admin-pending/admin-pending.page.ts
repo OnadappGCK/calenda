@@ -22,6 +22,7 @@ type EtabDraft = {
   featuredTier: number;
   featuredStart: string;
   featuredEnd: string;
+  proprietaireId: string;
   public: boolean;
 };
 
@@ -73,9 +74,30 @@ export class AdminPendingPage implements OnInit {
   readonly showAllEtabs = signal<boolean>(false);
   readonly editingEtabId = signal<string | null>(null);
   readonly etabDraft = signal<EtabDraft | null>(null);
-  readonly etabSaving = signal<boolean>(false);
+  readonly etabSaving = signal(false);
   readonly etabSaveError = signal<string | null>(null);
+  readonly etabUserSearch = signal('');
+  readonly etabUserResults = signal<{ id: string; pseudo: string; email: string }[]>([]);
+  readonly etabUserSearching = signal(false);
   readonly etabSearchQ = signal<string>('');
+
+  async searchEtabUsers(q: string) {
+    this.etabUserSearch.set(q);
+    if (!q.trim()) { this.etabUserResults.set([]); return; }
+    this.etabUserSearching.set(true);
+    try {
+      const users = await this.adminService.users({ q }).toPromise();
+      this.etabUserResults.set((users ?? []) as { id: string; pseudo: string; email: string }[]);
+    } finally {
+      this.etabUserSearching.set(false);
+    }
+  }
+
+  selectEtabUser(user: { id: string; pseudo: string }) {
+    this.setEtabDraft('proprietaireId', user.id);
+    this.etabUserSearch.set(user.pseudo);
+    this.etabUserResults.set([]);
+  }
 
   readonly filteredAllEtabs = computed(() => {
     const q = this.etabSearchQ().toLowerCase().trim();
@@ -207,7 +229,9 @@ export class AdminPendingPage implements OnInit {
   }
 
   startEditEtab(et: any) {
-    this.editingEtabId.set(et.id);
+    this.etabSaveError.set(null);
+    this.etabUserSearch.set(et.proprietairePseudo ?? '');
+    this.etabUserResults.set([]);
     this.etabSaveError.set(null);
     this.etabDraft.set({
       nom: et.nom ?? '',
@@ -224,6 +248,7 @@ export class AdminPendingPage implements OnInit {
       featuredTier: et.featuredTier ?? 0,
       featuredStart: et.featuredStart ?? '',
       featuredEnd: et.featuredEnd ?? '',
+      proprietaireId: et.proprietaireId ?? '',
       public: et.public ?? true,
     });
   }
@@ -262,6 +287,7 @@ export class AdminPendingPage implements OnInit {
         featuredTier: Number(d.featuredTier) || 0,
         featuredStart: d.featuredStart.trim() || null,
         featuredEnd: d.featuredEnd.trim() || null,
+        proprietaireId: d.proprietaireId.trim() || null,
         public: d.public,
       };
       const updated = await this.adminService.updateEtablissement(id, payload).toPromise();
