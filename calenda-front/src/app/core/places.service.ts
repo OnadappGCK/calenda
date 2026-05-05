@@ -49,6 +49,7 @@ export interface CreatePlaceDto {
   featuredTier?: number;
   featuredStart?: string | null;
   featuredEnd?: string | null;
+  proprietaireId?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

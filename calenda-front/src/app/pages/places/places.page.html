@@ -75,6 +75,29 @@
             URL image
             <input type="text" [(ngModel)]="newImageUrl" placeholder="https://…" />
           </label>
+          @if (isAdmin()) {
+            <label class="field fieldFull" style="position:relative">
+              Propriétaire (facultatif)
+              <input type="text" [value]="newUserSearch"
+                     (input)="searchNewUser($any($event.target).value)"
+                     placeholder="Rechercher un utilisateur par pseudo…" />
+              @if (newProprietaireId) {
+                <small style="color:var(--brand-primary)">
+                  ✓ {{ newUserSearch }}
+                  <button type="button" style="background:none;border:none;cursor:pointer;color:inherit" (click)="clearNewUser()">✕</button>
+                </small>
+              }
+              @if (newUserResults().length > 0) {
+                <div class="userDropdown">
+                  @for (u of newUserResults(); track u.id) {
+                    <button type="button" class="userDropdownItem" (click)="selectNewUser(u)">
+                      {{ u.pseudo }} <small>{{ u.email }}</small>
+                    </button>
+                  }
+                </div>
+              }
+            </label>
+          }
         </div>
         <div class="tagsSection">
           <div class="tagsLabel">Tags (emoji + mot)</div>

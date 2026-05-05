@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../../core/api.config';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n.service';
 import { PlacesService, PlaceDto, PlaceType, CreatePlaceDto } from '../../core/places.service';
+import { AdminService } from '../../core/admin.service';
 
 const TYPE_LABELS: Record<PlaceType, string> = {
   RESTAURANT: 'Pour manger',
@@ -41,6 +42,7 @@ export class PlacesPage implements OnInit, OnDestroy {
   private readonly apiHost = this.apiBase.replace(/\/api\/?$/, '');
   protected readonly auth = inject(AuthService);
   protected readonly i18n = inject(I18nService);
+  private readonly adminService = inject(AdminService);
 
   readonly TYPE_LABELS = TYPE_LABELS;
   readonly TYPE_LABELS_HERO = TYPE_LABELS_HERO;
@@ -177,7 +179,35 @@ export class PlacesPage implements OnInit, OnDestroy {
   newTags: string[] = [];
   newTagInput = '';
   allTagsForForm = signal<{ tag: string; count: number }[]>([]);
+  newProprietaireId = '';
+  newUserSearch = '';
+  readonly newUserResults = signal<{ id: string; pseudo: string; email: string }[]>([]);
+  readonly newUserSearching = signal(false);
   saving = false;
+
+  async searchNewUser(q: string) {
+    this.newUserSearch = q;
+    if (!q.trim()) { this.newUserResults.set([]); return; }
+    this.newUserSearching.set(true);
+    try {
+      const users = await this.adminService.users({ q }).toPromise();
+      this.newUserResults.set((users ?? []) as { id: string; pseudo: string; email: string }[]);
+    } finally {
+      this.newUserSearching.set(false);
+    }
+  }
+
+  selectNewUser(user: { id: string; pseudo: string }) {
+    this.newProprietaireId = user.id;
+    this.newUserSearch = user.pseudo;
+    this.newUserResults.set([]);
+  }
+
+  clearNewUser() {
+    this.newProprietaireId = '';
+    this.newUserSearch = '';
+    this.newUserResults.set([]);
+  }
 
   async ngOnInit() {
     const typeParam = this.route.snapshot.queryParamMap.get('type') as PlaceType | null;
@@ -286,6 +316,7 @@ export class PlacesPage implements OnInit, OnDestroy {
         horaires: this.newHoraires.trim() || null,
         type: this.newType,
         tags: this.newTags,
+        proprietaireId: this.newProprietaireId || null,
       };
       const created = await this.placesService.create(dto).toPromise();
       if (created) {
@@ -312,5 +343,8 @@ export class PlacesPage implements OnInit, OnDestroy {
     this.newImageUrl = '';
     this.newTags = [];
     this.newTagInput = '';
+    this.newProprietaireId = '';
+    this.newUserSearch = '';
+    this.newUserResults.set([]);
   }
 }
