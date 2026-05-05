@@ -24,6 +24,7 @@ type PlaceDraft = {
   featuredStart: string;
   featuredEnd: string;
   public: boolean;
+  proprietaireId: string;
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -63,6 +64,31 @@ export class PlaceDetailPage implements OnInit {
   readonly draft = signal<PlaceDraft | null>(null);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
+  readonly editUserSearch = signal('');
+  readonly editUserResults = signal<{ id: string; pseudo: string; email: string }[]>([]);
+  readonly editUserSearching = signal(false);
+
+  async searchEditUser(q: string) {
+    this.editUserSearch.set(q);
+    if (!q.trim()) { this.editUserResults.set([]); return; }
+    this.editUserSearching.set(true);
+    try {
+      const users = await this.adminSvc.users({ q }).toPromise();
+      this.editUserResults.set((users ?? []) as { id: string; pseudo: string; email: string }[]);
+    } finally { this.editUserSearching.set(false); }
+  }
+
+  selectEditUser(user: { id: string; pseudo: string }) {
+    this.setDraft('proprietaireId', user.id);
+    this.editUserSearch.set(user.pseudo);
+    this.editUserResults.set([]);
+  }
+
+  clearEditUser() {
+    this.setDraft('proprietaireId', '');
+    this.editUserSearch.set('');
+    this.editUserResults.set([]);
+  }
 
   readonly typeLabel = computed(() => TYPE_LABELS[this.place()?.type ?? ''] ?? '');
   readonly typeIcon = computed(() => TYPE_ICONS[this.place()?.type ?? ''] ?? '');
@@ -139,7 +165,10 @@ export class PlaceDetailPage implements OnInit {
       featuredStart: p.featuredStart ?? '',
       featuredEnd: p.featuredEnd ?? '',
       public: p.public,
+      proprietaireId: p.proprietaireId ?? '',
     });
+    this.editUserSearch.set(p.proprietairePseudo ?? '');
+    this.editUserResults.set([]);
     this.editing.set(true);
   }
 
@@ -147,6 +176,8 @@ export class PlaceDetailPage implements OnInit {
     this.editing.set(false);
     this.draft.set(null);
     this.saveError.set(null);
+    this.editUserSearch.set('');
+    this.editUserResults.set([]);
   }
 
   setDraft(field: keyof PlaceDraft, value: any) {
@@ -178,6 +209,7 @@ export class PlaceDetailPage implements OnInit {
         featuredStart: d.featuredStart.trim() || null,
         featuredEnd: d.featuredEnd.trim() || null,
         public: d.public,
+        proprietaireId: d.proprietaireId.trim() || null,
       };
       let updated: PlaceDto;
       if (this.isAdmin) {

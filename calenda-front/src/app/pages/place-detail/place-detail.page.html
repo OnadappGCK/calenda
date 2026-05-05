@@ -106,6 +106,28 @@
                 <input type="date" [value]="draft()!.featuredEnd"
                        (input)="setDraft('featuredEnd', $any($event.target).value)" />
               </label>
+              <label class="editField editFullRow" style="position:relative">
+                Propriétaire
+                <input type="text" [value]="editUserSearch()"
+                       (input)="searchEditUser($any($event.target).value)"
+                       placeholder="Rechercher un utilisateur par pseudo…" />
+                @if (editUserSearching()) { <small style="font-size:.78rem;color:var(--text-muted-2)">Recherche…</small> }
+                @if (draft()!.proprietaireId) {
+                  <small style="font-size:.78rem;color:var(--brand-primary)">
+                    ✓ {{ editUserSearch() }}
+                    <button type="button" style="background:none;border:none;cursor:pointer;color:inherit;padding:0 0.3rem" (click)="clearEditUser()">✕</button>
+                  </small>
+                }
+                @if (editUserResults().length > 0) {
+                  <div class="editUserDropdown">
+                    @for (u of editUserResults(); track u.id) {
+                      <button type="button" class="editUserDropdownItem" (click)="selectEditUser(u)">
+                        {{ u.pseudo }} <small>{{ u.email }}</small>
+                      </button>
+                    }
+                  </div>
+                }
+              </label>
             }
           </div>
           <label class="editField editFullRow">

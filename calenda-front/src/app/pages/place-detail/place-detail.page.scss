@@ -195,6 +195,33 @@
 
 .editFullRow { grid-column: 1 / -1; }
 
+.editUserDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: $surface-1;
+  border: 1px solid $border-1;
+  border-radius: 0.5rem;
+  z-index: 20;
+  max-height: 180px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.editUserDropdownItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.75rem;
+  border: none;
+  background: none;
+  color: $text-1;
+  cursor: pointer;
+  font-size: 0.88rem;
+  &:hover { background: $overlay-1; }
+  small { color: $text-muted-2; margin-left: 0.5rem; font-size: 0.78rem; }
+}
+
 .editBools {
   display: flex;
   gap: 1.25rem;
