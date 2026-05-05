@@ -124,6 +124,9 @@
             </div>
           }
         </div>
+        @if (createError()) {
+          <div class="createErrorMsg">⚠️ {{ createError() }}</div>
+        }
         <div class="formActions">
           <button class="btn btnPrimary" type="button" [disabled]="saving || !newNom.trim()" (click)="submitCreate()">
             {{ saving ? 'Enregistrement…' : 'Créer' }}

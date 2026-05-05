@@ -184,6 +184,7 @@ export class PlacesPage implements OnInit, OnDestroy {
   readonly newUserResults = signal<{ id: string; pseudo: string; email: string }[]>([]);
   readonly newUserSearching = signal(false);
   saving = false;
+  readonly createError = signal<string | null>(null);
 
   async searchNewUser(q: string) {
     this.newUserSearch = q;
@@ -305,6 +306,7 @@ export class PlacesPage implements OnInit, OnDestroy {
   async submitCreate() {
     if (!this.newNom.trim()) return;
     this.saving = true;
+    this.createError.set(null);
     try {
       const dto: CreatePlaceDto = {
         nom: this.newNom.trim(),
@@ -323,12 +325,16 @@ export class PlacesPage implements OnInit, OnDestroy {
         this.allPlaces.set([created, ...this.allPlaces()]);
       }
       this.resetCreateForm();
+    } catch (err: any) {
+      const msg = err?.error?.message ?? err?.message ?? null;
+      this.createError.set(msg ? String(msg) : 'Erreur lors de la création. Vérifiez que tous les champs obligatoires sont remplis.');
     } finally {
       this.saving = false;
     }
   }
 
   cancelCreate() {
+    this.createError.set(null);
     this.resetCreateForm();
   }
 
