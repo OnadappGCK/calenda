@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { API_BASE_URL } from '../../core/api.config';
@@ -33,7 +33,7 @@ const TYPE_ICONS: Record<PlaceType, string> = {
   templateUrl: './places.page.html',
   styleUrl: './places.page.scss',
 })
-export class PlacesPage implements OnInit {
+export class PlacesPage implements OnInit, OnDestroy {
   private readonly placesService = inject(PlacesService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -98,26 +98,70 @@ export class PlacesPage implements OnInit {
     return places;
   });
 
-  readonly premium2Place = computed(() =>
-    this.filteredPlaces().find((p) => p.featuredTier >= 3) ?? null,
-  );
+  /** Établissements mis en avant pour le carousel (date active + tier > 0, triés par tier desc). */
+  readonly carouselPlaces = computed(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return this.filteredPlaces()
+      .filter((p) => {
+        if ((p.featuredTier ?? 0) <= 0) return false;
+        if (p.featuredStart && today < p.featuredStart) return false;
+        if (p.featuredEnd && today > p.featuredEnd) return false;
+        return true;
+      })
+      .sort((a, b) => (b.featuredTier ?? 0) - (a.featuredTier ?? 0));
+  });
 
-  readonly premium1Place = computed(() =>
-    this.filteredPlaces().find((p) => p.featuredTier === 2) ?? null,
-  );
-
-  readonly normalFeaturedPlaces = computed(() =>
-    this.filteredPlaces().filter((p) => p.featuredTier === 1),
-  );
+  readonly carouselIdx = signal(0);
+  private carouselTimer: ReturnType<typeof setInterval> | null = null;
 
   readonly gridPlaces = computed(() => {
-    const excludeIds = new Set([
-      ...(this.premium2Place() ? [this.premium2Place()!.id] : []),
-      ...(this.premium1Place() ? [this.premium1Place()!.id] : []),
-      ...this.normalFeaturedPlaces().map((p) => p.id),
-    ]);
-    return this.filteredPlaces().filter((p) => !excludeIds.has(p.id));
+    const ids = new Set(this.carouselPlaces().map((p) => p.id));
+    return this.filteredPlaces().filter((p) => !ids.has(p.id));
   });
+
+  carouselTierBadge(tier: number): string {
+    if (tier >= 3) return '⭐⭐ Premium';
+    if (tier === 2) return '⭐ À la une';
+    return '✨ Sélection';
+  }
+
+  prevSlide() {
+    const len = this.carouselPlaces().length;
+    if (!len) return;
+    this.carouselIdx.update((i) => (i - 1 + len) % len);
+    this.resetTimer();
+  }
+
+  nextSlide() {
+    const len = this.carouselPlaces().length;
+    if (!len) return;
+    this.carouselIdx.update((i) => (i + 1) % len);
+    this.resetTimer();
+  }
+
+  goToSlide(i: number) {
+    this.carouselIdx.set(i);
+    this.resetTimer();
+  }
+
+  pauseCarousel() {
+    if (this.carouselTimer) { clearInterval(this.carouselTimer); this.carouselTimer = null; }
+  }
+
+  resumeCarousel() { this.startTimer(); }
+
+  private startTimer() {
+    if (this.carouselTimer) clearInterval(this.carouselTimer);
+    this.carouselTimer = setInterval(() => {
+      const len = this.carouselPlaces().length;
+      if (len > 1) this.carouselIdx.update((i) => (i + 1) % len);
+    }, 5000);
+  }
+
+  private resetTimer() {
+    if (this.carouselTimer) clearInterval(this.carouselTimer);
+    this.startTimer();
+  }
 
   readonly typeLabel = computed(() => TYPE_LABELS[this.selectedType()]);
 
@@ -146,10 +190,16 @@ export class PlacesPage implements OnInit {
     }
 
     await this.loadPlaces();
+    this.startTimer();
+  }
+
+  ngOnDestroy() {
+    if (this.carouselTimer) clearInterval(this.carouselTimer);
   }
 
   async selectType(type: PlaceType) {
     this.selectedType.set(type);
+    this.carouselIdx.set(0);
     this.selectedTags.set(new Set());
     this.searchName.set('');
     this.searchAddress.set('');

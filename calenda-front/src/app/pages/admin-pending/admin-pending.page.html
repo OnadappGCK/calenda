@@ -224,6 +224,16 @@
                   <input type="number" min="0" max="10" [value]="etabDraft()!.featuredTier"
                          (input)="setEtabDraft('featuredTier', +$any($event.target).value)" />
                 </label>
+                <label class="field">
+                  Mise en avant — début
+                  <input type="date" [value]="etabDraft()!.featuredStart"
+                         (input)="setEtabDraft('featuredStart', $any($event.target).value)" />
+                </label>
+                <label class="field">
+                  Mise en avant — fin
+                  <input type="date" [value]="etabDraft()!.featuredEnd"
+                         (input)="setEtabDraft('featuredEnd', $any($event.target).value)" />
+                </label>
               </div>
               <label class="field etabEditFullRow">
                 Description

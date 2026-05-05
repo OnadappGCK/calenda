@@ -57,6 +57,12 @@ export class Etablissement {
   @Column({ type: 'integer', default: 0 })
   featuredTier!: number;
 
+  @Column({ type: 'text', nullable: true })
+  featuredStart!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  featuredEnd!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

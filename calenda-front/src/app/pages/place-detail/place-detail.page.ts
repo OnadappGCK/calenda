@@ -1,10 +1,30 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { API_BASE_URL } from '../../core/api.config';
+import { AdminService } from '../../core/admin.service';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n.service';
-import { PlacesService, PlaceDto } from '../../core/places.service';
+import { PlacesService, PlaceDto, PlaceType } from '../../core/places.service';
+
+type PlaceDraft = {
+  nom: string;
+  description: string;
+  adresse: string;
+  ville: string;
+  type: PlaceType;
+  contact: string;
+  horaires: string;
+  imageUrl: string;
+  sourceUrl: string;
+  tags: string;
+  featured: boolean;
+  featuredTier: number;
+  featuredStart: string;
+  featuredEnd: string;
+  public: boolean;
+};
 
 const TYPE_LABELS: Record<string, string> = {
   RESTAURANT: 'Restaurant',
@@ -21,13 +41,14 @@ const TYPE_ICONS: Record<string, string> = {
 
 @Component({
   selector: 'app-place-detail-page',
-  imports: [],
+  imports: [FormsModule],
   templateUrl: './place-detail.page.html',
   styleUrl: './place-detail.page.scss',
 })
 export class PlaceDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly svc = inject(PlacesService);
+  private readonly adminSvc = inject(AdminService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly apiBase = inject(API_BASE_URL);
   private readonly apiHost = this.apiBase.replace(/\/api\/?$/, '');
@@ -37,6 +58,11 @@ export class PlaceDetailPage implements OnInit {
   readonly place = signal<PlaceDto | null>(null);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+
+  readonly editing = signal(false);
+  readonly draft = signal<PlaceDraft | null>(null);
+  readonly saving = signal(false);
+  readonly saveError = signal<string | null>(null);
 
   readonly typeLabel = computed(() => TYPE_LABELS[this.place()?.type ?? ''] ?? '');
   readonly typeIcon = computed(() => TYPE_ICONS[this.place()?.type ?? ''] ?? '');
@@ -72,6 +98,78 @@ export class PlaceDetailPage implements OnInit {
     if (/^https?:\/\//i.test(raw)) return raw;
     if (raw.startsWith('/')) return `${this.apiHost}${raw}`;
     return `${this.apiHost}/${raw}`;
+  }
+
+  get isAdmin(): boolean { return this.auth.user()?.isAdmin ?? false; }
+
+  startEdit() {
+    const p = this.place();
+    if (!p) return;
+    this.saveError.set(null);
+    this.draft.set({
+      nom: p.nom,
+      description: p.description ?? '',
+      adresse: p.adresse ?? '',
+      ville: p.ville ?? '',
+      type: p.type,
+      contact: p.contact ?? '',
+      horaires: p.horaires ?? '',
+      imageUrl: p.imageUrl ?? '',
+      sourceUrl: p.sourceUrl ?? '',
+      tags: (p.tags ?? []).join(', '),
+      featured: p.featured,
+      featuredTier: p.featuredTier ?? 0,
+      featuredStart: p.featuredStart ?? '',
+      featuredEnd: p.featuredEnd ?? '',
+      public: p.public,
+    });
+    this.editing.set(true);
+  }
+
+  cancelEdit() {
+    this.editing.set(false);
+    this.draft.set(null);
+    this.saveError.set(null);
+  }
+
+  setDraft(field: keyof PlaceDraft, value: any) {
+    const d = this.draft();
+    if (!d) return;
+    this.draft.set({ ...d, [field]: value });
+  }
+
+  async save() {
+    const id = this.place()?.id;
+    const d = this.draft();
+    if (!id || !d) return;
+    this.saving.set(true);
+    this.saveError.set(null);
+    try {
+      const payload = {
+        nom: d.nom.trim(),
+        description: d.description.trim() || null,
+        adresse: d.adresse.trim() || null,
+        ville: d.ville.trim() || null,
+        type: d.type,
+        contact: d.contact.trim() || null,
+        horaires: d.horaires.trim() || null,
+        imageUrl: d.imageUrl.trim() || null,
+        sourceUrl: d.sourceUrl.trim() || null,
+        tags: d.tags.split(',').map((t) => t.trim()).filter(Boolean),
+        featured: d.featured,
+        featuredTier: Number(d.featuredTier) || 0,
+        featuredStart: d.featuredStart.trim() || null,
+        featuredEnd: d.featuredEnd.trim() || null,
+        public: d.public,
+      };
+      const updated = await this.adminSvc.updateEtablissement(id, payload).toPromise();
+      this.place.set(updated as PlaceDto);
+      this.cancelEdit();
+    } catch (err: any) {
+      this.saveError.set(err?.error?.message ?? 'Erreur lors de la sauvegarde');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   async ngOnInit() {

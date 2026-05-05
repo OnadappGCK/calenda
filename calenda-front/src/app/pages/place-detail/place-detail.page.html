@@ -28,7 +28,104 @@
       </div>
     }
 
+    <!-- Barre admin -->
+    @if (isAdmin) {
+      <div class="adminBar">
+        @if (!editing()) {
+          <button class="adminBtn" type="button" (click)="startEdit()">✏️ Modifier l'établissement</button>
+        } @else {
+          <button class="adminBtn adminBtnSave" type="button" (click)="save()" [disabled]="saving()">
+            {{ saving() ? 'Sauvegarde…' : '💾 Sauvegarder' }}
+          </button>
+          <button class="adminBtn" type="button" (click)="cancelEdit()">Annuler</button>
+          @if (saveError()) { <span class="adminError">{{ saveError() }}</span> }
+        }
+      </div>
+    }
+
     <div class="container pageContent">
+
+      <!-- Formulaire d'édition inline (admin uniquement) -->
+      @if (editing() && draft()) {
+        <div class="editForm">
+          <div class="editGrid">
+            <label class="editField">
+              Nom *
+              <input type="text" [value]="draft()!.nom" (input)="setDraft('nom', $any($event.target).value)" />
+            </label>
+            <label class="editField">
+              Type
+              <select [value]="draft()!.type" (change)="setDraft('type', $any($event.target).value)">
+                <option value="RESTAURANT">Restaurant</option>
+                <option value="BAR">Bar</option>
+                <option value="SORTIE">Sortie</option>
+                <option value="ACTIVITE">Activité</option>
+              </select>
+            </label>
+            <label class="editField">
+              Ville
+              <input type="text" [value]="draft()!.ville" (input)="setDraft('ville', $any($event.target).value)" />
+            </label>
+            <label class="editField">
+              Adresse
+              <input type="text" [value]="draft()!.adresse" (input)="setDraft('adresse', $any($event.target).value)" />
+            </label>
+            <label class="editField">
+              Contact
+              <input type="text" [value]="draft()!.contact" (input)="setDraft('contact', $any($event.target).value)" />
+            </label>
+            <label class="editField">
+              Horaires
+              <input type="text" [value]="draft()!.horaires" (input)="setDraft('horaires', $any($event.target).value)" />
+            </label>
+            <label class="editField editFullRow">
+              Image URL
+              <input type="url" [value]="draft()!.imageUrl" (input)="setDraft('imageUrl', $any($event.target).value)" />
+            </label>
+            <label class="editField editFullRow">
+              Source URL
+              <input type="url" [value]="draft()!.sourceUrl" (input)="setDraft('sourceUrl', $any($event.target).value)" />
+            </label>
+            <label class="editField editFullRow">
+              Tags <small>(virgule-séparés)</small>
+              <input type="text" [value]="draft()!.tags" (input)="setDraft('tags', $any($event.target).value)" />
+            </label>
+            <label class="editField">
+              Tier featured
+              <input type="number" min="0" max="10" [value]="draft()!.featuredTier"
+                     (input)="setDraft('featuredTier', +$any($event.target).value)" />
+            </label>
+            <label class="editField">
+              Mise en avant — début
+              <input type="date" [value]="draft()!.featuredStart"
+                     (input)="setDraft('featuredStart', $any($event.target).value)" />
+            </label>
+            <label class="editField">
+              Mise en avant — fin
+              <input type="date" [value]="draft()!.featuredEnd"
+                     (input)="setDraft('featuredEnd', $any($event.target).value)" />
+            </label>
+          </div>
+          <label class="editField editFullRow">
+            Description
+            <textarea rows="5" [value]="draft()!.description"
+                      (input)="setDraft('description', $any($event.target).value)"></textarea>
+          </label>
+          <div class="editBools">
+            <label class="checkLabel">
+              <input type="checkbox" [checked]="draft()!.featured"
+                     (change)="setDraft('featured', $any($event.target).checked)" />
+              Featured
+            </label>
+            <label class="checkLabel">
+              <input type="checkbox" [checked]="draft()!.public"
+                     (change)="setDraft('public', $any($event.target).checked)" />
+              Public (visible)
+            </label>
+          </div>
+        </div>
+      }
+
       <div class="detailGrid">
 
         <!-- Left: infos -->
@@ -108,8 +205,8 @@
           }
         </aside>
 
-      </div>
-    </div>
+      </div><!-- /detailGrid -->
+    </div><!-- /container pageContent -->
 
-  </div>
+  </div><!-- /detailPage -->
 }

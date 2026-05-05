@@ -162,66 +162,46 @@
       <!-- Zone principale -->
       <div class="mainArea">
 
-        <!-- ⭐⭐ Premium 2 — grande bannière -->
-        @if (premium2Place()) {
-          <a class="fp2Card" [routerLink]="['/places', premium2Place()!.id]">
-            @if (placeImageUrl(premium2Place()!)) {
-              <div class="fp2Bg" [style.background-image]="'url(' + placeImageUrl(premium2Place()!) + ')'"></div>
-            } @else {
-              <div class="fp2BgPlaceholder">{{ TYPE_ICONS[premium2Place()!.type] }}</div>
-            }
-            <div class="fp2Content">
-              <div class="fp2Badge">⭐⭐ Premium</div>
-              <div class="fp2Nom">{{ premium2Place()!.nom }}</div>
-              @if (premium2Place()!.ville) { <div class="fp2Ville">📍 {{ premium2Place()!.ville }}</div> }
-              @if (premium2Place()!.description) { <div class="fp2Desc">{{ premium2Place()!.description }}</div> }
-              <div class="fp2Tags">
-                @for (tag of (premium2Place()!.tags ?? []).slice(0, 5); track tag) {
-                  <span class="tagChip">{{ tag }}</span>
+        <!-- ═══ Carousel mise en avant ════════════════ -->
+        @if (carouselPlaces().length > 0) {
+          <div class="carousel" (mouseenter)="pauseCarousel()" (mouseleave)="resumeCarousel()">
+            <div class="carouselViewport">
+              <div class="carouselTrack" [style.transform]="'translateX(-' + carouselIdx() * 100 + '%)'">
+                @for (p of carouselPlaces(); track p.id) {
+                  <a class="carouselSlide" [routerLink]="['/places', p.id]">
+                    @if (placeImageUrl(p)) {
+                      <div class="csBg" [style.background-image]="'url(' + placeImageUrl(p) + ')'"></div>
+                    } @else {
+                      <div class="csBgPlaceholder">{{ TYPE_ICONS[p.type] }}</div>
+                    }
+                    <div class="csContent">
+                      <span class="csBadge" [class.csBadgePremium2]="p.featuredTier >= 3" [class.csBadgePremium1]="p.featuredTier === 2">
+                        {{ carouselTierBadge(p.featuredTier) }}
+                      </span>
+                      <div class="csNom">{{ p.nom }}</div>
+                      @if (p.ville) { <div class="csVille">📍 {{ p.ville }}</div> }
+                      @if (p.description) { <div class="csDesc">{{ p.description }}</div> }
+                      @if ((p.tags ?? []).length > 0) {
+                        <div class="csTags">
+                          @for (tag of (p.tags ?? []).slice(0, 5); track tag) {
+                            <span class="tagChip">{{ tag }}</span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </a>
                 }
               </div>
             </div>
-          </a>
-        }
 
-        <!-- ⭐ Premium 1 — carte moyenne -->
-        @if (premium1Place()) {
-          <a class="fp1Card" [routerLink]="['/places', premium1Place()!.id]">
-            @if (placeImageUrl(premium1Place()!)) {
-              <div class="fp1Img" [style.background-image]="'url(' + placeImageUrl(premium1Place()!) + ')'"></div>
-            } @else {
-              <div class="fp1ImgPlaceholder">{{ TYPE_ICONS[premium1Place()!.type] }}</div>
-            }
-            <div class="fp1Body">
-              <div class="fp1Badge">⭐ À la une</div>
-              <div class="fp1Nom">{{ premium1Place()!.nom }}</div>
-              @if (premium1Place()!.ville) { <div class="fp1Ville">📍 {{ premium1Place()!.ville }}</div> }
-              @if (premium1Place()!.description) { <div class="fp1Desc">{{ premium1Place()!.description }}</div> }
-              <div class="fp1Tags">
-                @for (tag of (premium1Place()!.tags ?? []).slice(0, 4); track tag) {
-                  <span class="tagChip">{{ tag }}</span>
+            @if (carouselPlaces().length > 1) {
+              <button class="csArrow csArrowPrev" type="button" (click)="prevSlide()">‹</button>
+              <button class="csArrow csArrowNext" type="button" (click)="nextSlide()">›</button>
+              <div class="csDots">
+                @for (p of carouselPlaces(); track p.id; let i = $index) {
+                  <button class="csDot" [class.active]="carouselIdx() === i" type="button" (click)="goToSlide(i)"></button>
                 }
               </div>
-            </div>
-          </a>
-        }
-
-        <!-- Normal featured row -->
-        @if (normalFeaturedPlaces().length > 0) {
-          <div class="normalFeaturedRow">
-            @for (p of normalFeaturedPlaces(); track p.id) {
-              <a class="normalFeaturedCard" [routerLink]="['/places', p.id]">
-                @if (placeImageUrl(p)) {
-                  <div class="nfImg" [style.background-image]="'url(' + placeImageUrl(p) + ')'"></div>
-                } @else {
-                  <div class="nfImgPlaceholder">{{ TYPE_ICONS[p.type] }}</div>
-                }
-                <div class="nfBody">
-                  <div class="nfBadge">✨ À découvrir</div>
-                  <div class="nfNom">{{ p.nom }}</div>
-                  @if (p.ville) { <div class="nfVille">📍 {{ p.ville }}</div> }
-                </div>
-              </a>
             }
           </div>
         }

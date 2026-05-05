@@ -20,6 +20,8 @@ type EtabDraft = {
   tags: string;
   featured: boolean;
   featuredTier: number;
+  featuredStart: string;
+  featuredEnd: string;
   public: boolean;
 };
 
@@ -220,6 +222,8 @@ export class AdminPendingPage implements OnInit {
       tags: (et.tags ?? []).join(', '),
       featured: et.featured ?? false,
       featuredTier: et.featuredTier ?? 0,
+      featuredStart: et.featuredStart ?? '',
+      featuredEnd: et.featuredEnd ?? '',
       public: et.public ?? true,
     });
   }
@@ -256,6 +260,8 @@ export class AdminPendingPage implements OnInit {
         tags: d.tags.split(',').map((t) => t.trim()).filter(Boolean),
         featured: d.featured,
         featuredTier: Number(d.featuredTier) || 0,
+        featuredStart: d.featuredStart.trim() || null,
+        featuredEnd: d.featuredEnd.trim() || null,
         public: d.public,
       };
       const updated = await this.adminService.updateEtablissement(id, payload).toPromise();

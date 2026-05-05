@@ -23,6 +23,8 @@ export interface PlaceDto {
   public: boolean;
   featured: boolean;
   featuredTier: number;
+  featuredStart: string | null;
+  featuredEnd: string | null;
   createdAt: string;
 }
 
@@ -42,6 +44,8 @@ export interface CreatePlaceDto {
   heureFermeture?: string | null;
   featured?: boolean;
   featuredTier?: number;
+  featuredStart?: string | null;
+  featuredEnd?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

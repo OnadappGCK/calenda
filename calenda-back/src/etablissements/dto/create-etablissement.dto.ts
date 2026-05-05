@@ -18,6 +18,8 @@ export class CreateEtablissementDto {
   public?: boolean;
   featured?: boolean;
   featuredTier?: number;
+  featuredStart?: string | null;
+  featuredEnd?: string | null;
 }
 
 export class UpdateEtablissementDto {
@@ -38,4 +40,6 @@ export class UpdateEtablissementDto {
   public?: boolean;
   featured?: boolean;
   featuredTier?: number;
+  featuredStart?: string | null;
+  featuredEnd?: string | null;
 }
