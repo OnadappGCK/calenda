@@ -28,6 +28,10 @@ const TYPE_ICONS: Record<PlaceType, string> = {
   ACTIVITE: '🏃',
 };
 
+const JOURS_SEMAINE = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'] as const;
+type JourSemaine = typeof JOURS_SEMAINE[number];
+type HoraireSlot = { jour: JourSemaine; heureDebut: string; heureFin: string; actif: boolean };
+
 @Component({
   selector: 'app-places-page',
   imports: [RouterLink, FormsModule],
@@ -48,6 +52,7 @@ export class PlacesPage implements OnInit, OnDestroy {
   readonly TYPE_LABELS_HERO = TYPE_LABELS_HERO;
   readonly TYPE_ICONS = TYPE_ICONS;
   readonly TYPES: PlaceType[] = ['RESTAURANT', 'SORTIE', 'BAR', 'ACTIVITE'];
+  readonly JOURS_SEMAINE = JOURS_SEMAINE;
 
   readonly selectedType = signal<PlaceType>('RESTAURANT');
   readonly selectedTags = signal<Set<string>>(new Set());
@@ -173,8 +178,19 @@ export class PlacesPage implements OnInit, OnDestroy {
   newAdresse = '';
   newVille = '';
   newContact = '';
-  newHoraires = '';
   newImageUrl = '';
+  // Adresse search
+  readonly newAdresseResults = signal<any[]>([]);
+  readonly newAdresseSearching = signal(false);
+  newLatitude: number | null = null;
+  newLongitude: number | null = null;
+  // Horaires
+  newHorairesMode: 'simple' | 'custom' = 'simple';
+  newJourDebut = 'Lundi';
+  newJourFin = 'Dimanche';
+  newHeureDebut = '';
+  newHeureFin = '';
+  newHorairesSlots: HoraireSlot[] = this.defaultSlots();
   newType: PlaceType = 'RESTAURANT';
   newTags: string[] = [];
   newTagInput = '';
@@ -185,6 +201,56 @@ export class PlacesPage implements OnInit, OnDestroy {
   readonly newUserSearching = signal(false);
   saving = false;
   readonly createError = signal<string | null>(null);
+
+  private defaultSlots(): HoraireSlot[] {
+    return JOURS_SEMAINE.map(j => ({ jour: j, heureDebut: '', heureFin: '', actif: false }));
+  }
+
+  async searchNewAdresse(q: string) {
+    this.newAdresse = q;
+    if (q.length < 3) { this.newAdresseResults.set([]); return; }
+    this.newAdresseSearching.set(true);
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&countrycodes=fr&limit=6`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
+      this.newAdresseResults.set(await res.json());
+    } catch { this.newAdresseResults.set([]); }
+    finally { this.newAdresseSearching.set(false); }
+  }
+
+  selectNewAdresse(r: any) {
+    const addr = r.address ?? {};
+    const num = addr.house_number ? addr.house_number + ' ' : '';
+    this.newAdresse = (num + (addr.road ?? '')).trim() || r.display_name.split(',')[0];
+    this.newVille = addr.city ?? addr.town ?? addr.village ?? addr.municipality ?? '';
+    this.newLatitude = parseFloat(r.lat);
+    this.newLongitude = parseFloat(r.lon);
+    this.newAdresseResults.set([]);
+  }
+
+  switchHorairesMode(mode: 'simple' | 'custom') {
+    if (mode === 'custom') {
+      const iStart = JOURS_SEMAINE.indexOf(this.newJourDebut as JourSemaine);
+      const iEnd = JOURS_SEMAINE.indexOf(this.newJourFin as JourSemaine);
+      this.newHorairesSlots = this.defaultSlots().map((s, i) => ({
+        ...s,
+        actif: i >= iStart && i <= iEnd,
+        heureDebut: this.newHeureDebut,
+        heureFin: this.newHeureFin,
+      }));
+    }
+    this.newHorairesMode = mode;
+  }
+
+  buildHoraires(): string | null {
+    if (this.newHorairesMode === 'simple') {
+      if (!this.newHeureDebut && !this.newHeureFin) return null;
+      return JSON.stringify({ mode: 'simple', jourDebut: this.newJourDebut, jourFin: this.newJourFin, heureDebut: this.newHeureDebut, heureFin: this.newHeureFin });
+    }
+    const slots = this.newHorairesSlots.filter(s => s.actif);
+    if (!slots.length) return null;
+    return JSON.stringify({ mode: 'custom', slots: slots.map(s => ({ jour: s.jour, heureDebut: s.heureDebut, heureFin: s.heureFin })) });
+  }
 
   async searchNewUser(q: string) {
     this.newUserSearch = q;
@@ -315,7 +381,9 @@ export class PlacesPage implements OnInit, OnDestroy {
         ville: this.newVille.trim() || null,
         imageUrl: this.newImageUrl.trim() || null,
         contact: this.newContact.trim() || null,
-        horaires: this.newHoraires.trim() || null,
+        horaires: this.buildHoraires(),
+        latitude: this.newLatitude,
+        longitude: this.newLongitude,
         type: this.newType,
         tags: this.newTags,
         proprietaireId: this.newProprietaireId || null,
@@ -345,8 +413,16 @@ export class PlacesPage implements OnInit, OnDestroy {
     this.newAdresse = '';
     this.newVille = '';
     this.newContact = '';
-    this.newHoraires = '';
     this.newImageUrl = '';
+    this.newAdresseResults.set([]);
+    this.newLatitude = null;
+    this.newLongitude = null;
+    this.newHorairesMode = 'simple';
+    this.newJourDebut = 'Lundi';
+    this.newJourFin = 'Dimanche';
+    this.newHeureDebut = '';
+    this.newHeureFin = '';
+    this.newHorairesSlots = this.defaultSlots();
     this.newTags = [];
     this.newTagInput = '';
     this.newProprietaireId = '';

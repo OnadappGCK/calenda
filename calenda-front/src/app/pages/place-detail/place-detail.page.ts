@@ -101,6 +101,21 @@ export class PlaceDetailPage implements OnInit {
   }
 
   get isAdmin(): boolean { return this.auth.user()?.isAdmin ?? false; }
+
+  displayHoraires(h: string | null): string {
+    if (!h) return '';
+    try {
+      const p = JSON.parse(h);
+      if (p.mode === 'simple') {
+        const jours = `${p.jourDebut || '?'} au ${p.jourFin || '?'}`;
+        return p.heureDebut || p.heureFin ? `${jours} · ${p.heureDebut || '?'}h \u2192 ${p.heureFin || '?'}h` : jours;
+      }
+      if (p.mode === 'custom' && Array.isArray(p.slots)) {
+        return (p.slots as any[]).map((s) => `${s.jour}\u00a0: ${s.heureDebut || '?'} \u2192 ${s.heureFin || '?'}`).join(' · ');
+      }
+      return h;
+    } catch { return h; }
+  }
   get isOwner(): boolean { return !!this.auth.user() && this.place()?.proprietaireId === this.auth.user()!.id; }
   get canEdit(): boolean { return this.isAdmin || this.isOwner; }
 

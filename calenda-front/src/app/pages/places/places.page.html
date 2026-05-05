@@ -55,9 +55,22 @@
             Description
             <textarea [(ngModel)]="newDescription" rows="3" placeholder="Décrivez l'établissement…"></textarea>
           </label>
-          <label class="field">
+          <label class="field fieldFull" style="position:relative">
             Adresse
-            <input type="text" [(ngModel)]="newAdresse" placeholder="Ex: 3 Rue de la Mer" />
+            <input type="text" [value]="newAdresse"
+                   (input)="searchNewAdresse($any($event.target).value)"
+                   placeholder="Rechercher une adresse…" />
+            @if (newAdresseSearching()) { <small class="searchHint">Recherche…</small> }
+            @if (newLatitude) { <small class="searchHint">&#10003; {{ newAdresse }}</small> }
+            @if (newAdresseResults().length > 0) {
+              <div class="userDropdown">
+                @for (r of newAdresseResults(); track r.place_id) {
+                  <button type="button" class="userDropdownItem" (click)="selectNewAdresse(r)">
+                    {{ r.display_name }}
+                  </button>
+                }
+              </div>
+            }
           </label>
           <label class="field">
             Ville
@@ -67,10 +80,48 @@
             Contact
             <input type="text" [(ngModel)]="newContact" placeholder="Email ou téléphone" />
           </label>
-          <label class="field">
-            Horaires
-            <input type="text" [(ngModel)]="newHoraires" placeholder="Ex: Mar-Dim 12h-22h" />
-          </label>
+          <div class="field fieldFull horairesField">
+            <div class="horairesHeader">
+              <span>Horaires d’ouverture</span>
+              @if (newHorairesMode === 'simple') {
+                <button type="button" class="btn btnSmall" (click)="switchHorairesMode('custom')">Personnaliser par jour</button>
+              } @else {
+                <button type="button" class="btn btnSmall" (click)="switchHorairesMode('simple')">Mode simple</button>
+              }
+            </div>
+            @if (newHorairesMode === 'simple') {
+              <div class="horairesSimple">
+                <label>Du
+                  <select [(ngModel)]="newJourDebut">
+                    @for (j of JOURS_SEMAINE; track j) { <option [value]="j">{{ j }}</option> }
+                  </select>
+                </label>
+                <label>au
+                  <select [(ngModel)]="newJourFin">
+                    @for (j of JOURS_SEMAINE; track j) { <option [value]="j">{{ j }}</option> }
+                  </select>
+                </label>
+                <label>de <input type="time" [(ngModel)]="newHeureDebut" /></label>
+                <label>à  <input type="time" [(ngModel)]="newHeureFin" /></label>
+              </div>
+            } @else {
+              <div class="horairesCustom">
+                @for (slot of newHorairesSlots; track slot.jour; let i = $index) {
+                  <div class="jourSlot">
+                    <label class="checkLabel">
+                      <input type="checkbox" [(ngModel)]="newHorairesSlots[i].actif" />
+                      <span class="jourName">{{ slot.jour }}</span>
+                    </label>
+                    @if (slot.actif) {
+                      <input type="time" [(ngModel)]="newHorairesSlots[i].heureDebut" class="timeInput" />
+                      <span class="timeSep">→</span>
+                      <input type="time" [(ngModel)]="newHorairesSlots[i].heureFin" class="timeInput" />
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
           <label class="field fieldFull">
             URL image
             <input type="text" [(ngModel)]="newImageUrl" placeholder="https://…" />
