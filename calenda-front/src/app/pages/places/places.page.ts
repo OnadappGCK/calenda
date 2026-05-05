@@ -114,10 +114,7 @@ export class PlacesPage implements OnInit, OnDestroy {
   readonly carouselIdx = signal(0);
   private carouselTimer: ReturnType<typeof setInterval> | null = null;
 
-  readonly gridPlaces = computed(() => {
-    const ids = new Set(this.carouselPlaces().map((p) => p.id));
-    return this.filteredPlaces().filter((p) => !ids.has(p.id));
-  });
+  readonly gridPlaces = computed(() => this.filteredPlaces());
 
   carouselTierBadge(tier: number): string {
     if (tier >= 3) return '⭐⭐ Premium';
