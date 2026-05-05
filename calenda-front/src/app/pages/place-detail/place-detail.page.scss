@@ -195,6 +195,79 @@
 
 .editFullRow { grid-column: 1 / -1; }
 
+.btnSmall {
+  padding: 0.25rem 0.7rem;
+  border-radius: 0.4rem;
+  border: 1px solid $border-1;
+  background: $overlay-1;
+  color: $text-1;
+  font-size: 0.78rem;
+  cursor: pointer;
+  &:hover { background: $overlay-2; }
+}
+
+.editHorairesField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.editHorairesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: $text-muted-1;
+  font-weight: 500;
+}
+.editHorairesSimple {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+    color: $text-muted-1;
+    select, input[type=time] {
+      padding: 0.3rem 0.5rem;
+      border: 1px solid $border-2;
+      border-radius: 0.4rem;
+      background: $surface-2;
+      color: $text-1;
+      font-size: 0.88rem;
+    }
+  }
+}
+.editHorairesCustom {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.4rem;
+}
+.editJourSlot {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: $surface-2;
+  border: 1px solid $border-2;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+}
+.editJourName { min-width: 70px; font-weight: 500; color: $text-1; }
+.editCheckLabel { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+.editTimeInput {
+  width: 82px;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid $border-1;
+  border-radius: 0.35rem;
+  background: $surface-1;
+  color: $text-1;
+  font-size: 0.82rem;
+}
+.editTimeSep { color: $text-muted-2; font-size: 0.8rem; }
+
 .editUserDropdown {
   position: absolute;
   top: 100%;

@@ -40,6 +40,10 @@ const TYPE_ICONS: Record<string, string> = {
   ACTIVITE: '🏃',
 };
 
+const JOURS_SEMAINE = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'] as const;
+type JourSemaine = typeof JOURS_SEMAINE[number];
+type HoraireSlot = { jour: JourSemaine; heureDebut: string; heureFin: string; actif: boolean };
+
 @Component({
   selector: 'app-place-detail-page',
   imports: [FormsModule],
@@ -64,9 +68,68 @@ export class PlaceDetailPage implements OnInit {
   readonly draft = signal<PlaceDraft | null>(null);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
+  readonly JOURS_SEMAINE = JOURS_SEMAINE;
+  editHorairesMode: 'simple' | 'custom' = 'simple';
+  editJourDebut = 'Lundi';
+  editJourFin = 'Dimanche';
+  editHeureDebut = '';
+  editHeureFin = '';
+  editHorairesSlots: HoraireSlot[] = this.defaultEditSlots();
+
   readonly editUserSearch = signal('');
   readonly editUserResults = signal<{ id: string; pseudo: string; email: string }[]>([]);
   readonly editUserSearching = signal(false);
+
+  private defaultEditSlots(): HoraireSlot[] {
+    return JOURS_SEMAINE.map(j => ({ jour: j, heureDebut: '', heureFin: '', actif: false }));
+  }
+
+  parseHorairesForEdit(h: string | null): void {
+    if (!h) { this.editHorairesMode = 'simple'; this.editJourDebut = 'Lundi'; this.editJourFin = 'Dimanche'; this.editHeureDebut = ''; this.editHeureFin = ''; this.editHorairesSlots = this.defaultEditSlots(); return; }
+    try {
+      const p = JSON.parse(h);
+      if (p.mode === 'simple') {
+        this.editHorairesMode = 'simple';
+        this.editJourDebut = p.jourDebut ?? 'Lundi';
+        this.editJourFin = p.jourFin ?? 'Dimanche';
+        this.editHeureDebut = p.heureDebut ?? '';
+        this.editHeureFin = p.heureFin ?? '';
+        this.editHorairesSlots = this.defaultEditSlots();
+      } else if (p.mode === 'custom' && Array.isArray(p.slots)) {
+        this.editHorairesMode = 'custom';
+        this.editHorairesSlots = this.defaultEditSlots().map(s => {
+          const found = (p.slots as any[]).find(sl => sl.jour === s.jour);
+          return found ? { ...s, actif: true, heureDebut: found.heureDebut ?? '', heureFin: found.heureFin ?? '' } : s;
+        });
+      } else {
+        this.editHorairesMode = 'simple'; this.editJourDebut = 'Lundi'; this.editJourFin = 'Dimanche'; this.editHeureDebut = ''; this.editHeureFin = ''; this.editHorairesSlots = this.defaultEditSlots();
+      }
+    } catch { this.editHorairesMode = 'simple'; this.editJourDebut = 'Lundi'; this.editJourFin = 'Dimanche'; this.editHeureDebut = ''; this.editHeureFin = ''; this.editHorairesSlots = this.defaultEditSlots(); }
+  }
+
+  buildEditHoraires(): string | null {
+    if (this.editHorairesMode === 'simple') {
+      if (!this.editHeureDebut && !this.editHeureFin) return null;
+      return JSON.stringify({ mode: 'simple', jourDebut: this.editJourDebut, jourFin: this.editJourFin, heureDebut: this.editHeureDebut, heureFin: this.editHeureFin });
+    }
+    const slots = this.editHorairesSlots.filter(s => s.actif);
+    if (!slots.length) return null;
+    return JSON.stringify({ mode: 'custom', slots: slots.map(s => ({ jour: s.jour, heureDebut: s.heureDebut, heureFin: s.heureFin })) });
+  }
+
+  switchEditHorairesMode(mode: 'simple' | 'custom') {
+    if (mode === 'custom') {
+      const iStart = JOURS_SEMAINE.indexOf(this.editJourDebut as JourSemaine);
+      const iEnd = JOURS_SEMAINE.indexOf(this.editJourFin as JourSemaine);
+      this.editHorairesSlots = this.defaultEditSlots().map((s, i) => ({
+        ...s,
+        actif: i >= iStart && i <= iEnd,
+        heureDebut: this.editHeureDebut,
+        heureFin: this.editHeureFin,
+      }));
+    }
+    this.editHorairesMode = mode;
+  }
 
   async searchEditUser(q: string) {
     this.editUserSearch.set(q);
@@ -169,6 +232,7 @@ export class PlaceDetailPage implements OnInit {
     });
     this.editUserSearch.set(p.proprietairePseudo ?? '');
     this.editUserResults.set([]);
+    this.parseHorairesForEdit(p.horaires ?? null);
     this.editing.set(true);
   }
 
@@ -178,6 +242,12 @@ export class PlaceDetailPage implements OnInit {
     this.saveError.set(null);
     this.editUserSearch.set('');
     this.editUserResults.set([]);
+    this.editHorairesMode = 'simple';
+    this.editJourDebut = 'Lundi';
+    this.editJourFin = 'Dimanche';
+    this.editHeureDebut = '';
+    this.editHeureFin = '';
+    this.editHorairesSlots = this.defaultEditSlots();
   }
 
   setDraft(field: keyof PlaceDraft, value: any) {
@@ -200,7 +270,7 @@ export class PlaceDetailPage implements OnInit {
         ville: d.ville.trim() || null,
         type: d.type,
         contact: d.contact.trim() || null,
-        horaires: d.horaires.trim() || null,
+        horaires: this.buildEditHoraires(),
         imageUrl: d.imageUrl.trim() || null,
         sourceUrl: d.sourceUrl.trim() || null,
         tags: d.tags.split(',').map((t) => t.trim()).filter(Boolean),

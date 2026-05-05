@@ -74,10 +74,48 @@
               Contact
               <input type="text" [value]="draft()!.contact" (input)="setDraft('contact', $any($event.target).value)" />
             </label>
-            <label class="editField">
-              Horaires
-              <input type="text" [value]="draft()!.horaires" (input)="setDraft('horaires', $any($event.target).value)" />
-            </label>
+            <div class="editField editFullRow editHorairesField">
+              <div class="editHorairesHeader">
+                <span>Horaires d'ouverture</span>
+                @if (editHorairesMode === 'simple') {
+                  <button type="button" class="btnSmall" (click)="switchEditHorairesMode('custom')">Personnaliser par jour</button>
+                } @else {
+                  <button type="button" class="btnSmall" (click)="switchEditHorairesMode('simple')">Mode simple</button>
+                }
+              </div>
+              @if (editHorairesMode === 'simple') {
+                <div class="editHorairesSimple">
+                  <label>Du
+                    <select [(ngModel)]="editJourDebut">
+                      @for (j of JOURS_SEMAINE; track j) { <option [value]="j">{{ j }}</option> }
+                    </select>
+                  </label>
+                  <label>au
+                    <select [(ngModel)]="editJourFin">
+                      @for (j of JOURS_SEMAINE; track j) { <option [value]="j">{{ j }}</option> }
+                    </select>
+                  </label>
+                  <label>de <input type="time" [(ngModel)]="editHeureDebut" /></label>
+                  <label>à  <input type="time" [(ngModel)]="editHeureFin" /></label>
+                </div>
+              } @else {
+                <div class="editHorairesCustom">
+                  @for (slot of editHorairesSlots; track slot.jour; let i = $index) {
+                    <div class="editJourSlot">
+                      <label class="editCheckLabel">
+                        <input type="checkbox" [(ngModel)]="editHorairesSlots[i].actif" />
+                        <span class="editJourName">{{ slot.jour }}</span>
+                      </label>
+                      @if (slot.actif) {
+                        <input type="time" [(ngModel)]="editHorairesSlots[i].heureDebut" class="editTimeInput" />
+                        <span class="editTimeSep">→</span>
+                        <input type="time" [(ngModel)]="editHorairesSlots[i].heureFin" class="editTimeInput" />
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
             <label class="editField editFullRow">
               Image URL
               <input type="url" [value]="draft()!.imageUrl" (input)="setDraft('imageUrl', $any($event.target).value)" />
