@@ -255,7 +255,7 @@
         <!-- Grid -->
         @if (loading()) {
           <div class="loading">Chargement…</div>
-        } @else if (gridPlaces().length === 0 && !premium2Place() && !premium1Place() && normalFeaturedPlaces().length === 0) {
+        } @else if (gridPlaces().length === 0 && carouselPlaces().length === 0) {
           <div class="empty">Aucun établissement dans cette catégorie pour l'instant.</div>
         } @else {
           <div class="placesGrid">
