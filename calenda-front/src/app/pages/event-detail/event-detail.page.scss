@@ -536,3 +536,354 @@
 .title {
   font-weight: 700;
 }
+
+.btnSmall {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  color: inherit;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.12s;
+
+  &:hover:not(:disabled) {
+    background: $overlay-1;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.danger {
+    color: #e53e3e;
+    border-color: #e53e3e;
+    &:hover:not(:disabled) {
+      background: rgba(229, 62, 62, 0.1);
+    }
+  }
+}
+
+.slotsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.35rem 0;
+}
+
+.slotChip {
+  background: $overlay-1;
+  border: 1px solid $border-1;
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.83rem;
+  white-space: nowrap;
+}
+
+.slotToggle {
+  margin-top: 0.3rem;
+  background: none;
+  border: 1px solid $border-1;
+  border-radius: 999px;
+  padding: 0.25rem 1rem;
+  font-size: 0.8rem;
+  color: $text-muted-2;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: $overlay-1;
+    color: $text-muted-1;
+  }
+}
+
+.slotsSection {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.slotsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.slotsLabel {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.slotRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 0.5rem;
+  align-items: end;
+  background: $overlay-1;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid $border-1;
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.slotField {
+  font-size: 0.82rem;
+}
+
+.slotRemove {
+  align-self: flex-end;
+  margin-bottom: 0.1rem;
+}
+
+.highlightSection {
+  margin-top: 0.75rem;
+  border: 1px solid $border-1;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.highlightHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.highlightTitle {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.highlightEmpty {
+  font-size: 0.85rem;
+  color: $text-muted-1;
+  margin: 0;
+}
+
+.highlightItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid $border-1;
+  margin-bottom: 0.4rem;
+  font-size: 0.82rem;
+
+  &.active {
+    border-color: #38a169;
+    background: rgba(56, 161, 105, 0.06);
+  }
+}
+
+.highlightBadge {
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: $overlay-1;
+  color: $text-muted-1;
+
+  &.premium {
+    background: rgba(214, 158, 46, 0.18);
+    color: #d69e2e;
+  }
+}
+
+.highlightDates {
+  flex: 1 1 auto;
+  color: $text-muted-1;
+}
+
+.highlightActive {
+  color: #38a169;
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.highlightActions {
+  display: flex;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.highlightForm {
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  background: $overlay-1;
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.editTop {
+  gap: 0.5rem;
+}
+
+.btnBoost {
+  background: linear-gradient(135deg, #f6ad55, #ed8936);
+  color: #fff;
+  border-color: #dd6b20;
+  font-weight: 600;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ed8936, #dd6b20);
+  }
+}
+
+.slotsHeaderActions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.weeklyModal {
+  max-width: 520px;
+  padding: 1.5rem;
+}
+
+.weeklyModalTitle {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.weeklyRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  @media (max-width: 420px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.weeklyDayPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.dayBtn {
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1.5px solid $border-1;
+  background: $surface-1;
+  color: $text-muted-1;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &:hover:not(.active) {
+    background: $overlay-1;
+    color: $text-1;
+  }
+
+  &.active {
+    background: $brand-primary;
+    border-color: $brand-primary;
+    color: #fff;
+  }
+}
+
+.weeklyActions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.boostModal {
+  max-width: 480px;
+  text-align: center;
+  padding: 2rem 1.5rem 1.5rem;
+}
+
+.boostClose {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: $text-muted-1;
+  line-height: 1;
+  padding: 0.25rem;
+
+  &:hover { color: $text-1; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.boostHero {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.boostIntro {
+  font-size: 0.9rem;
+  color: $text-muted-1;
+  line-height: 1.5;
+  margin: 0.5rem 0 1rem;
+  text-align: left;
+}
+
+.boostPerks {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+}
+
+.boostForm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  text-align: left;
+  margin-bottom: 0.75rem;
+
+  @media (max-width: 420px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.boostSummary {
+  font-size: 0.85rem;
+  color: $text-muted-1;
+  margin: 0 0 0.75rem;
+}
+
+.boostActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.boostSuccess {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.boostSuccessIcon {
+  font-size: 3rem;
+}

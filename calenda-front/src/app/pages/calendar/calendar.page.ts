@@ -29,6 +29,7 @@ import {
 import { FavoritesService } from '../../core/favorites.service';
 import { I18nService } from '../../core/i18n.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
+import { WeatherService, WeatherDay, weatherCodeToEmoji, moonPhaseEmoji, moonPhaseIconUrl, isFullMoonPeak } from '../../core/weather.service';
 
 type ImageChoice = { label: string; value: string };
 
@@ -44,12 +45,13 @@ const PINNED_SUGGESTION_CITIES: Array<{ label: string; searchTerm: string }> = [
 ];
 
 const CATEGORY_IMAGE_CHOICES: Record<EventCategory, ImageChoice[]> = {
-  Concert: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
-  Danse: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
-  Spectacle: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
-  'Feux d\u2019artifice': [{ label: 'Générique', value: 'img/categorie/FESTIVAL/fest1.png' }],
-  Exposition: [{ label: 'Générique', value: 'img/categorie/EXPOSITION/expo1.png' }],
-  Autre: [{ label: 'Générique', value: 'img/categorie/AUTRE/autre1.png' }],
+  'Culture & spectacle': [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
+  'Arts & expos':        [{ label: 'Générique', value: 'img/categorie/EXPOSITION/expo1.png' }],
+  'Vie sociale':         [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
+  'Activités':          [{ label: 'Générique', value: 'img/categorie/AUTRE/autre1.png' }],
+  'Vie locale':          [{ label: 'Générique', value: 'img/categorie/FESTIVAL/fest1.png' }],
+  'Famille':             [{ label: 'Générique', value: 'img/categorie/AUTRE/autre1.png' }],
+  'Spécial':            [{ label: 'Générique', value: 'img/categorie/AUTRE/autre1.png' }],
 };
 
 @Component({
@@ -72,6 +74,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly el = inject(ElementRef);
   private readonly photon = inject(PhotonService);
+  private readonly weather = inject(WeatherService);
 
   @ViewChild('schedScroll')
   private schedScroll?: ElementRef<HTMLElement>;
@@ -154,6 +157,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   private upcomingToken = 0;
 
   readonly favoriteIds = signal<Set<string>>(new Set());
+
+  readonly weatherByDate = signal<Map<string, WeatherDay>>(new Map());
+  readonly weatherCityLbl = signal<string>('Sausset-les-Pins');
+  private lastWeatherCity = '';
 
   private readonly _viewMode = signal<'week' | 'day'>('week');
   private readonly _selectedDate = signal<string>(this.todayLocalKey());
@@ -407,7 +414,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       return {
         idx,
         minutesFromStart,
-        label: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`,
+        label: mm === 0 ? `${hh}h` : '30',
         isHour: mm === 0,
       };
     });
@@ -426,7 +433,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   newTitre = '';
   newDescription = '';
-  newCategorie: EventCategory = 'Concert';
+  newCategorie: EventCategory = 'Culture & spectacle';
   newVille = '';
   newAdresse = '';
   newLatitude: number | null = null;
@@ -437,8 +444,20 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   newCaracteristiques: EventTag[] = [];
   newImageUrl = '';
   newContact = '';
-  newDateDebut = '';
-  newDateFin = '';
+  newSlots: { date: string; heureDebut: string; heureFin: string }[] = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
+
+  newWeeklyForm: { dateDebut: string; dateFin: string; heureDebut: string; heureFin: string; days: Set<number> } | null = null;
+  newWeeklyFormError: string | null = null;
+
+  readonly slotWeekDays = [
+    { num: 1, label: 'Lundi' },
+    { num: 2, label: 'Mardi' },
+    { num: 3, label: 'Mercredi' },
+    { num: 4, label: 'Jeudi' },
+    { num: 5, label: 'Vendredi' },
+    { num: 6, label: 'Samedi' },
+    { num: 0, label: 'Dimanche' },
+  ] as const;
 
   newHoneypot = '';
 
@@ -459,20 +478,18 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   mergedBlockTags(eventIds: string[]): string[] {
     const evMap = new Map(this.events().map((e) => [e.id, e]));
-    const seen = new Set<string>();
-    const result: string[] = [];
+    const freq = new Map<string, number>();
     for (const id of eventIds) {
       const ev = evMap.get(id);
       if (!ev) continue;
       for (const tag of ev.caracteristiques ?? []) {
-        if (!seen.has(tag)) {
-          seen.add(tag);
-          result.push(tag);
-          if (result.length >= 5) return result;
-        }
+        freq.set(tag, (freq.get(tag) ?? 0) + 1);
       }
     }
-    return result;
+    return [...freq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([tag]) => tag);
   }
 
   newImageOptions(): ImageChoice[] {
@@ -488,17 +505,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   readonly availableTags: EventTag[] = [
-    'MUSIQUE',
-    'DANSE',
-    'PLEIN AIR',
-    'RENCONTRE',
-    'FEU D’ARTIFICE',
-    'SPORT',
-    'MARCHÉ',
-    'COMPÉTITION',
-    'HUMOUR',
-    'ART',
-    'VISITE',
+    'CONCERT', 'SPORT', 'DANSE', 'CONCOURS', 'FEU_DARTIFICE',
+    'ENFANT', 'FAMILLE', 'ADULTE', 'TOUT_PUBLIC',
+    'PLEIN_AIR', 'INTERIEUR', 'MUSIQUE', 'FESTIF', 'CALME',
+    'CULTUREL', 'RENCONTRE', 'NETWORKING',
+    'JOUR', 'NUIT', 'FOOD', 'BOISSON', 'DJ', 'LIVE',
   ];
 
   readonly selectedDateObj = computed(() => {
@@ -579,10 +590,32 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   readonly eventsByDay = computed(() => {
     const map = new Map<string, EventDto[]>();
     for (const e of this.events()) {
-      const key = this.localKeyFromIso(e.dateDebut);
-      const arr = map.get(key) ?? [];
-      arr.push(e);
-      map.set(key, arr);
+      if (e.slots && e.slots.length > 0) {
+        for (const slot of e.slots) {
+          const arr = map.get(slot.date) ?? [];
+          arr.push({
+            ...e,
+            dateDebut: `${slot.date}T${slot.heureDebut}:00`,
+            dateFin: `${slot.date}T${slot.heureFin}:00`,
+          } as EventDto);
+          map.set(slot.date, arr);
+        }
+      } else {
+        const startKey = this.localKeyFromIso(e.dateDebut);
+        const endKey = e.dateFin ? this.localKeyFromIso(e.dateFin) : startKey;
+        let cur = startKey;
+        const added = new Set<string>();
+        while (cur <= endKey) {
+          if (!added.has(cur)) {
+            const arr = map.get(cur) ?? [];
+            arr.push(e);
+            map.set(cur, arr);
+            added.add(cur);
+          }
+          cur = this.nextDayKey(cur);
+          if (cur > endKey) break;
+        }
+      }
     }
     for (const [k, arr] of map.entries()) {
       arr.sort((a, b) => a.dateDebut.localeCompare(b.dateDebut) || a.titre.localeCompare(b.titre));
@@ -913,6 +946,35 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** Recharge la liste des favoris du user (si connecté). */
+  private async refreshWeather() {
+    const resolved = this.weather.resolveCity(this.adresse ?? '');
+    if (resolved.key === this.lastWeatherCity) return;
+    this.lastWeatherCity = resolved.key;
+    this.weatherCityLbl.set(resolved.label);
+    const days = await this.weather.getWeeklyWeather(resolved.lat, resolved.lon, resolved.key);
+    this.weatherByDate.set(new Map(days.map((d) => [d.date, d])));
+  }
+
+  weatherEmoji(dateKey: string): string {
+    return weatherCodeToEmoji(this.weatherByDate().get(dateKey)?.code);
+  }
+
+  currentWeatherEmoji(): string {
+    return this.weatherEmoji(this.todayLocalKey());
+  }
+
+  moonPhase(dateKey: string): string {
+    return moonPhaseEmoji(dateKey);
+  }
+
+  isFullMoon(dateKey: string): boolean {
+    return isFullMoonPeak(dateKey);
+  }
+
+  moonPhaseUrl(dateKey: string): string {
+    return moonPhaseIconUrl(dateKey);
+  }
+
   private async reloadFavorites() {
     if (!this.auth.isLoggedIn()) {
       this.favoriteIds.set(new Set());
@@ -929,6 +991,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
    * Sérialisé pour éviter les courses (refreshs rapides) et recalculer le layout à la fin.
    */
   async reload() {
+    void this.refreshWeather();
     if (this.reloadInFlight) {
       this.reloadQueued = true;
       this.dbg('reload queued');
@@ -1249,7 +1312,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     // Villes fixées en tête, puis tri par fréquence décroissante
     return all
       .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.count - a.count)
-      .slice(0, 12);
+      .slice(0, 10);
   }
 
   /** Active un filtre suggéré et relance le chargement. */
@@ -1535,7 +1598,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   /**
    * Calcule le layout (top/height/colonnes) des blocs d'événements pour un jour.
-   * Gère le clipping sur la fenêtre, le regroupement des overlaps, et le bloc "n événements".
+   * Algo en 2 passes :
+   *  1. Sweep-line → repère les plages horaires où > 3 événements se chevauchent simultanément.
+   *  2. Les événements touchant ces plages forment des blocs fusionnés ; les autres sont
+   *     affectés goulûment à 3 colonnes max, en réutilisant les colonnes libérées.
    */
   private computeLayoutForDay(dayKey: string, items: EventDto[]): Array<LayoutItem> {
     const total = this.windowMinutes();
@@ -1544,16 +1610,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
         const s = this.minutesFromWindowStart(dayKey, e.dateDebut);
         let end = e.dateFin ? this.minutesFromWindowStart(dayKey, e.dateFin) : total;
         if (end < s) end = s + 30;
-
-        // Display events that overlap the window (clipped), excluding pure nocturne events.
-        if (this.isNocturne(e)) {
-          return null;
-        }
-
-        if (end <= 0 || s >= total) {
-          return null;
-        }
-
+        if (this.isNocturne(e)) return null;
+        if (end <= 0 || s >= total) return null;
         const startClamped = Math.max(0, Math.min(total, s));
         const endClamped = Math.max(0, Math.min(total, end));
         return { e, s: startClamped, end: Math.max(startClamped + 10, endClamped) };
@@ -1561,65 +1619,126 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       .filter((x): x is NonNullable<typeof x> => x !== null)
       .sort((a, b) => a.s - b.s || a.end - b.end || a.e.titre.localeCompare(b.e.titre));
 
-    const groups: Array<Array<(typeof normalized)[number]>> = [];
-    let current: Array<(typeof normalized)[number]> = [];
-    let currentEnd = -1;
-    for (const it of normalized) {
-      if (current.length === 0) {
-        current = [it];
-        currentEnd = it.end;
-        continue;
-      }
-      if (it.s < currentEnd) {
-        current.push(it);
-        currentEnd = Math.max(currentEnd, it.end);
-      } else {
-        groups.push(current);
-        current = [it];
-        currentEnd = it.end;
-      }
-    }
-    if (current.length) groups.push(current);
-
     const pxPerMinute = this.slotPx() / this.minutesPerSlot;
     const out: LayoutItem[] = [];
+    if (normalized.length === 0) return out;
+
+    // ── Passe 1 : sweep-line → plages surchargées (> 3 événements en même temps) ──
+    const pts: Array<{ t: number; delta: number }> = [];
+    for (const n of normalized) {
+      pts.push({ t: n.s, delta: 1 });
+      pts.push({ t: n.end, delta: -1 });
+    }
+    pts.sort((a, b) => a.t - b.t || a.delta - b.delta); // fin avant début à t égal
+
+    const overloads: Array<{ from: number; to: number }> = [];
+    let cnt = 0, oStart = -1;
+    for (const p of pts) {
+      cnt += p.delta;
+      if (cnt > 3 && oStart === -1) { oStart = p.t; }
+      else if (cnt <= 3 && oStart !== -1) { overloads.push({ from: oStart, to: p.t }); oStart = -1; }
+    }
+    if (oStart !== -1) overloads.push({ from: oStart, to: total + 1 });
+
+    // ── Passe 2 : marquer les événements qui touchent une plage surchargée ──
+    const mergeSet = new Set<number>();
+    for (let i = 0; i < normalized.length; i++) {
+      for (const ol of overloads) {
+        if (normalized[i].s < ol.to && normalized[i].end > ol.from) { mergeSet.add(i); break; }
+      }
+    }
+
+    // ── Passe 3 : construire les composantes connexes des événements à fusionner ──
+    type MergeComp = { indices: number[]; top: number; bottom: number };
+    const mergeComps: MergeComp[] = [];
+    if (mergeSet.size > 0) {
+      const visited = new Set<number>();
+      for (const seed of mergeSet) {
+        if (visited.has(seed)) continue;
+        const comp: number[] = [];
+        const queue = [seed];
+        while (queue.length) {
+          const curr = queue.pop()!;
+          if (visited.has(curr)) continue;
+          visited.add(curr); comp.push(curr);
+          for (const other of mergeSet) {
+            if (!visited.has(other)) {
+              const a = normalized[curr], b = normalized[other];
+              if (a.s < b.end && a.end > b.s) queue.push(other);
+            }
+          }
+        }
+        const ci = comp.map((i) => normalized[i]);
+        mergeComps.push({
+          indices: comp,
+          top: Math.min(...ci.map((x) => x.s)),
+          bottom: Math.max(...ci.map((x) => x.end)),
+        });
+      }
+    }
+
+    // ── Passe 4 : affectation greedy en colonnes pour TOUS les candidats
+    //    (blocs fusionnés + événements individuels) afin d'éviter tout chevauchement visuel ──
+    type Candidate =
+      | { kind: 'merge'; comp: MergeComp }
+      | { kind: 'single'; item: (typeof normalized)[number] };
+
+    const candidates: Candidate[] = [
+      ...mergeComps.map((comp): Candidate => ({ kind: 'merge', comp })),
+      ...normalized.filter((_, i) => !mergeSet.has(i)).map((item): Candidate => ({ kind: 'single', item })),
+    ];
+    candidates.sort((a, b) => {
+      const as = a.kind === 'single' ? a.item.s : a.comp.top;
+      const bs = b.kind === 'single' ? b.item.s : b.comp.top;
+      const ae = a.kind === 'single' ? a.item.end : a.comp.bottom;
+      const be = b.kind === 'single' ? b.item.end : b.comp.bottom;
+      return as - bs || ae - be;
+    });
+
+    const groups: Array<Candidate[]> = [];
+    let cur: Candidate[] = [], curEnd = -1;
+    for (const c of candidates) {
+      const cs = c.kind === 'single' ? c.item.s : c.comp.top;
+      const ce = c.kind === 'single' ? c.item.end : c.comp.bottom;
+      if (!cur.length) { cur = [c]; curEnd = ce; }
+      else if (cs < curEnd) { cur.push(c); curEnd = Math.max(curEnd, ce); }
+      else { groups.push(cur); cur = [c]; curEnd = ce; }
+    }
+    if (cur.length) groups.push(cur);
 
     for (const g of groups) {
-      if (g.length >= 4) {
-        const top = Math.min(...g.map((x) => x.s));
-        const bottom = Math.max(...g.map((x) => x.end));
-        out.push({
-          kind: 'merged',
-          count: g.length,
-          eventIds: g.map((x) => x.e.id),
-          topPx: top * pxPerMinute,
-          heightPx: Math.max(18, (bottom - top) * pxPerMinute),
-        });
-        continue;
-      }
-
       const colEnds = [-1, -1, -1];
-      const placed: Array<{ it: (typeof g)[number]; col: number }> = [];
-      for (const it of g) {
+      const placed: Array<{ c: Candidate; col: number }> = [];
+      for (const c of g) {
+        const cs = c.kind === 'single' ? c.item.s : c.comp.top;
         let col = 0;
-        while (col < 3 && it.s < colEnds[col]) col++;
+        while (col < 3 && cs < colEnds[col]) col++;
         if (col >= 3) col = 2;
-        colEnds[col] = it.end;
-        placed.push({ it, col });
+        colEnds[col] = c.kind === 'single' ? c.item.end : c.comp.bottom;
+        placed.push({ c, col });
       }
       const usedCols = Math.max(...placed.map((p) => p.col)) + 1;
-
       for (const p of placed) {
-        const topPx = p.it.s * pxPerMinute;
-        const heightPx = Math.max(18, (p.it.end - p.it.s) * pxPerMinute);
-        out.push({
-          kind: 'event',
-          event: p.it.e,
-          topPx,
-          heightPx,
-          leftPct: (p.col / usedCols) * 100,
-          widthPct: (1 / usedCols) * 100,
-        });
+        if (p.c.kind === 'merge') {
+          out.push({
+            kind: 'merged',
+            count: p.c.comp.indices.length,
+            eventIds: p.c.comp.indices.map((i) => normalized[i].e.id),
+            topPx: p.c.comp.top * pxPerMinute,
+            heightPx: Math.max(18, (p.c.comp.bottom - p.c.comp.top) * pxPerMinute),
+            leftPct: (p.col / usedCols) * 100,
+            widthPct: (1 / usedCols) * 100,
+          });
+        } else {
+          out.push({
+            kind: 'event',
+            event: p.c.item.e,
+            topPx: p.c.item.s * pxPerMinute,
+            heightPx: Math.max(18, (p.c.item.end - p.c.item.s) * pxPerMinute),
+            leftPct: (p.col / usedCols) * 100,
+            widthPct: (1 / usedCols) * 100,
+          });
+        }
       }
     }
 
@@ -1664,6 +1783,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
     await this.auth.ensureLoaded();
 
+    const date = this.selectedDate ?? new Date().toISOString().slice(0, 10);
+    if (this.newSlots.length === 1 && !this.newSlots[0].date) {
+      this.newSlots = [{ date, heureDebut: '09:00', heureFin: '18:00' }];
+    }
+
     this.showPropose = true;
 
     if (!this.newContact.trim()) {
@@ -1685,9 +1809,91 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.proposeGateOpen = false;
   }
 
+  openNewWeeklyForm() {
+    const last = this.newSlots[this.newSlots.length - 1];
+    const today = new Date().toISOString().slice(0, 10);
+    this.newWeeklyFormError = null;
+    this.newWeeklyForm = {
+      dateDebut: last?.date || today,
+      dateFin: last?.date || today,
+      heureDebut: last?.heureDebut ?? '09:00',
+      heureFin: last?.heureFin ?? '18:00',
+      days: new Set<number>(),
+    };
+  }
+
+  closeNewWeeklyForm() {
+    this.newWeeklyForm = null;
+    this.newWeeklyFormError = null;
+  }
+
+  patchNewWeeklyForm(patch: Partial<{ dateDebut: string; dateFin: string; heureDebut: string; heureFin: string }>) {
+    if (!this.newWeeklyForm) return;
+    this.newWeeklyForm = { ...this.newWeeklyForm, ...patch };
+  }
+
+  toggleNewWeeklyDay(num: number) {
+    if (!this.newWeeklyForm) return;
+    const days = new Set(this.newWeeklyForm.days);
+    if (days.has(num)) days.delete(num); else days.add(num);
+    this.newWeeklyForm = { ...this.newWeeklyForm, days };
+  }
+
+  applyNewWeeklySlots() {
+    const f = this.newWeeklyForm;
+    if (!f) return;
+    if (!f.dateDebut || !f.dateFin) {
+      this.newWeeklyFormError = 'Veuillez renseigner les dates de début et de fin.';
+      return;
+    }
+    if (f.dateFin < f.dateDebut) {
+      this.newWeeklyFormError = 'La date de fin doit être après la date de début.';
+      return;
+    }
+    if (f.days.size === 0) {
+      this.newWeeklyFormError = 'Sélectionnez au moins un jour de la semaine.';
+      return;
+    }
+    const generated: { date: string; heureDebut: string; heureFin: string }[] = [];
+    const cur = new Date(f.dateDebut + 'T00:00:00');
+    const end = new Date(f.dateFin + 'T00:00:00');
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    while (cur <= end && generated.length < 730) {
+      if (f.days.has(cur.getDay())) {
+        const key = `${cur.getFullYear()}-${pad2(cur.getMonth() + 1)}-${pad2(cur.getDate())}`;
+        generated.push({ date: key, heureDebut: f.heureDebut, heureFin: f.heureFin });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    if (generated.length === 0) {
+      this.newWeeklyFormError = 'Aucun créneau généré pour les jours sélectionnés.';
+      return;
+    }
+    const existingDates = new Set(this.newSlots.filter((s) => s.date).map((s) => s.date));
+    const newOnes = generated.filter((s) => !existingDates.has(s.date));
+    const base = this.newSlots.filter((s) => s.date);
+    this.newSlots = [...base, ...newOnes].sort((a, b) => a.date.localeCompare(b.date));
+    if (this.newSlots.length === 0) this.newSlots = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
+    this.closeNewWeeklyForm();
+  }
+
+  addNewSlot() {
+    const last = this.newSlots[this.newSlots.length - 1];
+    const nextDate = last?.date ? this.nextDayKey(last.date) : '';
+    this.newSlots = [...this.newSlots, { date: nextDate, heureDebut: last?.heureDebut ?? '09:00', heureFin: last?.heureFin ?? '18:00' }];
+  }
+
+  removeNewSlot(idx: number) {
+    if (this.newSlots.length <= 1) return;
+    this.newSlots = this.newSlots.filter((_, i) => i !== idx);
+  }
+
+  updateNewSlot(idx: number, field: 'date' | 'heureDebut' | 'heureFin', value: string) {
+    this.newSlots = this.newSlots.map((s, i) => (i === idx ? { ...s, [field]: value } : s));
+  }
+
   /** Soumet un événement proposé via l'API puis réinitialise le formulaire et recharge. */
   async submitPropose() {
-    const rawEnd = (this.newDateFin ?? '').trim();
     const rawContact = (this.newContact ?? '').trim();
     const payload: any = {
       titre: this.newTitre,
@@ -1699,8 +1905,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       longitude: this.newLongitude,
       caracteristiques: this.newCaracteristiques.slice(0, 3),
       imageUrl: this.newImageUrl ? this.newImageUrl : undefined,
-      dateDebut: new Date(this.newDateDebut).toISOString(),
-      dateFin: rawEnd ? new Date(rawEnd).toISOString() : null,
+      slots: this.newSlots.filter((s) => s.date).map((s) => ({
+        date: s.date,
+        heureDebut: s.heureDebut,
+        heureFin: s.heureFin,
+      })),
       honeypot: this.newHoneypot,
     };
 
@@ -1712,7 +1921,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
     this.newTitre = '';
     this.newDescription = '';
-    this.newCategorie = 'Concert';
+    this.newCategorie = 'Culture & spectacle';
     this.newVille = '';
     this.newAdresse = '';
     this.newLatitude = null;
@@ -1722,8 +1931,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.newCaracteristiques = [];
     this.newImageUrl = '';
     this.newContact = '';
-    this.newDateDebut = '';
-    this.newDateFin = '';
+    this.newSlots = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
     this.newHoneypot = '';
 
     this.closePropose();
@@ -1752,4 +1960,4 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
 type LayoutItem =
   | { kind: 'event'; event: EventDto; topPx: number; heightPx: number; leftPct: number; widthPct: number }
-  | { kind: 'merged'; count: number; eventIds: string[]; topPx: number; heightPx: number };
+  | { kind: 'merged'; count: number; eventIds: string[]; topPx: number; heightPx: number; leftPct: number; widthPct: number };

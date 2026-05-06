@@ -81,6 +81,26 @@ export class AdminService {
     return this.http.delete(`${this.apiBaseUrl}/admin/events/${id}`);
   }
 
+  allEtablissements() {
+    return this.http.get<any[]>(`${this.apiBaseUrl}/admin/etablissements`);
+  }
+
+  pendingEtablissements() {
+    return this.http.get<any[]>(`${this.apiBaseUrl}/admin/pending-etablissements`);
+  }
+
+  updateEtablissement(id: string, dto: Record<string, any>) {
+    return this.http.patch<any>(`${this.apiBaseUrl}/admin/etablissements/${id}`, dto);
+  }
+
+  validateEtablissement(id: string) {
+    return this.http.patch(`${this.apiBaseUrl}/admin/etablissements/${id}/validate`, {});
+  }
+
+  deleteEtablissement(id: string) {
+    return this.http.delete(`${this.apiBaseUrl}/admin/etablissements/${id}`);
+  }
+
   /** Liste les profils organisateurs (admin). */
   organizers() {
     return this.http.get<{ id: string; pseudo: string; email: string; isAdmin: boolean }[]>(
@@ -119,6 +139,7 @@ export class AdminService {
       skippedPast: number;
       failed: number;
       urls: string[];
+      toDelete: { id: string; titre: string; dateDebut: string; dateFin: string | null }[];
       failures: { url: string; reason: string }[];
       debugSamples: {
         status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
@@ -133,12 +154,13 @@ export class AdminService {
     }>(`${this.apiBaseUrl}/admin/merge/martigues/preview`, { params: query });
   }
 
-  applyMergeMartigues(body: { urls: string[] }) {
+  applyMergeMartigues(body: { urls: string[]; toDeleteIds?: string[] }) {
     return this.http.post<{
       processed: number;
       created: number;
       skippedExisting: number;
       skippedPast: number;
+      deleted: number;
       failed: number;
       debugSamples: {
         status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
@@ -167,6 +189,7 @@ export class AdminService {
       skippedPast: number;
       failed: number;
       urls: string[];
+      toDelete: { id: string; titre: string; dateDebut: string; dateFin: string | null }[];
       failures: { url: string; reason: string }[];
       debugSamples: {
         status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
@@ -181,12 +204,13 @@ export class AdminService {
     }>(`${this.apiBaseUrl}/admin/merge/salsa-olivier/preview`, { params: query });
   }
 
-  applyMergeSalsaOlivier(body: { urls: string[] }) {
+  applyMergeSalsaOlivier(body: { urls: string[]; toDeleteIds?: string[] }) {
     return this.http.post<{
       processed: number;
       created: number;
       skippedExisting: number;
       skippedPast: number;
+      deleted: number;
       failed: number;
       debugSamples: {
         status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
@@ -197,5 +221,55 @@ export class AdminService {
         dateFin?: string | null;
       }[];
     }>(`${this.apiBaseUrl}/admin/merge/salsa-olivier/apply`, body);
+  }
+
+  previewMergeCarryLeRouet(params?: { pages?: number }) {
+    const query: Record<string, string> = {};
+    if (params?.pages !== undefined) query['pages'] = String(params.pages);
+
+    return this.http.get<{
+      scannedPages: number;
+      foundUrls: number;
+      dedupedUrls: number;
+      parsed: number;
+      withImage: number;
+      withDescription: number;
+      wouldCreate: number;
+      skippedExisting: number;
+      skippedPast: number;
+      failed: number;
+      urls: string[];
+      toDelete: { id: string; titre: string; dateDebut: string; dateFin: string | null }[];
+      failures: { url: string; reason: string }[];
+      debugSamples: {
+        status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
+        url: string;
+        reason?: string;
+        titre?: string;
+        dateDebut?: string;
+        dateFin?: string | null;
+        image?: boolean;
+        descLen?: number;
+      }[];
+    }>(`${this.apiBaseUrl}/admin/merge/carry-le-rouet/preview`, { params: query });
+  }
+
+  applyMergeCarryLeRouet(body: { urls: string[]; toDeleteIds?: string[] }) {
+    return this.http.post<{
+      processed: number;
+      created: number;
+      skippedExisting: number;
+      skippedPast: number;
+      deleted: number;
+      failed: number;
+      debugSamples: {
+        status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
+        url: string;
+        reason?: string;
+        titre?: string;
+        dateDebut?: string;
+        dateFin?: string | null;
+      }[];
+    }>(`${this.apiBaseUrl}/admin/merge/carry-le-rouet/apply`, body);
   }
 }

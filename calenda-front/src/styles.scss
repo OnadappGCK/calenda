@@ -98,6 +98,8 @@ app-calendar-page {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  max-width: 100%;
+  overflow-x: hidden;
 
   --cal-topbar-gap: 0.35rem;
   --cal-topbar-padding: 0.35rem;
@@ -155,7 +157,8 @@ app-calendar-page {
 }
 
 app-calendar-page .calendarContainer {
-  max-width: none;
+  max-width: 100%;
+  width: 100%;
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
@@ -163,6 +166,7 @@ app-calendar-page .calendarContainer {
   flex-direction: column;
   box-sizing: border-box;
   padding: 0.6rem;
+  overflow-x: hidden;
 }
 
 app-calendar-page .calendarViewport {
@@ -171,12 +175,16 @@ app-calendar-page .calendarViewport {
   height: auto;
   display: flex;
   flex-direction: column;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 app-calendar-page .scheduler {
   margin-top: 0.25rem;
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 app-calendar-page .schedScroll {

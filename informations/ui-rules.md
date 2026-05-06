@@ -9,14 +9,25 @@
   - la couleur de texte (contraste auto),
   - l'icône catégorie (fallback si pas de tags).
 
-| Catégorie (métier) | Couleur de base | Icône catégorie |
-|---|---|---|
-| Concert | `#4A90E2` | `♪` |
-| Spectacle | `#4A90E2` | `▸` |
-| Danse | `#2FBF71` | `⌁` |
-| Feux d’artifice | `#F5B841` | `*` |
-| Exposition | `#E85D5D` | `▦` |
-| Autre | `#8E6AD8` | `•` |
+| Catégorie (métier) | Valeur enum | Couleur de base | Icône |
+|---|---|---|---|
+| Culture & spectacle | `CULTURE_SPECTACLE` | `#5C6BC0` | 🎭 |
+| Arts & expos | `ARTS_EXPOS` | `#E85D5D` | 🎨 |
+| Vie sociale | `VIE_SOCIALE` | `#2FBF71` | 💃 |
+| Activités | `ACTIVITES` | `#FF7043` | 🏃 |
+| Vie locale | `VIE_LOCALE` | `#AB47BC` | 🛍️ |
+| Spécial | `SPECIAL` | `#F5B841` | 🎆 |
+
+**Mots-clés de catégorisation automatique (merge services) :**
+
+| Catégorie | Mots-clés déclencheurs |
+|---|---|
+| Culture & spectacle | concert, musique, jazz, rock, théâtre, spectacle, comédie, humour, cinéma |
+| Arts & expos | exposition, galerie, vernissage, musée, peinture, sculpture, photo |
+| Vie sociale | danse, salsa, tango, bachata, festival, soirée |
+| Activités | sport, atelier, bien-être, yoga, pilates, randonnée |
+| Vie locale | marché, brocante, salon |
+| Spécial | feux d'artifice, pyro *(fallback par défaut)* |
 
 Règles d'affichage :
 - Le fond des cartes/blocs utilise un **dégradé** dérivé de la couleur de catégorie.
@@ -28,15 +39,20 @@ Règles d'affichage :
 - Affichage prioritaire en bulles/icônes dans les cartes événement.
 - Si aucun tag n'est présent, on affiche l'icône de catégorie.
 
-| Tag | Icône |
-|---|---|
-| MUSIQUE | 🎵 |
-| DANSE | 💃 |
-| PLEIN AIR | ☀️ |
-| RENCONTRE | 🤝 |
-| FEU D’ARTIFICE | 🔥 |
-| SPORT | ⚽ |
-| MARCHÉ | 🏠 |
+| Tag | Icône | Tag | Icône |
+|---|---|---|---|
+| `CONCERT` | 🎤 | `MUSIQUE` | 🎵 |
+| `SPORT` | ⚽ | `FESTIF` | 🎉 |
+| `DANSE` | 💃 | `CALME` | 🌿 |
+| `CONCOURS` | 🏆 | `CULTUREL` | 🎭 |
+| `FEU_DARTIFICE` | 🎆 | `RENCONTRE` | 🤝 |
+| `ENFANT` | 🧒 | `NETWORKING` | 💼 |
+| `FAMILLE` | 👨‍👩‍👧 | `JOUR` | 🌤️ |
+| `ADULTE` | 🔞 | `NUIT` | 🌙 |
+| `TOUT_PUBLIC` | � | `FOOD` | 🍽️ |
+| `PLEIN_AIR` | ☀️ | `BOISSON` | 🥂 |
+| `INTERIEUR` | 🏠 | `DJ` | 🎧 |
+| — | — | `LIVE` | 🎸 |
 
 ## 3) Images événement
 
@@ -47,10 +63,10 @@ Règles d'affichage :
 - Une galerie d'images par défaut est disponible dans l'édition d'un événement.
 
 Mapping par défaut :
-- Concert / Danse / Spectacle -> `img/categorie/SPECTACLE/spec1.png`
-- Feux d’artifice -> `img/categorie/FESTIVAL/fest1.png`
-- Exposition -> `img/categorie/EXPOSITION/expo1.png`
-- Autre -> `img/categorie/AUTRE/autre1.png`
+- Culture & spectacle / Vie sociale -> `img/categorie/SPECTACLE/spec1.png`
+- Spécial -> `img/categorie/FESTIVAL/fest1.png`
+- Arts & expos -> `img/categorie/EXPOSITION/expo1.png`
+- Activités / Vie locale -> `img/categorie/AUTRE/autre1.png`
 
 ## 4) Règles i18n UI
 

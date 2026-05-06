@@ -30,17 +30,11 @@ export class FavoritesPage implements OnInit {
   dateFinFilter = '';
 
   readonly availableTags: EventTag[] = [
-    'MUSIQUE',
-    'DANSE',
-    'PLEIN AIR',
-    'RENCONTRE',
-    'FEU D’ARTIFICE',
-    'SPORT',
-    'MARCHÉ',
-    'COMPÉTITION',
-    'HUMOUR',
-    'ART',
-    'VISITE',
+    'CONCERT', 'SPORT', 'DANSE', 'CONCOURS', 'FEU_DARTIFICE',
+    'ENFANT', 'FAMILLE', 'ADULTE', 'TOUT_PUBLIC',
+    'PLEIN_AIR', 'INTERIEUR', 'MUSIQUE', 'FESTIF', 'CALME',
+    'CULTUREL', 'RENCONTRE', 'NETWORKING',
+    'JOUR', 'NUIT', 'FOOD', 'BOISSON', 'DJ', 'LIVE',
   ];
 
   showFilters = false;

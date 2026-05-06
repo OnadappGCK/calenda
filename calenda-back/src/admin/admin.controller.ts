@@ -5,9 +5,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminGuard } from '../common/guards/admin.guard';
 import { ListEventsQueryDto } from '../events/dto/list-events.query';
 import { EventsService } from '../events/events.service';
+import { EtablissementsService } from '../etablissements/etablissements.service';
 import { User } from '../users/user.entity';
 import { MartiguesMergeService } from './martigues-merge.service';
 import { SalsaOlivierMergeService } from './salsa-olivier-merge.service';
+import { CarryLeRouetMergeService } from './carry-le-rouet-merge.service';
 import { Repository } from 'typeorm';
 import { AdminCreateUserDto } from './dto/admin-create-user.dto';
 import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
@@ -21,8 +23,10 @@ import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
 export class AdminController {
   constructor(
     private readonly eventsService: EventsService,
+    private readonly etablissementsService: EtablissementsService,
     private readonly martiguesMerge: MartiguesMergeService,
     private readonly salsaMerge: SalsaOlivierMergeService,
+    private readonly carryMerge: CarryLeRouetMergeService,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
   ) {}
 
@@ -57,6 +61,31 @@ export class AdminController {
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
     };
+  }
+
+  @Get('etablissements')
+  async allEtablissements() {
+    return this.etablissementsService.listAll();
+  }
+
+  @Get('pending-etablissements')
+  async pendingEtablissements() {
+    return this.etablissementsService.listPending();
+  }
+
+  @Patch('etablissements/:id')
+  async updateEtablissement(@Param('id') id: string, @Body() dto: any) {
+    return this.etablissementsService.update(id, dto);
+  }
+
+  @Patch('etablissements/:id/validate')
+  async validateEtablissement(@Param('id') id: string) {
+    return this.etablissementsService.validatePublic(id);
+  }
+
+  @Delete('etablissements/:id')
+  async removeEtablissement(@Param('id') id: string) {
+    return this.etablissementsService.remove(id);
   }
 
   @Get('pending-events')
@@ -238,8 +267,8 @@ export class AdminController {
   }
 
   @Post('merge/martigues/apply')
-  async applyMergeMartigues(@Body() body: { urls?: string[] }) {
-    return this.martiguesMerge.apply({ urls: body?.urls ?? [] });
+  async applyMergeMartigues(@Body() body: { urls?: string[]; toDeleteIds?: string[] }) {
+    return this.martiguesMerge.apply({ urls: body?.urls ?? [], toDeleteIds: body?.toDeleteIds ?? [] });
   }
 
   @Post('merge/salsa-olivier')
@@ -259,7 +288,25 @@ export class AdminController {
   }
 
   @Post('merge/salsa-olivier/apply')
-  async applyMergeSalsaOlivier(@Body() body: { urls?: string[] }) {
-    return this.salsaMerge.apply({ urls: body?.urls ?? [] });
+  async applyMergeSalsaOlivier(@Body() body: { urls?: string[]; toDeleteIds?: string[] }) {
+    return this.salsaMerge.apply({ urls: body?.urls ?? [], toDeleteIds: body?.toDeleteIds ?? [] });
+  }
+
+  @Post('merge/carry-le-rouet')
+  async mergeCarryLeRouet(@Query('pages') pages?: string, @Query('dryRun') dryRun?: string) {
+    const pagesN = pages ? Number(pages) : undefined;
+    const dry = (dryRun ?? '').toLowerCase() === 'true';
+    return this.carryMerge.merge({ pages: pagesN, dryRun: dry });
+  }
+
+  @Get('merge/carry-le-rouet/preview')
+  async previewMergeCarryLeRouet(@Query('pages') pages?: string) {
+    const pagesN = pages ? Number(pages) : undefined;
+    return this.carryMerge.preview({ pages: pagesN });
+  }
+
+  @Post('merge/carry-le-rouet/apply')
+  async applyMergeCarryLeRouet(@Body() body: { urls?: string[]; toDeleteIds?: string[] }) {
+    return this.carryMerge.apply({ urls: body?.urls ?? [], toDeleteIds: body?.toDeleteIds ?? [] });
   }
 }

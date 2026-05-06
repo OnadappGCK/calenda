@@ -9,6 +9,9 @@
     @if (!editing() && canEdit()) {
       <div class="editTop">
         <button class="btn" type="button" (click)="startEdit()">{{ i18n.t('common.edit') }}</button>
+        @if (canBoost()) {
+          <button class="btn btnBoost" type="button" (click)="openBoost()">{{ i18n.t('eventDetail.boost.btn') }}</button>
+        }
       </div>
     }
 
@@ -99,9 +102,24 @@
       <div class="meta">
         {{ categoryLabel(event()!.categorie) }} · {{ event()!.ville }}
       </div>
-      <div class="meta">
-        {{ event()!.dateDebut | date: 'short':undefined:dateLocale() }} → {{ event()!.dateFin ? (event()!.dateFin | date: 'short':undefined:dateLocale()) : i18n.t('common.notMentioned') }}
-      </div>
+      @if ((event()!.slots ?? []).length > 0) {
+        <div class="slotsList">
+          @for (s of visibleSlots(); track s.id) {
+            <span class="slotChip">📅 {{ s.date | date:'EEE d MMM':undefined:dateLocale() }} · {{ s.heureDebut }}–{{ s.heureFin }}</span>
+          }
+        </div>
+        @if (hiddenSlotsCount() > 0) {
+          @if (!slotsExpanded()) {
+            <button class="slotToggle" type="button" (click)="slotsExpanded.set(true)">Voir tous les créneaux (+{{ hiddenSlotsCount() }})</button>
+          } @else {
+            <button class="slotToggle" type="button" (click)="slotsExpanded.set(false)">Voir moins</button>
+          }
+        }
+      } @else {
+        <div class="meta">
+          {{ event()!.dateDebut | date: 'short':undefined:dateLocale() }} → {{ event()!.dateFin ? (event()!.dateFin | date: 'short':undefined:dateLocale()) : i18n.t('common.notMentioned') }}
+        </div>
+      }
 
       <div class="meta">{{ i18n.t('eventDetail.organizer') }}: {{ event()!.organisateur?.pseudo ?? i18n.t('eventDetail.organizerMissing') }}</div>
 
@@ -205,23 +223,43 @@
           </div>
         }
 
-        <div class="row2">
-          <label class="field">
-            {{ i18n.t('eventDetail.start') }}
-            <input
-              type="datetime-local"
-              [ngModel]="draft()!.dateDebutLocal"
-              (ngModelChange)="setDraft({ dateDebutLocal: $event })"
-            />
-          </label>
-          <label class="field">
-            {{ i18n.t('eventDetail.end') }}
-            <input
-              type="datetime-local"
-              [ngModel]="draft()!.dateFinLocal"
-              (ngModelChange)="setDraft({ dateFinLocal: $event })"
-            />
-          </label>
+        <div class="slotsSection">
+          <div class="slotsHeader">
+            <span class="slotsLabel">{{ i18n.t('eventDetail.slots.title') }}</span>
+            <div class="slotsHeaderActions">
+              <button type="button" class="btnSmall" (click)="openWeeklySlotForm()">
+                📅 Créneaux hebdomadaires
+              </button>
+              <button type="button" class="btnSmall" (click)="addDraftSlot()">
+                + {{ i18n.t('eventDetail.slots.add') }}
+              </button>
+            </div>
+          </div>
+          @for (slot of draft()!.slots; track $index) {
+            <div class="slotRow">
+              <label class="field slotField">
+                {{ i18n.t('eventDetail.slots.date') }}
+                <input type="date"
+                  [ngModel]="slot.date"
+                  (ngModelChange)="updateDraftSlot($index, 'date', $event)" />
+              </label>
+              <label class="field slotField">
+                {{ i18n.t('eventDetail.slots.from') }}
+                <input type="time"
+                  [ngModel]="slot.heureDebut"
+                  (ngModelChange)="updateDraftSlot($index, 'heureDebut', $event)" />
+              </label>
+              <label class="field slotField">
+                {{ i18n.t('eventDetail.slots.to') }}
+                <input type="time"
+                  [ngModel]="slot.heureFin"
+                  (ngModelChange)="updateDraftSlot($index, 'heureFin', $event)" />
+              </label>
+              @if (draft()!.slots.length > 1) {
+                <button type="button" class="btnSmall danger slotRemove" (click)="removeDraftSlot($index)">✕</button>
+              }
+            </div>
+          }
         </div>
 
         <label class="field">
@@ -263,14 +301,97 @@
               />
               {{ i18n.t('eventDetail.public') }}
             </label>
-            <label class="field inline">
-              <input
-                type="checkbox"
-                [ngModel]="draft()!.enAvant"
-                (ngModelChange)="setDraft({ enAvant: $event })"
-              />
-              {{ i18n.t('eventDetail.featured') }}
-            </label>
+          </div>
+
+          <div class="highlightSection">
+            <div class="highlightHeader">
+              <span class="highlightTitle">{{ i18n.t('eventDetail.highlight.title') }}</span>
+              <button type="button" class="btnSmall" (click)="openNewHighlight()" [disabled]="!!highlightForm()">
+                + {{ i18n.t('eventDetail.highlight.add') }}
+              </button>
+            </div>
+
+            @if (highlights().length === 0 && !highlightForm()) {
+              <p class="highlightEmpty">{{ i18n.t('eventDetail.highlight.none') }}</p>
+            }
+
+            @for (h of highlights(); track h.id) {
+              <div class="highlightItem" [class.active]="isHighlightActive(h)">
+                <span class="highlightBadge" [class.premium]="h.priority > 0">
+                  {{ h.priority > 0 ? i18n.t('eventDetail.highlight.premium') : i18n.t('eventDetail.highlight.standard') }}
+                </span>
+                <span class="highlightDates">
+                  {{ h.startAt | date:'dd/MM/yy HH:mm' }} → {{ h.endAt | date:'dd/MM/yy HH:mm' }}
+                </span>
+                @if (isHighlightActive(h)) {
+                  <span class="highlightActive">● {{ i18n.t('eventDetail.highlight.activeNow') }}</span>
+                }
+                <div class="highlightActions">
+                  <button type="button" class="btnSmall" (click)="openEditHighlight(h)">✏</button>
+                  <button type="button" class="btnSmall danger" (click)="deleteHighlight(h.id)" [disabled]="highlightSaving()">✕</button>
+                </div>
+              </div>
+            }
+
+            @if (highlightForm()) {
+              <div class="highlightForm">
+                <label class="field">
+                  {{ i18n.t('eventDetail.highlight.startAt') }}
+                  <input type="datetime-local"
+                    [ngModel]="highlightForm()!.startAt"
+                    (ngModelChange)="setHighlightFormField('startAt', $event)" />
+                </label>
+                <label class="field">
+                  {{ i18n.t('eventDetail.highlight.endAt') }}
+                  <input type="datetime-local"
+                    [ngModel]="highlightForm()!.endAt"
+                    (ngModelChange)="setHighlightFormField('endAt', $event)" />
+                </label>
+                <label class="field">
+                  {{ i18n.t('eventDetail.highlight.priority') }}
+                  <select [ngModel]="highlightForm()!.priority" (ngModelChange)="setHighlightFormField('priority', +$event)">
+                    <option [value]="0">{{ i18n.t('eventDetail.highlight.standard') }} (0)</option>
+                    <option [value]="1">{{ i18n.t('eventDetail.highlight.premium') }} (1)</option>
+                    <option [value]="2">{{ i18n.t('eventDetail.highlight.premium') }} (2)</option>
+                  </select>
+                </label>
+                @if (highlightError()) {
+                  <p class="error">{{ i18n.t('eventDetail.highlight.saveError') }}</p>
+                }
+                <div class="row2">
+                  <button type="button" class="btnSmall" (click)="saveHighlight()" [disabled]="highlightSaving()">
+                    {{ i18n.t('eventDetail.highlight.save') }}
+                  </button>
+                  <button type="button" class="btnSmall" (click)="cancelHighlightForm()">
+                    {{ i18n.t('eventDetail.highlight.cancel') }}
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (canEdit() && !isAdmin()) {
+          <div class="highlightSection">
+            <div class="highlightHeader">
+              <span class="highlightTitle">{{ i18n.t('eventDetail.highlight.title') }}</span>
+            </div>
+            @if (highlights().length === 0) {
+              <p class="highlightEmpty">{{ i18n.t('eventDetail.highlight.none') }}</p>
+            }
+            @for (h of highlights(); track h.id) {
+              <div class="highlightItem" [class.active]="isHighlightActive(h)">
+                <span class="highlightBadge" [class.premium]="h.priority > 0">
+                  {{ h.priority > 0 ? i18n.t('eventDetail.highlight.premium') : i18n.t('eventDetail.highlight.standard') }}
+                </span>
+                <span class="highlightDates">
+                  {{ h.startAt | date:'dd/MM/yy HH:mm' }} → {{ h.endAt | date:'dd/MM/yy HH:mm' }}
+                </span>
+                @if (isHighlightActive(h)) {
+                  <span class="highlightActive">● {{ i18n.t('eventDetail.highlight.activeNow') }}</span>
+                }
+              </div>
+            }
           </div>
         }
 
@@ -308,7 +429,115 @@
       </div>
     }
   }
+@if (boostOpen()) {
+  <div class="modalBackdrop" (click)="closeBoost()"></div>
+  <div class="modal boostModal" (click)="$event.stopPropagation()">
+    @if (boostSuccess()) {
+      <div class="boostSuccess">
+        <div class="boostSuccessIcon">🎉</div>
+        <h2>{{ i18n.t('eventDetail.boost.successTitle') }}</h2>
+        <p>{{ i18n.t('eventDetail.boost.successMsg') }}</p>
+        <button class="btn btnPrimary" type="button" (click)="closeBoost()">{{ i18n.t('common.close') }}</button>
+      </div>
+    } @else {
+      <button class="boostClose" type="button" (click)="closeBoost()" [disabled]="boostSaving()">✕</button>
+      <div class="boostHero">⭐</div>
+      <h2>{{ i18n.t('eventDetail.boost.title') }}</h2>
+      <p class="boostIntro">{{ i18n.t('eventDetail.boost.intro') }}</p>
+
+      <ul class="boostPerks">
+        <li>📅 {{ i18n.t('eventDetail.boost.perk1') }}</li>
+        <li>🏠 {{ i18n.t('eventDetail.boost.perk2') }}</li>
+        <li>🔄 {{ i18n.t('eventDetail.boost.perk3') }}</li>
+      </ul>
+
+      <div class="boostForm">
+        <label class="field">
+          {{ i18n.t('eventDetail.boost.startDate') }}
+          <input type="date"
+            [ngModel]="boostStartDate()"
+            (ngModelChange)="boostStartDate.set($event)" />
+        </label>
+        <label class="field">
+          {{ i18n.t('eventDetail.boost.days') }}
+          <input type="number" min="1" max="365"
+            [ngModel]="boostDays()"
+            (ngModelChange)="boostDays.set(+$event)" />
+        </label>
+      </div>
+
+      <p class="boostSummary">
+        {{ i18n.t('eventDetail.boost.summary', { days: boostDays() }) }}
+      </p>
+
+      @if (boostError()) {
+        <p class="error">{{ i18n.t('eventDetail.boost.' + boostError()) }}</p>
+      }
+
+      <div class="boostActions">
+        <button class="btn" type="button" (click)="closeBoost()" [disabled]="boostSaving()">{{ i18n.t('common.cancel') }}</button>
+        <button class="btn btnPrimary" type="button" (click)="submitBoost()" [disabled]="boostSaving()">
+          @if (boostSaving()) { {{ i18n.t('common.loading') }} } @else { {{ i18n.t('eventDetail.boost.submit') }} }
+        </button>
+      </div>
+    }
+  </div>
+}
+
 </section>
+
+@if (weeklySlotForm()) {
+  <div class="modalBackdrop" (click)="closeWeeklySlotForm()"></div>
+  <div class="modal weeklyModal">
+    <h2 class="weeklyModalTitle">📅 Créneaux hebdomadaires</h2>
+
+    <div class="weeklyRow">
+      <label class="field">
+        Date de début
+        <input type="date" [ngModel]="weeklySlotForm()!.dateDebut"
+          (ngModelChange)="patchWeeklyForm({ dateDebut: $event })" />
+      </label>
+      <label class="field">
+        Date de fin
+        <input type="date" [ngModel]="weeklySlotForm()!.dateFin"
+          (ngModelChange)="patchWeeklyForm({ dateFin: $event })" />
+      </label>
+    </div>
+
+    <div class="weeklyRow">
+      <label class="field">
+        Heure de début
+        <input type="time" [ngModel]="weeklySlotForm()!.heureDebut"
+          (ngModelChange)="patchWeeklyForm({ heureDebut: $event })" />
+      </label>
+      <label class="field">
+        Heure de fin
+        <input type="time" [ngModel]="weeklySlotForm()!.heureFin"
+          (ngModelChange)="patchWeeklyForm({ heureFin: $event })" />
+      </label>
+    </div>
+
+    <div class="weeklyDayPicker">
+      @for (day of weekDays; track day.num) {
+        <button type="button"
+          class="dayBtn"
+          [class.active]="weeklySlotForm()!.days.has(day.num)"
+          (click)="toggleWeeklyDay(day.num)">
+          {{ day.label }}
+        </button>
+      }
+    </div>
+
+    @if (weeklySlotFormError()) {
+      <p class="editError">{{ weeklySlotFormError() }}</p>
+    }
+
+    <div class="weeklyActions">
+      <button class="btn" type="button" (click)="applyWeeklySlots()">Générer les créneaux</button>
+      <button class="btn btnSecondary" type="button" (click)="closeWeeklySlotForm()">Annuler</button>
+    </div>
+  </div>
+}
 
 @if (showDeleteConfirm()) {
   <div class="modalBackdrop" (click)="closeDeleteConfirm()"></div>

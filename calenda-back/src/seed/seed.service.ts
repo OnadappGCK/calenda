@@ -9,6 +9,8 @@ import { EventTag } from '../common/enums/event-tag.enum';
 import { Event } from '../events/event.entity';
 import { News } from '../news/news.entity';
 import { User } from '../users/user.entity';
+import { Etablissement } from '../etablissements/etablissement.entity';
+import { EtablissementType } from '../common/enums/etablissement-type.enum';
 
 @Injectable()
 /**
@@ -21,6 +23,7 @@ export class SeedService {
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
     @InjectRepository(News) private readonly newsRepo: Repository<News>,
+    @InjectRepository(Etablissement) private readonly etablissementsRepo: Repository<Etablissement>,
   ) {}
 
   /** Seed des comptes de dev (admin/organisateur) selon `SEED_ADMIN` / `SEED_ORGANISATEUR`. */
@@ -190,12 +193,12 @@ export class SeedService {
 
     /** Liste des catégories utilisées pour générer des événements de démo. */
     const categories: EventCategory[] = [
-      EventCategory.DANSE,
-      EventCategory.CONCERT,
-      EventCategory.SPECTACLE,
-      EventCategory.FEUX_D_ARTIFICE,
-      EventCategory.EXPOSITION,
-      EventCategory.AUTRE,
+      EventCategory.CULTURE_SPECTACLE,
+      EventCategory.ARTS_EXPOS,
+      EventCategory.VIE_SOCIALE,
+      EventCategory.ACTIVITES,
+      EventCategory.VIE_LOCALE,
+      EventCategory.SPECIAL,
     ];
 
     /** Origines utilisées pour simuler des imports externes (utile pour la page admin). */
@@ -229,12 +232,12 @@ export class SeedService {
         titre: 'DEMO - Exposition (journée) - Centre ville',
         description:
           'Exposition accessible toute la journée. Cas utile: événement long dans la même journée.',
-        categorie: EventCategory.EXPOSITION,
+        categorie: EventCategory.ARTS_EXPOS,
         origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Galerie du centre',
         theme: 'art',
-        caracteristiques: [EventTag.PLEIN_AIR, EventTag.RENCONTRE],
+        caracteristiques: [EventTag.PLEIN_AIR, EventTag.CULTUREL],
         dateDebut: at(0, 9, 0),
         dateFin: at(0, 18, 0),
         public: true,
@@ -245,12 +248,12 @@ export class SeedService {
       {
         titre: 'DEMO - Concert du soir',
         description: 'Concert du soir. Sert de base pour tester les événements qui se chevauchent.',
-        categorie: EventCategory.CONCERT,
+        categorie: EventCategory.CULTURE_SPECTACLE,
         origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Salle des fêtes',
         theme: 'musique',
-        caracteristiques: [EventTag.MUSIQUE, EventTag.PLEIN_AIR, EventTag.RENCONTRE],
+        caracteristiques: [EventTag.MUSIQUE, EventTag.LIVE, EventTag.FESTIF],
         dateDebut: at(0, 18, 0),
         dateFin: at(0, 20, 0),
         public: true,
@@ -261,12 +264,12 @@ export class SeedService {
       {
         titre: 'DEMO - Danse (chevauchement)',
         description: 'Atelier danse. Chevauchement partiel avec le concert.',
-        categorie: EventCategory.DANSE,
+        categorie: EventCategory.VIE_SOCIALE,
         origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Maison des associations',
         theme: 'danse',
-        caracteristiques: [EventTag.DANSE, EventTag.SPORT],
+        caracteristiques: [EventTag.DANSE, EventTag.FESTIF],
         dateDebut: at(0, 19, 0),
         dateFin: at(0, 21, 0),
         public: true,
@@ -277,12 +280,12 @@ export class SeedService {
       {
         titre: 'DEMO - Spectacle (même créneau)',
         description: 'Spectacle exactement sur le même créneau que le concert (test collisions).',
-        categorie: EventCategory.SPECTACLE,
+        categorie: EventCategory.CULTURE_SPECTACLE,
         origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Théâtre municipal',
         theme: 'scene',
-        caracteristiques: [EventTag.RENCONTRE, EventTag.MARCHE],
+        caracteristiques: [EventTag.CULTUREL, EventTag.TOUT_PUBLIC],
         dateDebut: at(0, 18, 0),
         dateFin: at(0, 20, 0),
         public: true,
@@ -293,12 +296,12 @@ export class SeedService {
       {
         titre: 'DEMO - Atelier photo (même créneau)',
         description: 'Atelier photo. Même créneau que le concert (objectif: 4+ overlaps).',
-        categorie: EventCategory.AUTRE,
+        categorie: EventCategory.ACTIVITES,
         origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Médiathèque',
         theme: 'photo',
-        caracteristiques: [EventTag.RENCONTRE],
+        caracteristiques: [EventTag.CULTUREL],
         dateDebut: at(0, 18, 0),
         dateFin: at(0, 20, 0),
         public: true,
@@ -309,7 +312,7 @@ export class SeedService {
       {
         titre: 'DEMO - Rencontre auteurs (même créneau)',
         description: 'Rencontre avec auteurs. Même créneau que le concert (objectif: 4+ overlaps).',
-        categorie: EventCategory.AUTRE,
+        categorie: EventCategory.ACTIVITES,
         origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Librairie',
@@ -324,12 +327,12 @@ export class SeedService {
       {
         titre: 'DEMO - Feux d’artifice (passe minuit)',
         description: 'Événement qui démarre tard et termine après minuit.',
-        categorie: EventCategory.FEUX_D_ARTIFICE,
+        categorie: EventCategory.SPECIAL,
         origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Parc',
         theme: 'feu',
-        caracteristiques: [EventTag.FEU_D_ARTIFICE, EventTag.PLEIN_AIR],
+        caracteristiques: [EventTag.FEU_DARTIFICE, EventTag.PLEIN_AIR],
         dateDebut: at(0, 23, 0),
         dateFin: at(1, 0, 30),
         public: true,
@@ -340,12 +343,12 @@ export class SeedService {
       {
         titre: 'DEMO - Expo multi-jours (3 jours)',
         description: 'Événement multi-jours pour tester le filtrage de période.',
-        categorie: EventCategory.EXPOSITION,
+        categorie: EventCategory.ARTS_EXPOS,
         origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Musée',
         theme: 'art',
-        caracteristiques: [EventTag.MARCHE, EventTag.RENCONTRE],
+        caracteristiques: [EventTag.CULTUREL, EventTag.CALME],
         dateDebut: at(2, 10, 0),
         dateFin: at(4, 17, 0),
         public: true,
@@ -357,7 +360,7 @@ export class SeedService {
         titre: 'DEMO - Événement en attente (organisateur)',
         description:
           'Cas admin: événement non public (en attente de validation). Doit apparaître dans Admin pending.',
-        categorie: EventCategory.AUTRE,
+        categorie: EventCategory.SPECIAL,
         origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Lieu secret',
@@ -538,5 +541,139 @@ export class SeedService {
     }
 
     await this.newsRepo.save(toInsert.map((n) => this.newsRepo.create(n)));
+  }
+
+  async seedDevEtablissements() {
+    const count = await this.etablissementsRepo.count();
+    if (count > 0) return;
+
+    const demo: Partial<Etablissement>[] = [
+      {
+        nom: 'La Table de la Mer',
+        type: EtablissementType.RESTAURANT,
+        description: 'Restaurant de poissons et fruits de mer frais, face au port de Carry-le-Rouet. Terrasse ensoleillée avec vue sur la mer.',
+        adresse: '3 Quai du Port, Carry-le-Rouet',
+        ville: 'Carry-le-Rouet',
+        tags: ['🐟 Poissons', '🦞 Fruits de mer', '🌅 Vue mer', '🍷 Cave à vins', '☀️ Terrasse'],
+        imageUrl: null,
+        latitude: 43.332,
+        longitude: 5.152,
+        featured: true,
+        public: true,
+      },
+      {
+        nom: 'Chez Mémé Michèle',
+        type: EtablissementType.RESTAURANT,
+        description: 'Cuisine provençale authentique dans un cadre chaleureux. Daube, tian, pieds paquets… tout est fait maison.',
+        adresse: '12 Rue de la République, Martigues',
+        ville: 'Martigues',
+        tags: ['🥘 Provençal', '🏠 Fait maison', '🫒 Huile d\'olive', '👵 Cuisine du terroir'],
+        imageUrl: null,
+        latitude: 43.4,
+        longitude: 5.05,
+        public: true,
+      },
+      {
+        nom: 'Le Bouchon d\'Istres',
+        type: EtablissementType.RESTAURANT,
+        description: 'Bistrot convivial proposant tapas, planches et spécialités du marché. Brunch le dimanche.',
+        adresse: '7 Place Voltaire, Istres',
+        ville: 'Istres',
+        tags: ['🍢 Tapas', '🧀 Planches', '☕ Brunch', '🍺 Bières artisanales'],
+        imageUrl: null,
+        public: true,
+      },
+      {
+        nom: 'Le Caveau du Frioul',
+        type: EtablissementType.BAR,
+        description: 'Bar à vins et cocktails dans une cave voûtée. Sélection de vins naturels, bières artisanales et spiritueux locaux.',
+        adresse: '5 Rue des Pêcheurs, Sausset-les-Pins',
+        ville: 'Sausset-les-Pins',
+        tags: ['🍷 Vins naturels', '🍸 Cocktails', '🎵 Musique live', '🕯️ Ambiance'],
+        imageUrl: null,
+        latitude: 43.33,
+        longitude: 5.11,
+        featured: true,
+        public: true,
+      },
+      {
+        nom: 'Le Mojito Bleu',
+        type: EtablissementType.BAR,
+        description: 'Bar de plage avec terrasse face à la mer. Cocktails tropicaux, tapas et soirées DJ en été.',
+        adresse: 'Plage de la Couronne, Martigues',
+        ville: 'Martigues',
+        tags: ['🍹 Cocktails', '🏖️ Plage', '🎧 DJ', '🌴 Tropical', '☀️ Terrasse'],
+        imageUrl: null,
+        public: true,
+      },
+      {
+        nom: 'La Brasserie du Port',
+        type: EtablissementType.BAR,
+        description: 'Brasserie traditionnelle au cœur du port. Pression locale, planches charcuterie, matchs diffusés.',
+        adresse: '1 Quai du Vieux Port, Carry-le-Rouet',
+        ville: 'Carry-le-Rouet',
+        tags: ['🍺 Pression', '⚽ Sport', '🧀 Planches', '🎲 Jeux de société'],
+        imageUrl: null,
+        public: true,
+      },
+      {
+        nom: 'Cinéma L\'Étoile',
+        type: EtablissementType.SORTIE,
+        description: 'Cinéma indépendant proposant des films d\'art et essai, des avant-premières et des ciné-débats chaque mois.',
+        adresse: '22 Avenue Général de Gaulle, Martigues',
+        ville: 'Martigues',
+        tags: ['🎬 Cinéma', '🎞️ Art & Essai', '🗣️ Ciné-débat', '🌍 Films du monde'],
+        imageUrl: null,
+        featured: true,
+        public: true,
+      },
+      {
+        nom: 'Escape Game Azur',
+        type: EtablissementType.SORTIE,
+        description: 'Escape game thématique avec 4 salles disponibles. Idéal pour les groupes, familles et team-building.',
+        adresse: '14 Rue de la Jetée, Carry-le-Rouet',
+        ville: 'Carry-le-Rouet',
+        tags: ['🔐 Escape game', '👨‍👩‍👧 Famille', '🧩 Enigmes', '🏆 Team building'],
+        imageUrl: null,
+        public: true,
+      },
+      {
+        nom: 'Club de Voile Mistral',
+        type: EtablissementType.ACTIVITE,
+        description: 'École de voile proposant cours débutants et perfectionnement, location de catamarans et sorties en mer.',
+        adresse: 'Port de Plaisance, Sausset-les-Pins',
+        ville: 'Sausset-les-Pins',
+        tags: ['⛵ Voile', '🌊 Mer', '🏄 Nautique', '👶 Débutants', '📚 Formation'],
+        imageUrl: null,
+        latitude: 43.329,
+        longitude: 5.1,
+        featured: true,
+        public: true,
+      },
+      {
+        nom: 'Yoga sur la Plage',
+        type: EtablissementType.ACTIVITE,
+        description: 'Séances de yoga et méditation sur la plage tous les matins en saison. Tous niveaux bienvenus.',
+        adresse: 'Plage des Tamaris, Carry-le-Rouet',
+        ville: 'Carry-le-Rouet',
+        tags: ['🧘 Yoga', '🌅 Plein air', '🧠 Méditation', '🌿 Bien-être', '☀️ Matinal'],
+        imageUrl: null,
+        public: true,
+      },
+      {
+        nom: 'VTT Calanques Tour',
+        type: EtablissementType.ACTIVITE,
+        description: 'Randonnées VTT guidées dans les calanques et massifs environnants. Location de VTT électriques disponible.',
+        adresse: 'Place du Marché, Carry-le-Rouet',
+        ville: 'Carry-le-Rouet',
+        tags: ['🚵 VTT', '🏔️ Randonnée', '⚡ Électrique', '🌿 Nature', '📸 Panorama'],
+        imageUrl: null,
+        public: true,
+      },
+    ];
+
+    await this.etablissementsRepo.save(
+      demo.map((d) => this.etablissementsRepo.create(d)),
+    );
   }
 }

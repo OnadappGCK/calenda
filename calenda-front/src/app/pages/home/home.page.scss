@@ -24,11 +24,13 @@
   padding-top: 80px;
 }
 
-@media screen and (max-width: 600px) {
+@media screen and (max-width: 768px) {
   .heroTop {
-    min-height: 340px;
+    min-height: auto;
     margin-bottom: 0;
-    padding-top: 48px;
+    padding-top: 3rem;
+    padding-bottom: 2.5rem;
+    align-items: center;
   }
 
   .heroText {
@@ -38,6 +40,16 @@
 
   .heroText h1 {
     font-size: 1.8rem;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .heroText h1 {
+    font-size: 1.5rem;
+  }
+
+  .pageContent {
+    padding-top: 1.25rem;
   }
 }
 
@@ -475,4 +487,50 @@
     width: 38px;
     height: 38px;
   }
+}
+
+/* ─── Idée de sortie ─────────────────────────────── */
+
+.sortieSectionWrap {
+  margin: 2rem 0 1.5rem;
+}
+
+.sortieButtons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+  margin-top: 0.75rem;
+
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.sortieBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.1rem 0.75rem;
+  background: $surface-1;
+  border: 1px solid $border-1;
+  border-radius: 1.25rem;
+  text-decoration: none;
+  color: $text-1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+  text-align: center;
+
+  &:hover {
+    background: $overlay-1;
+    border-color: $brand-primary;
+    color: $brand-primary;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  }
+}
+
+.sortieBtnIcon {
+  font-size: 2rem;
 }
