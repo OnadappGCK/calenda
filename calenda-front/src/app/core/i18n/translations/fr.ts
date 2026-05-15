@@ -194,7 +194,7 @@ export const fr: TranslationTree = {
       musique: 'Musique',
       festif: 'Festif',
       calme: 'Calme',
-      culturel: 'Culturel',
+      culturel: 'Culture',
       rencontre: 'Rencontre',
       networking: 'Networking',
       jour: 'Jour',

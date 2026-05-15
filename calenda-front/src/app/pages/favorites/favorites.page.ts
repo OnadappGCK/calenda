@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { FavoritesService } from '../../core/favorites.service';
 import { EventCategory, EventDto, EventTag } from '../../core/events.service';
 import { categoryColor, tagIcon } from '../../core/event-ui';
+import { I18nService } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-favorites-page',
@@ -18,6 +19,7 @@ import { categoryColor, tagIcon } from '../../core/event-ui';
  */
 export class FavoritesPage implements OnInit {
   private readonly favoritesService = inject(FavoritesService);
+  private readonly i18n = inject(I18nService);
 
   readonly favorites = signal<EventDto[]>([]);
 
@@ -34,7 +36,7 @@ export class FavoritesPage implements OnInit {
     'ENFANT', 'FAMILLE', 'ADULTE', 'TOUT_PUBLIC',
     'PLEIN_AIR', 'INTERIEUR', 'MUSIQUE', 'FESTIF', 'CALME',
     'CULTUREL', 'RENCONTRE', 'NETWORKING',
-    'JOUR', 'NUIT', 'FOOD', 'BOISSON', 'DJ', 'LIVE',
+    'FOOD', 'BOISSON', 'DJ', 'LIVE',
   ];
 
   showFilters = false;
@@ -124,7 +126,10 @@ export class FavoritesPage implements OnInit {
     if (this.lieu.trim()) out.push({ key: 'lieu', label: `Lieu: ${this.lieu.trim()}` });
     if (this.categorie) out.push({ key: 'categorie', label: `Catégorie: ${this.categorie}` });
     if (this.caracteristiquesFilter.length) {
-      out.push({ key: 'caracteristiques', label: `Caractéristiques: ${this.caracteristiquesFilter.join(', ')}` });
+      out.push({
+        key: 'caracteristiques',
+        label: `Caractéristiques: ${this.caracteristiquesFilter.map((t) => this.tagLabel(t)).join(', ')}`,
+      });
     }
     if (this.dateDebutFilter) out.push({ key: 'dateDebut', label: `Début: ${this.dateDebutFilter}` });
     if (this.dateFinFilter) out.push({ key: 'dateFin', label: `Fin: ${this.dateFinFilter}` });
@@ -133,6 +138,39 @@ export class FavoritesPage implements OnInit {
 
   categoryColor = categoryColor;
   tagIcon = tagIcon;
+
+  private tagKey(tag: EventTag | string) {
+    const map: Record<string, string> = {
+      CONCERT: 'concert',
+      SPORT: 'sport',
+      DANSE: 'danse',
+      CONCOURS: 'concours',
+      FEU_DARTIFICE: 'feuDartifice',
+      ENFANT: 'enfant',
+      FAMILLE: 'famille',
+      ADULTE: 'adulte',
+      TOUT_PUBLIC: 'toutPublic',
+      PLEIN_AIR: 'pleinAir',
+      INTERIEUR: 'interieur',
+      MUSIQUE: 'musique',
+      FESTIF: 'festif',
+      CALME: 'calme',
+      CULTUREL: 'culturel',
+      RENCONTRE: 'rencontre',
+      NETWORKING: 'networking',
+      FOOD: 'food',
+      BOISSON: 'boisson',
+      DJ: 'dj',
+      LIVE: 'live',
+      JOUR: 'jour',
+      NUIT: 'nuit',
+    };
+    return map[tag] ?? tag.toLowerCase();
+  }
+
+  tagLabel(tag: EventTag | string) {
+    return this.i18n.t(`eventDetail.tags.${this.tagKey(tag)}`);
+  }
 
   /** Hook Angular: charge la liste initiale des favoris. */
   async ngOnInit() {

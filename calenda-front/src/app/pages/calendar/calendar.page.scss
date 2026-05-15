@@ -7,14 +7,29 @@
 // Top bar (navigation + filters): contains period navigation, date picker, filters, view mode and action buttons.
 .topbar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: var(--cal-topbar-gap);
-  flex-wrap: wrap;
   background: $surface-2;
   border: 1px solid $border-1;
   border-radius: var(--cal-topbar-radius);
   padding: var(--cal-topbar-padding);
+}
+
+.topbarRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cal-topbar-gap);
+  min-width: 0;
+}
+
+.topbarRowPrimary {
+  flex-wrap: nowrap;
+}
+
+.topbarRowSecondary {
+  flex-wrap: wrap;
 }
 
 // Root container for the calendar page.
@@ -35,6 +50,7 @@
   align-items: center;
   gap: var(--cal-topbar-gap);
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 // Wrapper for the (week) title; allows truncation without breaking layout.
@@ -62,6 +78,13 @@
   align-items: center;
   gap: var(--cal-topbar-gap);
   flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.topDatePick {
+  flex: 0 0 auto;
 }
 
 .topbar .iconBtn {
@@ -90,6 +113,21 @@
   pointer-events: none;
 }
 
+@media screen and (max-width: 900px) {
+  .topbarRowPrimary {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .topLeft {
+    flex: 0 0 auto;
+  }
+
+  .topDatePick {
+    flex: 0 1 220px;
+  }
+}
+
 @media screen and (max-width: 600px) {
   .calendarContainer {
     padding: 0.4rem;
@@ -106,25 +144,39 @@
   }
 
   .topbar {
-    flex-direction: column;
-    align-items: stretch;
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
   }
 
-  .topLeft,
-  .topRight {
+  .topbarRow {
     width: 100%;
   }
 
+  .topbarRow {
+    flex-wrap: wrap;
+  }
+
+  .topbarRowSecondary {
+    align-items: flex-start;
+  }
+
+  .weatherBubble {
+    flex: 0 1 auto;
+  }
+
   .topLeft {
-    justify-content: space-between;
+    flex: 0 0 auto;
+    width: auto;
+    max-width: 100%;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
   }
 
   .weekTitle {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: calc(100% - 5.5rem);
   }
 
   .weekMain,
@@ -140,11 +192,15 @@
   }
 
   .topRight {
+    width: 100%;
+    flex: 1 1 100%;
     justify-content: flex-start;
   }
 
+  .topDatePick,
   .datePick {
-    flex: 1 1 160px;
+    width: auto;
+    flex: 1 1 180px;
   }
 
   .datePick input {
@@ -158,7 +214,6 @@
 
   .proposeBtn {
     min-width: 0;
-    flex: 1 0 100%;
   }
 
   .scheduler {
@@ -200,6 +255,12 @@
   .schedGrid.dayOnly .timeCell {
     font-size: 0.6rem;
     padding: 0 2px 0;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .topRight {
+    gap: calc(var(--cal-topbar-gap) * 0.75);
   }
 }
 
@@ -277,6 +338,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--cal-chip-gap);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .chipFixed {

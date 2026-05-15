@@ -184,7 +184,7 @@ export const en: TranslationTree = {
       feuDartifice: 'Fireworks', enfant: 'Children', famille: 'Family',
       adulte: 'Adults', toutPublic: 'All ages', pleinAir: 'Outdoor',
       interieur: 'Indoor', musique: 'Music', festif: 'Festive',
-      calme: 'Quiet', culturel: 'Cultural', rencontre: 'Meetup',
+      calme: 'Quiet', culturel: 'Culture', rencontre: 'Meetup',
       networking: 'Networking', jour: 'Daytime', nuit: 'Nighttime',
       food: 'Food', boisson: 'Drinks', dj: 'DJ', live: 'Live',
     },

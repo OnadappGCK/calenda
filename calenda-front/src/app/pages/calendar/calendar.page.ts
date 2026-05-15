@@ -44,6 +44,43 @@ const PINNED_SUGGESTION_CITIES: Array<{ label: string; searchTerm: string }> = [
   { label: 'Carry-le-Rouet',  searchTerm: 'Carry'    },
 ];
 
+const COTE_BLEUE_TERMS = [
+  'sausset les pins',
+  'sausset',
+  'carry le rouet',
+  'carry',
+  'la couronne',
+  'carro',
+  'ensues',
+];
+
+const COTE_BLEUE_LABEL = 'Côte Bleue';
+
+const IGNORED_FILTER_VALUES = new Set([
+  '',
+  '-',
+  'n/a',
+  'na',
+  'non renseigne',
+  'non renseignee',
+  'non indique',
+  'non mentionne',
+]);
+
+function normalizeFilterText(value: string): string {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[-‐‑‒–—―]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function isIgnoredFilterValue(value: string): boolean {
+  return IGNORED_FILTER_VALUES.has(normalizeFilterText(value));
+}
+
 const CATEGORY_IMAGE_CHOICES: Record<EventCategory, ImageChoice[]> = {
   'Culture & spectacle': [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
   'Arts & expos':        [{ label: 'Générique', value: 'img/categorie/EXPOSITION/expo1.png' }],
@@ -185,6 +222,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   q = '';
   adresse = '';
+  adresseFilters: string[] = [];
   categorie: EventCategory | '' = '';
   favoris = false;
   includePending = false;
@@ -241,7 +279,14 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.dateFinFilter = dateFin && this.isDayKey(dateFin) ? dateFin : '';
 
     this.q = (pm.get('q') ?? '').trim();
-    this.adresse = (pm.get('adresse') ?? '').trim();
+    const legacyAdresse = (pm.get('adresse') ?? '').trim();
+    const adressesRaw = (pm.get('adresses') ?? '').trim();
+    this.adresse = '';
+    this.adresseFilters = this.normalizeAdresseTerms(
+      adressesRaw
+        ? adressesRaw.split(',').map((x) => x.trim())
+        : (legacyAdresse ? [legacyAdresse] : []),
+    );
 
     const cat = (pm.get('categorie') ?? '').trim();
     this.categorie = (cat as any) || '';
@@ -256,12 +301,19 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
     const tagsRaw = (pm.get('tags') ?? '').trim();
     if (tagsRaw) {
-      const allowed = new Set(this.availableTags);
+      const seen = new Set<string>();
       const tags = tagsRaw
         .split(',')
         .map((t) => t.trim())
         .filter((t) => !!t)
-        .filter((t) => allowed.has(t as EventTag))
+        .map((t) => this.canonicalTagValue(t))
+        .filter((t): t is EventTag => !!t)
+        .filter((t) => {
+          const key = this.normalizeFilterValue(t);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
         .slice(0, 3) as EventTag[];
       this.caracteristiquesFilter = tags;
     } else {
@@ -275,7 +327,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     qp['date'] = this.selectedDate;
     if (this.dateDebutFilter) qp['dateDebut'] = this.dateDebutFilter;
     if (this.dateFinFilter) qp['dateFin'] = this.dateFinFilter;
-    if (this.adresse) qp['adresse'] = this.adresse;
+    const adresses = this.selectedAdresseTerms();
+    if (adresses.length) qp['adresses'] = adresses.join(',');
     if (this.categorie) qp['categorie'] = this.categorie as string;
     if (this.q) qp['q'] = this.q;
     if (this.favoris) qp['favoris'] = '1';
@@ -476,6 +529,71 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     return (e.adresse ?? e.lieu ?? '').trim();
   }
 
+  private tagKey(tag: EventTag | string) {
+    const map: Record<string, string> = {
+      CONCERT: 'concert',
+      SPORT: 'sport',
+      DANSE: 'danse',
+      CONCOURS: 'concours',
+      FEU_DARTIFICE: 'feuDartifice',
+      ENFANT: 'enfant',
+      FAMILLE: 'famille',
+      ADULTE: 'adulte',
+      TOUT_PUBLIC: 'toutPublic',
+      PLEIN_AIR: 'pleinAir',
+      INTERIEUR: 'interieur',
+      MUSIQUE: 'musique',
+      FESTIF: 'festif',
+      CALME: 'calme',
+      CULTUREL: 'culturel',
+      RENCONTRE: 'rencontre',
+      NETWORKING: 'networking',
+      FOOD: 'food',
+      BOISSON: 'boisson',
+      DJ: 'dj',
+      LIVE: 'live',
+      JOUR: 'jour',
+      NUIT: 'nuit',
+    };
+    return map[tag] ?? tag.toLowerCase();
+  }
+
+  tagLabel(tag: EventTag | string) {
+    return this.i18n.t(`eventDetail.tags.${this.tagKey(tag)}`);
+  }
+
+  private normalizeFilterValue(value: string) {
+    return normalizeFilterText(value);
+  }
+
+  private normalizeAdresseTerms(values: string[]) {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const raw of values) {
+      const v = (raw ?? '').trim();
+      if (!v || isIgnoredFilterValue(v)) continue;
+      const key = this.normalizeFilterValue(v);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(v);
+    }
+    return out;
+  }
+
+  private selectedAdresseTerms() {
+    return this.normalizeAdresseTerms([...this.adresseFilters, (this.adresse ?? '').trim()]);
+  }
+
+  private addAdresseFilter(value: string) {
+    this.adresseFilters = this.normalizeAdresseTerms([...this.adresseFilters, value]);
+  }
+
+  private canonicalTagValue(value: string): EventTag | null {
+    const key = this.normalizeFilterValue(value);
+    const found = this.availableTags.find((t) => this.normalizeFilterValue(t) === key);
+    return found ?? null;
+  }
+
   mergedBlockTags(eventIds: string[]): string[] {
     const evMap = new Map(this.events().map((e) => [e.id, e]));
     const freq = new Map<string, number>();
@@ -509,7 +627,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     'ENFANT', 'FAMILLE', 'ADULTE', 'TOUT_PUBLIC',
     'PLEIN_AIR', 'INTERIEUR', 'MUSIQUE', 'FESTIF', 'CALME',
     'CULTUREL', 'RENCONTRE', 'NETWORKING',
-    'JOUR', 'NUIT', 'FOOD', 'BOISSON', 'DJ', 'LIVE',
+    'FOOD', 'BOISSON', 'DJ', 'LIVE',
   ];
 
   readonly selectedDateObj = computed(() => {
@@ -866,7 +984,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   pickCity(city: string) {
-    this.adresse = city;
+    this.addAdresseFilter(city);
+    this.adresse = '';
     this.adresseSuggestions.set([]);
     this.adresseSuggestOpen.set(false);
   }
@@ -891,7 +1010,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   chooseAdresseSuggestion(f: PhotonFeature) {
-    this.adresse = this.photon.label(f);
+    this.addAdresseFilter(this.photon.label(f));
+    this.adresse = '';
     this.adresseSuggestions.set([]);
     this.adresseSuggestOpen.set(false);
   }
@@ -958,12 +1078,25 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Recharge la liste des favoris du user (si connecté). */
   private async refreshWeather() {
-    const resolved = this.weather.resolveCity(this.adresse ?? '');
+    const resolved = this.weather.resolveCity(this.selectedAdresseTerms()[0] ?? this.adresse ?? '');
     if (resolved.key === this.lastWeatherCity) return;
     this.lastWeatherCity = resolved.key;
     this.weatherCityLbl.set(resolved.label);
     const days = await this.weather.getWeeklyWeather(resolved.lat, resolved.lon, resolved.key);
     this.weatherByDate.set(new Map(days.map((d) => [d.date, d])));
+  }
+
+  private matchesAdresseFilters(e: EventDto) {
+    const terms = this.selectedAdresseTerms();
+    if (!terms.length) return true;
+    const city = this.normalizeFilterValue(e.ville ?? '');
+    const addr = this.normalizeFilterValue(e.adresse ?? '');
+    const lieu = this.normalizeFilterValue(e.lieu ?? '');
+    return terms.some((term) => {
+      const t = this.normalizeFilterValue(term);
+      if (!t) return false;
+      return city.includes(t) || addr.includes(t) || lieu.includes(t);
+    });
   }
 
   weatherEmoji(dateKey: string): string {
@@ -1020,7 +1153,6 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       if (fromTo.to) params['to'] = fromTo.to;
 
       if (this.q) params['q'] = this.q;
-      if (this.adresse) params['adresse'] = this.adresse;
       if (this.categorie) params['categorie'] = this.categorie as string;
       if (this.favoris) params['favoris'] = 'true';
       if (this.includePending && !!this.auth.user()?.isAdmin) params['includePending'] = '1';
@@ -1036,7 +1168,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
       const res = await this.eventsService.list(params).toPromise();
       if (token === this.reloadToken) {
-        this.events.set(res ?? []);
+        this.events.set((res ?? []).filter((e) => this.matchesAdresseFilters(e)));
 
         /** Recharge aussi la liste "à venir" (démarre à la première page) en vue semaine et journée. */
         this.resetUpcoming();
@@ -1167,7 +1299,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       }
 
       const items = res ?? [];
-      const next = [...this.upcomingEvents(), ...items];
+      const filteredItems = items.filter((e) => this.matchesAdresseFilters(e));
+      const next = [...this.upcomingEvents(), ...filteredItems];
       this.upcomingEvents.set(next);
       this.upcomingOffset += items.length;
       this.upcomingHasMore.set(items.length === this.upcomingPageSize);
@@ -1188,6 +1321,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   reset() {
     this.q = '';
     this.adresse = '';
+    this.adresseFilters = [];
     this.categorie = '';
     this.favoris = false;
     this.includePending = false;
@@ -1252,10 +1386,17 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Construit la liste de chips (tags) affichés pour représenter les filtres actifs. */
   activeChips() {
     const chips: Array<{ key: string; label: string }> = [];
-    if (this.adresse) chips.push({ key: 'adresse', label: this.adresse });
+    for (const city of this.selectedAdresseTerms()) {
+      chips.push({ key: `adresse:${this.normalizeFilterValue(city)}`, label: city });
+    }
     if (this.categorie) chips.push({ key: 'categorie', label: this.categorie });
     if (this.q) chips.push({ key: 'q', label: this.q });
-    if (this.caracteristiquesFilter.length) chips.push({ key: 'caracteristiques', label: this.caracteristiquesFilter.join(', ') });
+    if (this.caracteristiquesFilter.length) {
+      chips.push({
+        key: 'caracteristiques',
+        label: this.caracteristiquesFilter.map((t) => this.tagLabel(t)).join(', '),
+      });
+    }
     if (this.dateDebutFilter) chips.push({ key: 'dateDebut', label: this.i18n.t('calendar.fromChip', { date: this.dateDebutFilter }) });
     if (this.dateFinFilter) chips.push({ key: 'dateFin', label: this.i18n.t('calendar.toChip', { date: this.dateFinFilter }) });
     if (this.favoris) chips.push({ key: 'favoris', label: this.i18n.t('calendar.favorites') });
@@ -1278,64 +1419,126 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** Retourne les suggestions de filtres (villes/catégories/tags) triées par fréquence, hors filtres déjà actifs. */
-  suggestionChips(): Array<{ type: 'city' | 'category' | 'tag'; value: string; label: string }> {
+  suggestionChips(): Array<{ type: 'city' | 'city_group' | 'category' | 'tag'; value: string; label: string }> {
     const pool = this.suggestionPool();
-    const cityCount = new Map<string, number>();
-    const catCount = new Map<string, number>();
-    const tagCount = new Map<string, number>();
+    const cityCount = new Map<string, { value: string; label: string; count: number; pinned: boolean }>();
+    const catCount = new Map<string, { value: string; label: string; count: number }>();
+    const tagCount = new Map<string, { value: string; label: string; count: number }>();
+
     for (const e of pool) {
       if (e.ville) {
-        const k = e.ville.trim().toLowerCase();
-        cityCount.set(k, (cityCount.get(k) ?? 0) + 1);
+        const city = e.ville.trim();
+        const cityKey = this.normalizeFilterValue(city);
+        if (cityKey && !isIgnoredFilterValue(city)) {
+          const current = cityCount.get(cityKey);
+          if (current) {
+            current.count += 1;
+          } else {
+            cityCount.set(cityKey, { value: city, label: city, count: 1, pinned: false });
+          }
+        }
       }
-      catCount.set(e.categorie, (catCount.get(e.categorie) ?? 0) + 1);
+
+      const cat = `${e.categorie ?? ''}`.trim();
+      const catKey = this.normalizeFilterValue(cat);
+      if (catKey && !isIgnoredFilterValue(cat)) {
+        const currentCat = catCount.get(catKey);
+        if (currentCat) {
+          currentCat.count += 1;
+        } else {
+          catCount.set(catKey, { value: cat, label: cat, count: 1 });
+        }
+      }
+
       for (const tag of e.caracteristiques ?? []) {
-        tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+        const canonicalTag = this.canonicalTagValue(String(tag));
+        if (!canonicalTag) continue;
+        const key = this.normalizeFilterValue(canonicalTag);
+        const label = this.tagLabel(canonicalTag);
+        if (!key || isIgnoredFilterValue(label)) continue;
+        const currentTag = tagCount.get(key);
+        if (currentTag) {
+          currentTag.count += 1;
+        } else {
+          tagCount.set(key, { value: canonicalTag, label, count: 1 });
+        }
       }
     }
+
     // Villes fixées toujours présentes (clé en minuscules)
     for (const p of PINNED_SUGGESTION_CITIES) {
-      const k = p.label.toLowerCase();
-      if (!cityCount.has(k)) cityCount.set(k, 0);
-    }
-    const activeCity = this.adresse.trim().toLowerCase();
-    const activeCat = (this.categorie ?? '').toLowerCase();
-    const activeTags = new Set(this.caracteristiquesFilter.map(t => t.toLowerCase()));
-    const canAddTag = this.caracteristiquesFilter.length < 3;
-    const all: Array<{ type: 'city' | 'category' | 'tag'; value: string; label: string; count: number; pinned: boolean }> = [];
-    for (const [cityKey, count] of cityCount.entries()) {
-      const pinnedEntry = PINNED_SUGGESTION_CITIES.find(p => p.label.toLowerCase() === cityKey);
-      const label = pinnedEntry ? pinnedEntry.label : cityKey;
-      const searchTerm = pinnedEntry ? pinnedEntry.searchTerm : cityKey;
-      if (searchTerm.toLowerCase() !== activeCity)
-        all.push({ type: 'city', value: searchTerm, label, count, pinned: !!pinnedEntry });
-    }
-    for (const [cat, count] of catCount.entries()) {
-      if (cat.toLowerCase() !== activeCat)
-        all.push({ type: 'category', value: cat, label: cat, count, pinned: false });
-    }
-    if (canAddTag) {
-      for (const [tag, count] of tagCount.entries()) {
-        if (!activeTags.has(tag.toLowerCase()))
-          all.push({ type: 'tag', value: tag, label: tag, count, pinned: false });
+      const key = this.normalizeFilterValue(p.label);
+      const current = cityCount.get(key);
+      if (current) {
+        current.pinned = true;
+        current.label = p.label;
+        current.value = p.searchTerm;
+      } else {
+        cityCount.set(key, { value: p.searchTerm, label: p.label, count: 0, pinned: true });
       }
     }
+
+    const activeCities = new Set(this.selectedAdresseTerms().map((x) => this.normalizeFilterValue(x)));
+    const activeCat = this.normalizeFilterValue(this.categorie ?? '');
+    const activeTags = new Set(this.caracteristiquesFilter.map((t) => this.normalizeFilterValue(t)));
+    const canAddTag = this.caracteristiquesFilter.length < 3;
+    const all: Array<{ type: 'city' | 'category' | 'tag'; value: string; label: string; count: number; pinned: boolean }> = [];
+
+    for (const [cityKey, city] of cityCount.entries()) {
+      if (!activeCities.has(cityKey))
+        all.push({ type: 'city', value: city.value, label: city.label, count: city.count, pinned: city.pinned });
+    }
+
+    for (const [catKey, cat] of catCount.entries()) {
+      if (catKey !== activeCat)
+        all.push({ type: 'category', value: cat.value, label: cat.label, count: cat.count, pinned: false });
+    }
+
+    if (canAddTag) {
+      for (const [tagKey, tag] of tagCount.entries()) {
+        if (!activeTags.has(tagKey))
+          all.push({ type: 'tag', value: tag.value, label: tag.label, count: tag.count, pinned: false });
+      }
+    }
+
     // Villes fixées en tête, puis tri par fréquence décroissante
-    return all
+    const suggestions: Array<{ type: 'city' | 'city_group' | 'category' | 'tag'; value: string; label: string }> = all
       .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.count - a.count)
+      .filter((item, idx, arr) => arr.findIndex((x) => this.normalizeFilterValue(x.label) === this.normalizeFilterValue(item.label)) === idx)
       .slice(0, 10);
+
+    const allCoteBleueActive = COTE_BLEUE_TERMS.every((term) => activeCities.has(this.normalizeFilterValue(term)));
+    if (!allCoteBleueActive) {
+      suggestions.unshift({
+        type: 'city_group',
+        value: COTE_BLEUE_TERMS.join(','),
+        label: COTE_BLEUE_LABEL,
+      });
+    }
+
+    return suggestions.slice(0, 10);
   }
 
   /** Active un filtre suggéré et relance le chargement. */
   applySuggestion(type: string, value: string) {
     if (type === 'city') {
-      this.adresse = value;
+      this.addAdresseFilter(value);
+      this.adresse = '';
+    } else if (type === 'city_group') {
+      const parts = value
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
+      this.adresseFilters = this.normalizeAdresseTerms([...this.adresseFilters, ...parts]);
+      this.adresse = '';
     } else if (type === 'category') {
       this.categorie = value as EventCategory;
     } else if (type === 'tag') {
       const current = this.caracteristiquesFilter;
-      if (!current.includes(value as EventTag) && current.length < 3)
-        this.caracteristiquesFilter = [...current, value as EventTag];
+      const canonical = this.canonicalTagValue(value);
+      const currentKeys = new Set(current.map((t) => this.normalizeFilterValue(t)));
+      if (canonical && !currentKeys.has(this.normalizeFilterValue(canonical)) && current.length < 3)
+        this.caracteristiquesFilter = [...current, canonical];
     }
     this.syncUrl();
     void this.reload();
@@ -1344,7 +1547,12 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Retire un filtre correspondant à une chip, puis relance un reload (sauf chip date). */
   clearChip(key: string) {
     if (key === 'date') return;
-    if (key === 'adresse') this.adresse = '';
+    if (key.startsWith('adresse:')) {
+      const normalized = key.slice('adresse:'.length);
+      const terms = this.selectedAdresseTerms().filter((t) => this.normalizeFilterValue(t) !== normalized);
+      this.adresseFilters = this.normalizeAdresseTerms(terms);
+      this.adresse = '';
+    }
     if (key === 'categorie') this.categorie = '';
     if (key === 'q') this.q = '';
     if (key === 'caracteristiques') this.caracteristiquesFilter = [];

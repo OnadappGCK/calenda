@@ -174,7 +174,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
     'ENFANT', 'FAMILLE', 'ADULTE', 'TOUT_PUBLIC',
     'PLEIN_AIR', 'INTERIEUR', 'MUSIQUE', 'FESTIF', 'CALME',
     'CULTUREL', 'RENCONTRE', 'NETWORKING',
-    'JOUR', 'NUIT', 'FOOD', 'BOISSON', 'DJ', 'LIVE',
+    'FOOD', 'BOISSON', 'DJ', 'LIVE',
   ];
 
   readonly dateLocale = computed(() => {
@@ -432,7 +432,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
       ADULTE: 'adulte', TOUT_PUBLIC: 'toutPublic', PLEIN_AIR: 'pleinAir',
       INTERIEUR: 'interieur', MUSIQUE: 'musique', FESTIF: 'festif',
       CALME: 'calme', CULTUREL: 'culturel', RENCONTRE: 'rencontre',
-      NETWORKING: 'networking', JOUR: 'jour', NUIT: 'nuit',
+      NETWORKING: 'networking',
       FOOD: 'food', BOISSON: 'boisson', DJ: 'dj', LIVE: 'live',
     };
     return map[tag] ?? tag.toLowerCase();

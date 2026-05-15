@@ -65,21 +65,30 @@ export function isFullMoonPeak(dateKey: string): boolean {
 /** SVG géométrique pur (cercles + arcs) — aucune dépendance de police, fonctionne partout. */
 export function moonPhaseIconUrl(dateKey: string): string {
   const p   = lunarPhase(dateKey);
-  const idx = Math.round(p / SYNODIC * 8) % 8;
+  const idx = Math.floor((p / SYNODIC) * 8) % 8;
   const lit = '#FFD700', dark = '#1a2a4a';
   const R = 10, C = 12, rx = 5;
   const base = `<circle cx="${C}" cy="${C}" r="${R}" fill="${dark}" stroke="#4a6080" stroke-width="0.5"/>`;
-  const paths: Record<number, string> = {
+  const crescentRightLit = `<path d="M${C},${C-R} A${R},${R},0,0,1,${C},${C+R} A${rx},${R},0,0,1,${C},${C-R}Z" fill="${lit}"/>`;
+  const crescentLeftLit = `<path d="M${C},${C-R} A${R},${R},0,0,0,${C},${C+R} A${rx},${R},0,0,0,${C},${C-R}Z" fill="${lit}"/>`;
+  const quarterRightLit = `<path d="M${C},${C-R} A${R},${R},0,0,1,${C},${C+R} L${C},${C-R}Z" fill="${lit}"/>`;
+  const quarterLeftLit = `<path d="M${C},${C-R} A${R},${R},0,0,0,${C},${C+R} L${C},${C-R}Z" fill="${lit}"/>`;
+  const fullLit = `<circle cx="${C}" cy="${C}" r="${R}" fill="${lit}"/>`;
+
+  const crescentLeftDark = `<path d="M${C},${C-R} A${R},${R},0,0,0,${C},${C+R} A${rx},${R},0,0,0,${C},${C-R}Z" fill="${dark}"/>`;
+  const crescentRightDark = `<path d="M${C},${C-R} A${R},${R},0,0,1,${C},${C+R} A${rx},${R},0,0,1,${C},${C-R}Z" fill="${dark}"/>`;
+
+  const shapes: Record<number, string> = {
     0: '',
-    1: `<path d="M${C},${C-R} A${R},${R},0,0,1,${C},${C+R} A${rx},${R},0,0,1,${C},${C-R}Z" fill="${lit}"/>`,
-    2: `<path d="M${C},${C-R} A${R},${R},0,0,1,${C},${C+R} L${C},${C-R}Z" fill="${lit}"/>`,
-    3: `<path d="M${C},${C-R} A${R},${R},0,0,1,${C},${C+R} A${rx},${R},0,0,0,${C},${C-R}Z" fill="${lit}"/>`,
-    4: `<circle cx="${C}" cy="${C}" r="${R}" fill="${lit}"/>`,
-    5: `<path d="M${C},${C-R} A${R},${R},0,0,0,${C},${C+R} A${rx},${R},0,0,1,${C},${C-R}Z" fill="${lit}"/>`,
-    6: `<path d="M${C},${C-R} A${R},${R},0,0,0,${C},${C+R} L${C},${C-R}Z" fill="${lit}"/>`,
-    7: `<path d="M${C},${C-R} A${R},${R},0,0,0,${C},${C+R} A${rx},${R},0,0,0,${C},${C-R}Z" fill="${lit}"/>`,
+    1: crescentRightLit,
+    2: quarterRightLit,
+    3: `${fullLit}${crescentLeftDark}`,
+    4: fullLit,
+    5: `${fullLit}${crescentRightDark}`,
+    6: quarterLeftLit,
+    7: crescentLeftLit,
   };
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${base}${paths[idx] ?? ''}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${base}${shapes[idx] ?? ''}</svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 

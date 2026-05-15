@@ -184,7 +184,7 @@ export const es: TranslationTree = {
       feuDartifice: 'Fuegos artificiales', enfant: 'Niños', famille: 'Familia',
       adulte: 'Adultos', toutPublic: 'Todo público', pleinAir: 'Aire libre',
       interieur: 'Interior', musique: 'Música', festif: 'Festivo',
-      calme: 'Tranquilo', culturel: 'Cultural', rencontre: 'Encuentro',
+      calme: 'Tranquilo', culturel: 'Cultura', rencontre: 'Encuentro',
       networking: 'Networking', jour: 'De día', nuit: 'De noche',
       food: 'Comida', boisson: 'Bebidas', dj: 'DJ', live: 'En vivo',
     },

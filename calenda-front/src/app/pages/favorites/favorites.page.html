@@ -47,7 +47,7 @@
               <div class="listRight">
                 <div class="tagsBubbles">
                   @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
-                    <span class="tagBubbleMini" [title]="t">{{ tagIcon(t) }} {{ t }}</span>
+                    <span class="tagBubbleMini" [title]="tagLabel(t)">{{ tagIcon(t) }} {{ tagLabel(t) }}</span>
                   }
                 </div>
                 <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
@@ -106,7 +106,7 @@
         <div class="tagsPick">
           @for (t of availableTags; track t) {
             <button class="tagPick" type="button" [class.active]="isCaracteristiqueFilterSelected(t)" (click)="toggleCaracteristiqueFilter(t)">
-              {{ tagIcon(t) }} {{ t }}
+              {{ tagIcon(t) }} {{ tagLabel(t) }}
             </button>
           }
         </div>

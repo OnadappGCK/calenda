@@ -1,63 +1,56 @@
 <section class="calendarContainer">
   <div class="calendarViewport">
     <div class="topbar">
-      <div class="topLeft">
-        @if (viewMode === 'week') {
-          <button class="iconBtn" type="button" (click)="prevPeriod()" [attr.aria-label]="i18n.t('calendar.previous')">‹</button>
-        }
-        <div class="weekTitle">
-          <div class="weekMain">{{ weekLabel() }}</div>
-          <div class="weekSub">{{ selectedDateObj() | date: 'EEEE d MMMM':undefined:dateLocale() }}</div>
+      <div class="topbarRow topbarRowPrimary">
+        <div class="topLeft">
+          @if (viewMode === 'week') {
+            <button class="iconBtn" type="button" (click)="prevPeriod()" [attr.aria-label]="i18n.t('calendar.previous')">‹</button>
+          }
+          <div class="weekTitle">
+            <div class="weekMain">{{ weekLabel() }}</div>
+            <div class="weekSub">{{ selectedDateObj() | date: 'EEEE d MMMM':undefined:dateLocale() }}</div>
+          </div>
+          @if (viewMode === 'week') {
+            <button class="iconBtn" type="button" (click)="nextPeriod()" [attr.aria-label]="i18n.t('calendar.next')">›</button>
+          }
         </div>
-        @if (viewMode === 'week') {
-          <button class="iconBtn" type="button" (click)="nextPeriod()" [attr.aria-label]="i18n.t('calendar.next')">›</button>
-        }
-      </div>
 
-      <div class="weatherBubble" [title]="weatherCityLbl()">
-        <span class="weatherBubbleIcon">{{ currentWeatherEmoji() }}</span>
-        <span class="weatherBubbleName">{{ weatherCityLbl() }}</span>
-      </div>
-
-      <div class="topRight">
-        <label class="field datePick">
+        <label class="field datePick topDatePick">
           <input type="date" [(ngModel)]="selectedDate" name="selectedDate" (change)="onDateChange()" />
         </label>
+      </div>
 
-        <button class="btn" type="button" (click)="toggleFilters()">{{ i18n.t('calendar.filters') }}</button>
-
-        @if (isAdmin()) {
-          <button
-            class="btn pendingBtn"
-            type="button"
-            [class.active]="includePending"
-            (click)="toggleIncludePending()"
-          >
-            {{ i18n.t('calendar.pending') }}
-          </button>
-        }
-
-        <button class="iconBtn" type="button" (click)="reload()" [attr.aria-label]="i18n.t('calendar.refresh')">↻</button>
-        @if (viewMode === 'week') {
-          <button class="iconBtn" type="button" (click)="toggleFavoris()" [attr.aria-label]="i18n.t('calendar.favorites')">♥</button>
-        }
-
-        <div class="toggle">
-          <button class="toggleBtn" type="button" [class.active]="viewMode==='week'" (click)="setViewMode('week')">
-            {{ i18n.t('calendar.week') }}
-          </button>
-          <button class="toggleBtn" type="button" [class.active]="viewMode==='day'" (click)="setViewMode('day')">
-            {{ i18n.t('calendar.day') }}
-          </button>
+      <div class="topbarRow topbarRowSecondary">
+        <div class="weatherBubble" [title]="weatherCityLbl()">
+          <span class="weatherBubbleIcon">{{ currentWeatherEmoji() }}</span>
+          <span class="weatherBubbleName">{{ weatherCityLbl() }}</span>
         </div>
 
-        <button
-          class="btn btnPrimary proposeBtn"
-          type="button"
-          (click)="openPropose()"
-        >
-          {{ i18n.t('calendar.proposeEvent') }}
-        </button>
+        <div class="topRight">
+          <button class="btn" type="button" (click)="toggleFilters()">{{ i18n.t('calendar.filters') }}</button>
+
+          <button class="iconBtn" type="button" (click)="reload()" [attr.aria-label]="i18n.t('calendar.refresh')">↻</button>
+          @if (viewMode === 'week') {
+            <button class="iconBtn" type="button" (click)="toggleFavoris()" [attr.aria-label]="i18n.t('calendar.favorites')">♥</button>
+          }
+
+          <div class="toggle">
+            <button class="toggleBtn" type="button" [class.active]="viewMode==='week'" (click)="setViewMode('week')">
+              {{ i18n.t('calendar.week') }}
+            </button>
+            <button class="toggleBtn" type="button" [class.active]="viewMode==='day'" (click)="setViewMode('day')">
+              {{ i18n.t('calendar.day') }}
+            </button>
+          </div>
+
+          <button
+            class="btn btnPrimary proposeBtn"
+            type="button"
+            (click)="openPropose()"
+          >
+            {{ i18n.t('calendar.proposeEvent') }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -137,7 +130,7 @@
                         @if ((it.event.caracteristiques ?? []).length > 0) {
                           <span class="tagsMini">
                             @for (t of (it.event.caracteristiques ?? []).slice(0, 3); track t) {
-                              <span class="tagMini" [title]="t">
+                              <span class="tagMini" [title]="tagLabel(t)">
                                 <img class="tagMiniImg" [src]="tagIconUrl(t)" alt="" />
                               </span>
                             }
@@ -159,7 +152,7 @@
                       @if (mergedBlockTags(it.eventIds).length > 0) {
                         <span class="tagsMini mergedTags">
                           @for (t of mergedBlockTags(it.eventIds); track t) {
-                            <span class="tagMini" [title]="t">
+                            <span class="tagMini" [title]="tagLabel(t)">
                               <img class="tagMiniImg" [src]="tagIconUrl(t)" alt="" />
                             </span>
                           }
@@ -230,7 +223,7 @@
                         @if ((it.event.caracteristiques ?? []).length > 0) {
                           <span class="tagsMini">
                             @for (t of (it.event.caracteristiques ?? []).slice(0, 3); track t) {
-                              <span class="tagMini" [title]="t">
+                              <span class="tagMini" [title]="tagLabel(t)">
                                 <img class="tagMiniImg" [src]="tagIconUrl(t)" alt="" />
                               </span>
                             }
@@ -252,7 +245,7 @@
                       @if (mergedBlockTags(it.eventIds).length > 0) {
                         <span class="tagsMini mergedTags">
                           @for (t of mergedBlockTags(it.eventIds); track t) {
-                            <span class="tagMini" [title]="t">
+                            <span class="tagMini" [title]="tagLabel(t)">
                               <img class="tagMiniImg" [src]="tagIconUrl(t)" alt="" />
                             </span>
                           }
@@ -311,7 +304,7 @@
                   @if ((e.caracteristiques ?? []).length > 0) {
                     <span class="tagsMini">
                       @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
-                        <span class="tagMini" [title]="t">
+                        <span class="tagMini" [title]="tagLabel(t)">
                           <img class="tagMiniImg" [src]="tagIconUrl(t)" alt="" />
                         </span>
                       }
@@ -369,7 +362,7 @@
                 @if ((e.caracteristiques ?? []).length > 0) {
                   <div class="tagsBubbles" style="margin-top: 4px;">
                     @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
-                      <span class="tagBubbleMini" [title]="t">{{ tagIcon(t) }} {{ t }}</span>
+                      <span class="tagBubbleMini" [title]="tagLabel(t)">{{ tagIcon(t) }} {{ tagLabel(t) }}</span>
                     }
                   </div>
                 }
@@ -406,7 +399,7 @@
                 @if ((e.caracteristiques ?? []).length > 0) {
                   <div class="tagsBubbles" style="margin-top: 4px;">
                     @for (t of (e.caracteristiques ?? []).slice(0, 3); track t) {
-                      <span class="tagBubbleMini" [title]="t">{{ tagIcon(t) }} {{ t }}</span>
+                      <span class="tagBubbleMini" [title]="tagLabel(t)">{{ tagIcon(t) }} {{ tagLabel(t) }}</span>
                     }
                   </div>
                 }
@@ -552,7 +545,7 @@
         <div class="tagsPick">
           @for (t of availableTags; track t) {
             <button class="tagPick" type="button" [class.active]="isNewTagSelected(t)" (click)="toggleNewTag(t)">
-              {{ tagIcon(t) }} {{ t }}
+              {{ tagIcon(t) }} {{ tagLabel(t) }}
             </button>
           }
         </div>
@@ -656,7 +649,7 @@
         <div class="tagsPick">
           @for (t of availableTags; track t) {
             <button class="tagPick" type="button" [class.active]="isCaracteristiqueFilterSelected(t)" (click)="toggleCaracteristiqueFilter(t)">
-              {{ tagIcon(t) }} {{ t }}
+              {{ tagIcon(t) }} {{ tagLabel(t) }}
             </button>
           }
         </div>
@@ -671,6 +664,20 @@
         <span>Favoris</span>
         <input type="checkbox" [checked]="favoris" (change)="onFavorisFilterChange($event)" />
       </label>
+
+      @if (isAdmin()) {
+        <div class="field">
+          <span>{{ i18n.t('calendar.pending') }}</span>
+          <button
+            class="btn pendingBtn"
+            type="button"
+            [class.active]="includePending"
+            (click)="toggleIncludePending()"
+          >
+            {{ i18n.t('calendar.pending') }}
+          </button>
+        </div>
+      }
     </div>
 
     <div class="actions">
