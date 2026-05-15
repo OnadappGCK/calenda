@@ -38,6 +38,7 @@ export const it: TranslationTree = {
     next: 'Successivo',
     carouselNav: 'Navigazione carosello',
     goToSlide: 'Vai alla diapositiva',
+    categories: 'Categorie',
     news: 'Notizie',
     seeAll: 'Vedi tutto',
     noNews: 'Nessuna notizia.',

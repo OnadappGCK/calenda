@@ -790,6 +790,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Hook Angular: initialise listeners (resize/navigation) puis charge favoris + événements. */
   async ngOnInit() {
+    const shouldOpenPropose = typeof window !== 'undefined' && !!history.state?.openPropose;
+
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', this.onResize);
     }
@@ -848,6 +850,15 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
     void this.loadSuggestionPool();
     await this.reload();
+
+    if (shouldOpenPropose) {
+      await this.openPropose();
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        replaceUrl: true,
+        state: { ...history.state, openPropose: undefined },
+      });
+    }
   }
 
   cityButtons() {

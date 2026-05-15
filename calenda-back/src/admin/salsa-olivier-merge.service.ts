@@ -600,18 +600,61 @@ export class SalsaOlivierMergeService {
     return new Date(y, mo - 1, d);
   }
 
+  private parseHourToken(token: string): { hh: number; mm: number } | null {
+    const raw = (token ?? '').trim().toLowerCase();
+    if (!raw) return null;
+
+    let hh: number;
+    let mm: number;
+
+    if (raw.includes(':')) {
+      const parts = raw.split(':');
+      hh = Number(parts[0]);
+      mm = parts[1] ? Number(parts[1]) : 0;
+    } else if (raw.includes('h')) {
+      const parts = raw.split('h');
+      hh = Number(parts[0]);
+      mm = parts[1] ? Number(parts[1]) : 0;
+    } else {
+      hh = Number(raw);
+      mm = 0;
+    }
+
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return { hh, mm };
+  }
+
   private extractTimeRange(text: string): { start: { hh: number; mm: number }; end: { hh: number; mm: number } } | null {
     const s = (text ?? '').replace(/\s+/g, ' ');
-    const re = /(\d{1,2})(?:h|:)(\d{2})\s*[→\-–]\s*(\d{1,2})(?:h|:)(\d{2})/;
-    const m = s.match(re);
-    if (!m) return null;
-    const hh1 = Number(m[1]);
-    const mm1 = Number(m[2]);
-    const hh2 = Number(m[3]);
-    const mm2 = Number(m[4]);
-    if ([hh1, mm1, hh2, mm2].some((n) => !Number.isFinite(n))) return null;
-    if (hh1 < 0 || hh1 > 23 || hh2 < 0 || hh2 > 23 || mm1 < 0 || mm1 > 59 || mm2 < 0 || mm2 > 59) return null;
-    return { start: { hh: hh1, mm: mm1 }, end: { hh: hh2, mm: mm2 } };
+    const re = /(\d{1,2}(?:h\d{0,2}|:\d{2})?)\s*[→\-–]\s*(\d{1,2}(?:h\d{0,2}|:\d{2})?)/gi;
+
+    let minStart: number | null = null;
+    let maxEnd: number | null = null;
+    let m: RegExpExecArray | null;
+
+    while ((m = re.exec(s))) {
+      const start = this.parseHourToken(m[1] ?? '');
+      const end = this.parseHourToken(m[2] ?? '');
+      if (!start || !end) continue;
+
+      const startMin = start.hh * 60 + start.mm;
+      let endMin = end.hh * 60 + end.mm;
+      if (endMin <= startMin) endMin += 24 * 60;
+
+      if (minStart === null || startMin < minStart) minStart = startMin;
+      if (maxEnd === null || endMin > maxEnd) maxEnd = endMin;
+    }
+
+    if (minStart === null || maxEnd === null) return null;
+
+    const startTotal = minStart;
+    const endTotal = maxEnd % (24 * 60);
+
+    return {
+      start: { hh: Math.floor(startTotal / 60), mm: startTotal % 60 },
+      end: { hh: Math.floor(endTotal / 60), mm: endTotal % 60 },
+    };
   }
 
   private extractTarif(text: string): string | null {

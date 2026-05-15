@@ -108,9 +108,25 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   private autoTimer: any = null;
+  private scrollTimers: any[] = [];
+
+  private forceTopSequence() {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    for (const delay of [0, 80, 250, 800, 1600]) {
+      const timer = setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      }, delay);
+      this.scrollTimers.push(timer);
+    }
+  }
 
   /** Hook Angular: charge featured + news, et démarre l'auto-rotation côté navigateur. */
   async ngOnInit() {
+    this.forceTopSequence();
+
     const featured = await this.eventsService.featured().toPromise();
     this.featured.set(featured ?? []);
 
@@ -125,6 +141,8 @@ export class HomePage implements OnInit, OnDestroy {
 
     const all = await this.eventsService.list().toPromise();
     this.allEvents.set(all ?? []);
+
+    this.forceTopSequence();
   }
 
   /** Hook Angular: stoppe le timer d'auto-rotation du carrousel. */
@@ -133,6 +151,11 @@ export class HomePage implements OnInit, OnDestroy {
       clearInterval(this.autoTimer);
       this.autoTimer = null;
     }
+
+    for (const timer of this.scrollTimers) {
+      clearTimeout(timer);
+    }
+    this.scrollTimers = [];
   }
 
   /** Va au slide précédent du carrousel. */

@@ -64,9 +64,15 @@ export class AuthService {
       return;
     }
 
-    const me = await this.http.get<AuthUser>(`${this.apiBaseUrl}/users/me`).toPromise();
-    if (me) {
-      this.user.set(me);
+    try {
+      const me = await this.http.get<AuthUser>(`${this.apiBaseUrl}/users/me`).toPromise();
+      if (me) {
+        this.user.set(me);
+      }
+    } catch {
+      this.storage.remove(this.tokenKey);
+      this.token.set(null);
+      this.user.set(null);
     }
   }
 
