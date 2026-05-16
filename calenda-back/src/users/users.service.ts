@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'node:crypto';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { Event } from '../events/event.entity';
 import { User } from './user.entity';
 import { UpdateMeDto } from './dto/update-me.dto';
@@ -40,7 +40,85 @@ export class UsersService {
       emailVerified: user.emailVerified,
       profileImage: user.profileImage,
       numero: user.numero,
+      bio: user.bio,
     };
+  }
+
+  async getPublicProfile(id: string) {
+    const user = await this.findById(id);
+    const nowIso = new Date().toISOString();
+
+    const [upcomingCount, totalCount] = await Promise.all([
+      this.eventsRepo
+        .createQueryBuilder('event')
+        .where('event.organisateurId = :id', { id })
+        .andWhere('event.public = :isPublic', { isPublic: true })
+        .andWhere('(event.dateFin >= :now OR (event.dateFin IS NULL AND event.dateDebut >= :now))', { now: nowIso })
+        .getCount(),
+      this.eventsRepo
+        .createQueryBuilder('event')
+        .where('event.organisateurId = :id', { id })
+        .andWhere('event.public = :isPublic', { isPublic: true })
+        .getCount(),
+    ]);
+
+    return {
+      id: user.id,
+      pseudo: user.pseudo,
+      ville: user.ville,
+      lieu: user.lieu,
+      profileImage: user.profileImage,
+      bio: user.bio,
+      upcomingCount,
+      totalCount,
+    };
+  }
+
+  async listPublicOrganizedEvents(
+    id: string,
+    query: { upcoming?: boolean; q?: string; categorie?: string; ville?: string; limit?: number; offset?: number },
+  ) {
+    await this.findById(id);
+
+    const qb = this.eventsRepo
+      .createQueryBuilder('event')
+      .leftJoinAndSelect('event.organisateur', 'organisateur')
+      .where('event.organisateurId = :id', { id })
+      .andWhere('event.public = :isPublic', { isPublic: true });
+
+    if (query.upcoming) {
+      const nowIso = new Date().toISOString();
+      qb.andWhere('(event.dateFin >= :now OR (event.dateFin IS NULL AND event.dateDebut >= :now))', { now: nowIso });
+      qb.orderBy('event.dateDebut', 'ASC').addOrderBy('event.titre', 'ASC').addOrderBy('event.id', 'ASC');
+    } else {
+      qb.orderBy('event.dateDebut', 'DESC').addOrderBy('event.titre', 'ASC').addOrderBy('event.id', 'ASC');
+    }
+
+    const q = (query.q ?? '').trim();
+    if (q) {
+      qb.andWhere(
+        new Brackets((sub) => {
+          sub.orWhere('LOWER(event.titre) LIKE LOWER(:q)', { q: `%${q}%` });
+          sub.orWhere('LOWER(event.description) LIKE LOWER(:q)', { q: `%${q}%` });
+        }),
+      );
+    }
+
+    const categorie = (query.categorie ?? '').trim();
+    if (categorie) {
+      qb.andWhere('event.categorie = :categorie', { categorie });
+    }
+
+    const ville = (query.ville ?? '').trim();
+    if (ville) {
+      qb.andWhere('LOWER(event.ville) = LOWER(:ville)', { ville });
+    }
+
+    const limit = Math.max(1, Math.min(200, Number.isFinite(query.limit as number) ? Number(query.limit) : 100));
+    const offset = Math.max(0, Number.isFinite(query.offset as number) ? Number(query.offset) : 0);
+    qb.take(limit).skip(offset);
+
+    return qb.getMany();
   }
 
   async requestEmailVerification(userId: string) {
@@ -178,6 +256,11 @@ export class UsersService {
     if (dto.numero !== undefined) {
       const raw = (dto.numero ?? '').trim();
       user.numero = raw ? raw : null;
+    }
+
+    if (dto.bio !== undefined) {
+      const raw = (dto.bio ?? '').trim();
+      user.bio = raw ? raw : null;
     }
 
     if (dto.password !== undefined || dto.passwordConfirmation !== undefined) {

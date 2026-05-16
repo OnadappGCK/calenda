@@ -121,7 +121,17 @@
         </div>
       }
 
-      <div class="meta">{{ i18n.t('eventDetail.organizer') }}: {{ event()!.organisateur?.pseudo ?? i18n.t('eventDetail.organizerMissing') }}</div>
+      <div class="organizerRow">
+        <span class="organizerLabel">{{ i18n.t('eventDetail.organizer') }}:</span>
+        @if (event()!.organisateur) {
+          <a class="organizerBubble" [routerLink]="['/profiles', event()!.organisateur!.id]">
+            <img class="organizerAvatar" [src]="organizerAvatarUrl(event()!)" alt="" loading="lazy" />
+            <span class="organizerName">{{ event()!.organisateur!.pseudo }}</span>
+          </a>
+        } @else {
+          <span class="organizerMissing">{{ i18n.t('eventDetail.organizerMissing') }}</span>
+        }
+      </div>
 
       <div class="meta">{{ i18n.t('eventDetail.contact') }}: {{ (event()!.contact ?? '').trim() || i18n.t('common.notMentioned') }}</div>
 

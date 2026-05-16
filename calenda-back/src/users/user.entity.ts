@@ -39,6 +39,9 @@ export class User {
   @Column({ type: 'text', nullable: true })
   numero!: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  bio!: string | null;
+
   @Column()
   /** Hash bcrypt du mot de passe (jamais exposé au front). */
   passwordHash!: string;

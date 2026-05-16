@@ -30,7 +30,7 @@ export class SeedService {
   async seedDevUsers() {
     const nodeEnv = (this.configService.get<string>('NODE_ENV') ?? 'dev').toLowerCase();
     if (nodeEnv !== 'production') {
-      const email = this.configService.get<string>('SEED_ADMIN_EMAIL') ?? 'admin@calenda.local';
+      const email = this.configService.get<string>('SEED_ADMIN_EMAIL') ?? 'admin@calendago.fr';
       const pseudo = this.configService.get<string>('SEED_ADMIN_PSEUDO') ?? 'admin';
       const existingAdmin = await this.usersRepo.findOne({ where: [{ email }, { pseudo }] });
       if (existingAdmin) {
@@ -76,7 +76,7 @@ export class SeedService {
     ).toLowerCase();
 
     if (seedAdmin === 'true') {
-      const email = this.configService.get<string>('SEED_ADMIN_EMAIL') ?? 'admin@calenda.local';
+      const email = this.configService.get<string>('SEED_ADMIN_EMAIL') ?? 'admin@calendago.fr';
       const pseudo = this.configService.get<string>('SEED_ADMIN_PSEUDO') ?? 'admin';
       const password = this.configService.get<string>('SEED_ADMIN_PASSWORD') ?? 'Admin123!';
 
@@ -118,7 +118,7 @@ export class SeedService {
 
     if (seedOrganisateur === 'true') {
       const orgEmail =
-        this.configService.get<string>('SEED_ORGANISATEUR_EMAIL') ?? 'orga@calenda.local';
+        this.configService.get<string>('SEED_ORGANISATEUR_EMAIL') ?? 'orga@calendago.fr';
       const orgPseudo =
         this.configService.get<string>('SEED_ORGANISATEUR_PSEUDO') ?? 'organisateur';
       const orgPassword =
@@ -168,9 +168,9 @@ export class SeedService {
       return;
     }
 
-    const adminEmail = this.configService.get<string>('SEED_ADMIN_EMAIL') ?? 'admin@calenda.local';
+    const adminEmail = this.configService.get<string>('SEED_ADMIN_EMAIL') ?? 'admin@calendago.fr';
     const orgEmail =
-      this.configService.get<string>('SEED_ORGANISATEUR_EMAIL') ?? 'orga@calenda.local';
+      this.configService.get<string>('SEED_ORGANISATEUR_EMAIL') ?? 'orga@calendago.fr';
 
     const admin = await this.usersRepo.findOne({ where: { email: adminEmail } });
     const organisateur = await this.usersRepo.findOne({ where: { email: orgEmail } });

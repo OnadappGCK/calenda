@@ -66,7 +66,7 @@ export type EventDto = {
   couleur: string | null;
   slots?: EventSlotDto[];
   highlights?: HighlightDto[];
-  organisateur: { id: string; pseudo: string; email: string; isAdmin?: boolean } | null;
+  organisateur: { id: string; pseudo: string; email: string; isAdmin?: boolean; profileImage?: string | null } | null;
 };
 
 @Injectable({ providedIn: 'root' })

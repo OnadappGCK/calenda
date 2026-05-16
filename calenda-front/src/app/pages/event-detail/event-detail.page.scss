@@ -251,6 +251,62 @@
   font-size: 0.9rem;
 }
 
+.organizerRow {
+  margin-top: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.organizerLabel {
+  color: $text-muted-4;
+  font-size: 0.9rem;
+}
+
+.organizerBubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid $border-1;
+  background: $surface-1;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem 0.2rem 0.22rem;
+  max-width: 100%;
+  color: inherit;
+  text-decoration: none;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.organizerBubble:hover {
+  background: $overlay-1;
+  transform: translateY(-1px);
+}
+
+.organizerAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid $border-1;
+  background: $overlay-2;
+  flex-shrink: 0;
+}
+
+.organizerName {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: $text-1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.organizerMissing {
+  color: $text-muted-2;
+  font-size: 0.9rem;
+}
+
 :host-context(body.theme-dark) {
   .btn {
     background: $surface-2;
@@ -263,6 +319,10 @@
   }
 
   .meta {
+    color: $text-muted-2;
+  }
+
+  .organizerLabel {
     color: $text-muted-2;
   }
 }

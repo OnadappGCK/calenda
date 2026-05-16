@@ -20,6 +20,7 @@ import { categoryColor, resolveEventImageUrl, tagIcon as tagIconFn } from '../..
 import { I18nService } from '../../core/i18n.service';
 import { EventCategory, EventsService, EventDto, EventSlotDto, EventTag, HighlightDto } from '../../core/events.service';
 import { FavoritesService } from '../../core/favorites.service';
+import { profileImageUrl } from '../../core/profile-images';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
 
 type Draft = {
@@ -344,6 +345,10 @@ export class EventDetailPage implements OnInit, OnDestroy {
 
   imageUrlFor(e: EventDto) {
     return resolveEventImageUrl(e.categorie, e.imageUrl);
+  }
+
+  organizerAvatarUrl(e: EventDto) {
+    return profileImageUrl(e.organisateur?.profileImage ?? null);
   }
 
   private async reloadFavorites() {

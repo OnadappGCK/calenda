@@ -309,4 +309,20 @@ export class AdminController {
   async applyMergeCarryLeRouet(@Body() body: { urls?: string[]; toDeleteIds?: string[] }) {
     return this.carryMerge.apply({ urls: body?.urls ?? [], toDeleteIds: body?.toDeleteIds ?? [] });
   }
+
+  @Post('merge/backfill-organizers')
+  async backfillMergeOrganizers() {
+    const [martigues, salsaOlivier, carryLeRouet] = await Promise.all([
+      this.martiguesMerge.backfillOrganizer(),
+      this.salsaMerge.backfillOrganizer(),
+      this.carryMerge.backfillOrganizer(),
+    ]);
+
+    return {
+      martigues,
+      salsaOlivier,
+      carryLeRouet,
+      total: martigues + salsaOlivier + carryLeRouet,
+    };
+  }
 }

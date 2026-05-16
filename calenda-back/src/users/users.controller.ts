@@ -36,6 +36,31 @@ export class UsersController {
     return this.usersService.verifyEmail(token);
   }
 
+  @Get(':id/profile')
+  async publicProfile(@Param('id') id: string) {
+    return this.usersService.getPublicProfile(id);
+  }
+
+  @Get(':id/events')
+  async publicOrganizedEvents(
+    @Param('id') id: string,
+    @Query('upcoming') upcoming?: string,
+    @Query('q') q?: string,
+    @Query('categorie') categorie?: string,
+    @Query('ville') ville?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.usersService.listPublicOrganizedEvents(id, {
+      upcoming: upcoming === 'true' || upcoming === '1',
+      q,
+      categorie,
+      ville,
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+    });
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('me/favorites')
   /** Liste les événements favoris de l'utilisateur courant. */

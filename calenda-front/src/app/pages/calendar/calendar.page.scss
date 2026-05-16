@@ -29,7 +29,9 @@
 }
 
 .topbarRowSecondary {
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
 }
 
 // Root container for the calendar page.
@@ -79,8 +81,10 @@
   gap: var(--cal-topbar-gap);
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-content: flex-start;
   min-width: 0;
-  flex: 1 1 auto;
+  width: 100%;
+  flex: 1 1 0;
 }
 
 .topDatePick {
@@ -117,6 +121,12 @@
   .topbarRowPrimary {
     flex-wrap: wrap;
     justify-content: flex-start;
+  }
+
+  .topbarRowSecondary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
   }
 
   .topLeft {
@@ -303,17 +313,11 @@
 .chips {
   display: flex;
   gap: var(--cal-chips-gap);
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  flex-wrap: wrap;
+  overflow-x: hidden;
   overflow-y: visible;
   min-width: 0;
   margin: var(--cal-chips-margin-y) 0;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 .loadingOverlay {

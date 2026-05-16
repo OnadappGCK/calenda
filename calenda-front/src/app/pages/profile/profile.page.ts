@@ -31,6 +31,7 @@ export class ProfilePage implements OnInit {
   ville = '';
   lieu = '';
   numero = '';
+  bio = '';
   password = '';
   passwordConfirmation = '';
   profileImage: string | null = null;
@@ -58,6 +59,7 @@ export class ProfilePage implements OnInit {
         this.ville = me.ville;
         this.lieu = me.lieu;
         this.numero = me.numero ?? '';
+        this.bio = me.bio ?? '';
         this.profileImage = me.profileImage ?? null;
       }
     } finally {
@@ -105,6 +107,7 @@ export class ProfilePage implements OnInit {
           ville: this.ville,
           lieu: this.lieu,
           numero: this.numero.trim() || null,
+          bio: this.bio.trim() || null,
           profileImage: this.profileImage,
           password: this.password || undefined,
           passwordConfirmation: this.passwordConfirmation || undefined,

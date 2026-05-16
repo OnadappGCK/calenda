@@ -1,6 +1,7 @@
 import { normalizePhone } from './merge-utils';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
 import { Between, MoreThanOrEqual, Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventTag } from '../common/enums/event-tag.enum';
@@ -10,6 +11,7 @@ import { EtablissementType } from '../common/enums/etablissement-type.enum';
 import { EtablissementsService } from '../etablissements/etablissements.service';
 import { Event } from '../events/event.entity';
 import { EventSlot } from '../events/event-slot.entity';
+import { User } from '../users/user.entity';
 
 const BASE_URL = 'https://www.otcarrylerouet.fr';
 const AGENDA_URL = `${BASE_URL}/agenda-carry-le-rouet.html`;
@@ -91,16 +93,87 @@ type ApplyResult = {
 @Injectable()
 export class CarryLeRouetMergeService {
   private readonly logger = new Logger(CarryLeRouetMergeService.name);
+  private static readonly MERGE_USER = {
+    email: 'merge.carry-le-rouet@calendago.fr',
+    pseudo: 'carry le rouet',
+    ville: 'Carry-le-Rouet',
+    lieu: 'merge',
+  };
+  private mergeOrganizerId: string | null = null;
 
   constructor(
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
     @InjectRepository(EventSlot) private readonly slotsRepo: Repository<EventSlot>,
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
     private readonly etablissementsService: EtablissementsService,
   ) {}
+
+  private async getMergeOrganizer(): Promise<User> {
+    if (this.mergeOrganizerId) {
+      const cached = await this.usersRepo.findOne({ where: { id: this.mergeOrganizerId } });
+      if (cached) return cached;
+    }
+
+    const cfg = CarryLeRouetMergeService.MERGE_USER;
+    let user = await this.usersRepo.findOne({ where: [{ email: cfg.email }, { pseudo: cfg.pseudo }] });
+    if (!user) {
+      const passwordHash = await bcrypt.hash(`merge-carry-le-rouet-${Date.now()}`, 10);
+      user = this.usersRepo.create({
+        email: cfg.email,
+        pseudo: cfg.pseudo,
+        ville: cfg.ville,
+        lieu: cfg.lieu,
+        profileImage: null,
+        numero: null,
+        passwordHash,
+        isAdmin: false,
+        emailVerified: true,
+        emailVerificationToken: null,
+      });
+      user = await this.usersRepo.save(user);
+      this.logger.log(`carry_merge_user_created id=${user.id} email=${user.email}`);
+    }
+
+    this.mergeOrganizerId = user.id;
+    return user;
+  }
+
+  async backfillOrganizer(): Promise<number> {
+    const organizer = await this.getMergeOrganizer();
+    const events = await this.eventsRepo.find({ where: { origin: EventOrigin.CARRY_LE_ROUET } });
+    const toUpdate = events.filter((ev) => !ev.organisateur || ev.organisateur.id !== organizer.id);
+    if (toUpdate.length === 0) return 0;
+
+    for (const ev of toUpdate) {
+      ev.organisateur = organizer;
+    }
+    await this.eventsRepo.save(toUpdate);
+    this.logger.log(`carry_backfill_organizer updated=${toUpdate.length} organizerId=${organizer.id}`);
+    return toUpdate.length;
+  }
+
+  private sanitizeCarryTags(tags: EventTag[] | null | undefined): EventTag[] {
+    return (tags ?? []).filter((tag) => tag !== EventTag.DANSE);
+  }
+
+  async backfillForbiddenDanceTag(): Promise<number> {
+    const events = await this.eventsRepo.find({ where: { origin: EventOrigin.CARRY_LE_ROUET } });
+    const toUpdate = events.filter((ev) => (ev.caracteristiques ?? []).includes(EventTag.DANSE));
+    if (toUpdate.length === 0) return 0;
+
+    for (const ev of toUpdate) {
+      ev.caracteristiques = this.sanitizeCarryTags(ev.caracteristiques);
+    }
+    await this.eventsRepo.save(toUpdate);
+    this.logger.log(`carry_backfill_tags updated=${toUpdate.length} removed=DANSE`);
+    return toUpdate.length;
+  }
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
   async merge(options?: MergeOptions): Promise<MergeResult> {
+    await this.backfillOrganizer();
+    await this.backfillForbiddenDanceTag();
     const pages = Math.max(1, Math.min(10, options?.pages ?? 2));
     const dryRun = options?.dryRun ?? false;
 
@@ -284,6 +357,7 @@ export class CarryLeRouetMergeService {
     let failed = 0;
     const debugSamples: ApplyResult['debugSamples'] = [];
     const now = new Date();
+    const mergeOrganizer = await this.getMergeOrganizer();
 
     this.logger.log(`carry_apply_start urls=${uniqueUrls.length}`);
     let sampleLogged = 0;
@@ -328,8 +402,16 @@ export class CarryLeRouetMergeService {
             );
             await this.slotsRepo.save(slotEntities);
           }
+          let shouldSaveExisting = false;
           if (detail.imageUrl && !existing.imageUrl) {
             existing.imageUrl = detail.imageUrl;
+            shouldSaveExisting = true;
+          }
+          if (!existing.organisateur || existing.organisateur.id !== mergeOrganizer.id) {
+            existing.organisateur = mergeOrganizer;
+            shouldSaveExisting = true;
+          }
+          if (shouldSaveExisting) {
             await this.eventsRepo.save(existing);
           }
           skippedExisting++;
@@ -381,7 +463,7 @@ export class CarryLeRouetMergeService {
           couleur: null,
           enAvant: false,
           public: false,
-          organisateur: null,
+          organisateur: mergeOrganizer,
         });
 
         const saved = await this.eventsRepo.save(ev);
@@ -656,7 +738,7 @@ export class CarryLeRouetMergeService {
     const adresse = (adresseFromHtml || adresseFromJsonLd || adresseFallback || lieu || 'Carry-le-Rouet').trim() || null;
 
     const categorie = this.guessCategory(sourceUrl, titre);
-    const caracteristiques = guessTags(titre, description ?? '');
+    const caracteristiques = this.sanitizeCarryTags(guessTags(titre, description ?? ''));
 
     const opening = this.extractOpeningHoursText(html) ?? this.extractOpeningHoursFromText(pageText);
 

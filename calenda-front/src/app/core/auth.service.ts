@@ -14,6 +14,7 @@ export type AuthUser = {
   emailVerified: boolean;
   profileImage?: string | null;
   numero?: string | null;
+  bio?: string | null;
 };
 
 @Injectable({ providedIn: 'root' })

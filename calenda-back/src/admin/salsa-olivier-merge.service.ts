@@ -1,11 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
 import { Between, MoreThanOrEqual, Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventTag } from '../common/enums/event-tag.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
 import { Event } from '../events/event.entity';
 import { EventSlot } from '../events/event-slot.entity';
+import { User } from '../users/user.entity';
 
 type MergeOptions = {
   pages?: number;
@@ -68,13 +70,69 @@ type ApplyResult = {
 @Injectable()
 export class SalsaOlivierMergeService {
   private readonly logger = new Logger(SalsaOlivierMergeService.name);
+  private static readonly MERGE_USER = {
+    email: 'merge.salsa-olivier@calendago.fr',
+    pseudo: 'salsa olivier',
+    ville: 'Sausset-les-Pins',
+    lieu: 'merge',
+  };
+  private mergeOrganizerId: string | null = null;
 
   constructor(
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
     @InjectRepository(EventSlot) private readonly slotsRepo: Repository<EventSlot>,
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
   ) {}
 
-  private async updateExistingIfBetter(existing: Event, detail: { description: string; contact: string | null; tarif: string | null; adresse: string | null }) {
+  private async getMergeOrganizer(): Promise<User> {
+    if (this.mergeOrganizerId) {
+      const cached = await this.usersRepo.findOne({ where: { id: this.mergeOrganizerId } });
+      if (cached) return cached;
+    }
+
+    const cfg = SalsaOlivierMergeService.MERGE_USER;
+    let user = await this.usersRepo.findOne({ where: [{ email: cfg.email }, { pseudo: cfg.pseudo }] });
+    if (!user) {
+      const passwordHash = await bcrypt.hash(`merge-salsa-olivier-${Date.now()}`, 10);
+      user = this.usersRepo.create({
+        email: cfg.email,
+        pseudo: cfg.pseudo,
+        ville: cfg.ville,
+        lieu: cfg.lieu,
+        profileImage: null,
+        numero: null,
+        passwordHash,
+        isAdmin: false,
+        emailVerified: true,
+        emailVerificationToken: null,
+      });
+      user = await this.usersRepo.save(user);
+      this.logger.log(`salsa_merge_user_created id=${user.id} email=${user.email}`);
+    }
+
+    this.mergeOrganizerId = user.id;
+    return user;
+  }
+
+  async backfillOrganizer(): Promise<number> {
+    const organizer = await this.getMergeOrganizer();
+    const events = await this.eventsRepo.find({ where: { origin: EventOrigin.SALSA_OLIVIER } });
+    const toUpdate = events.filter((ev) => !ev.organisateur || ev.organisateur.id !== organizer.id);
+    if (toUpdate.length === 0) return 0;
+
+    for (const ev of toUpdate) {
+      ev.organisateur = organizer;
+    }
+    await this.eventsRepo.save(toUpdate);
+    this.logger.log(`salsa_backfill_organizer updated=${toUpdate.length} organizerId=${organizer.id}`);
+    return toUpdate.length;
+  }
+
+  private async updateExistingIfBetter(
+    existing: Event,
+    detail: { description: string; contact: string | null; tarif: string | null; adresse: string | null },
+    organizer: User,
+  ) {
     let changed = false;
 
     const curDesc = (existing.description ?? '').trim();
@@ -99,12 +157,18 @@ export class SalsaOlivierMergeService {
       changed = true;
     }
 
+    if (!existing.organisateur || existing.organisateur.id !== organizer.id) {
+      existing.organisateur = organizer;
+      changed = true;
+    }
+
     if (changed) {
       await this.eventsRepo.save(existing);
     }
   }
 
   async merge(options?: MergeOptions): Promise<MergeResult> {
+    await this.backfillOrganizer();
     const pages = Math.max(1, Math.min(20, options?.pages ?? 2));
     const dryRun = options?.dryRun ?? false;
 
@@ -150,6 +214,7 @@ export class SalsaOlivierMergeService {
     const titresVus = new Set<string>();
 
     const now = new Date();
+    const mergeOrganizer = await this.getMergeOrganizer();
 
     const allUrls = await this.listEventUrls(maxItems);
     const uniqueUrls = [...new Set(allUrls)];
@@ -218,7 +283,7 @@ export class SalsaOlivierMergeService {
             contact: detail.contact,
             tarif: detail.tarif,
             adresse: detail.adresse,
-          });
+          }, mergeOrganizer);
           skippedExisting++;
           if (debugSamples.length < 20) {
             debugSamples.push({
@@ -311,6 +376,7 @@ export class SalsaOlivierMergeService {
     const debugSamples: ApplyResult['debugSamples'] = [];
 
     const now = new Date();
+    const mergeOrganizer = await this.getMergeOrganizer();
 
     this.logger.log(`salsa_apply_start urls=${uniqueUrls.length}`);
 
@@ -361,7 +427,7 @@ export class SalsaOlivierMergeService {
             contact: detail.contact,
             tarif: detail.tarif,
             adresse: detail.adresse,
-          });
+          }, mergeOrganizer);
           skippedExisting++;
           if (debugSamples.length < 20) {
             debugSamples.push({
@@ -395,7 +461,7 @@ export class SalsaOlivierMergeService {
           couleur: null,
           enAvant: false,
           public: false,
-          organisateur: null,
+          organisateur: mergeOrganizer,
         });
 
         await this.eventsRepo.save(ev);
