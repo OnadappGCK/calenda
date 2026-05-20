@@ -5,7 +5,9 @@ import { randomUUID } from 'node:crypto';
 import { Brackets, Repository } from 'typeorm';
 import { Event } from '../events/event.entity';
 import { User } from './user.entity';
+import { UserProfileReport } from './user-profile-report.entity';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { ReportProfileDto } from './dto/report-profile.dto';
 
 @Injectable()
 /**
@@ -16,6 +18,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
+    @InjectRepository(UserProfileReport) private readonly userProfileReportsRepo: Repository<UserProfileReport>,
   ) {}
 
   /** Récupère un user par id ou lève `user_not_found`. */
@@ -38,10 +41,44 @@ export class UsersService {
       lieu: user.lieu,
       isAdmin: user.isAdmin,
       emailVerified: user.emailVerified,
+      isBanned: user.isBanned,
       profileImage: user.profileImage,
       numero: user.numero,
       bio: user.bio,
     };
+  }
+
+  async reportProfile(reporterId: string, reportedId: string, dto: ReportProfileDto) {
+    if (reporterId === reportedId) {
+      throw new BadRequestException('cannot_report_self');
+    }
+
+    const [reporter, reported] = await Promise.all([this.findById(reporterId), this.findById(reportedId)]);
+
+    if (reporter.isBanned) {
+      throw new BadRequestException('account_banned');
+    }
+
+    const existing = await this.userProfileReportsRepo
+      .createQueryBuilder('r')
+      .leftJoin('r.reporter', 'reporter')
+      .leftJoin('r.reported', 'reported')
+      .where('reporter.id = :reporterId', { reporterId })
+      .andWhere('reported.id = :reportedId', { reportedId })
+      .getOne();
+
+    if (existing) {
+      return { ok: true, alreadyReported: true };
+    }
+
+    const reason = (dto.reason ?? '').trim();
+    const report = this.userProfileReportsRepo.create({
+      reporter,
+      reported,
+      reason: reason || null,
+    });
+    await this.userProfileReportsRepo.save(report);
+    return { ok: true, alreadyReported: false };
   }
 
   async getPublicProfile(id: string) {

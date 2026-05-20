@@ -18,6 +18,7 @@ import { CreateConversationMessageDto } from './dto/create-conversation-message.
 
 const MESSAGE_MIN_INTERVAL_MS = 15_000;
 const FLAG_THRESHOLD = 3;
+const MAX_CONSECUTIVE_MESSAGES = 3;
 
 @Injectable()
 export class ConversationsService {
@@ -72,7 +73,24 @@ export class ConversationsService {
     if (!user) {
       throw new NotFoundException('user_not_found');
     }
+    if (user.isBanned) {
+      throw new ForbiddenException('account_banned');
+    }
     return user;
+  }
+
+  private async assertParticipant(groupId: string, userId: string) {
+    const isParticipant = await this.participantsRepo
+      .createQueryBuilder('p')
+      .leftJoin('p.user', 'u')
+      .where('p.groupId = :groupId', { groupId })
+      .andWhere('u.id = :userId', { userId })
+      .andWhere('p.active = :active', { active: true })
+      .getExists();
+
+    if (!isParticipant) {
+      throw new ForbiddenException('participant_required');
+    }
   }
 
   private async findGroupOrThrow(groupId: string) {
@@ -128,6 +146,22 @@ export class ConversationsService {
 
     if (latest && Date.now() - latest.createdAt.getTime() < MESSAGE_MIN_INTERVAL_MS) {
       throw new BadRequestException('message_rate_limited');
+    }
+
+    const lastMessages = await this.messagesRepo
+      .createQueryBuilder('m')
+      .leftJoinAndSelect('m.user', 'u')
+      .where('m.groupId = :groupId', { groupId: group.id })
+      .andWhere('m.status IN (:...visible)', { visible: ['VISIBLE', 'FLAGGED'] })
+      .orderBy('m.createdAt', 'DESC')
+      .limit(MAX_CONSECUTIVE_MESSAGES)
+      .getMany();
+
+    if (
+      lastMessages.length >= MAX_CONSECUTIVE_MESSAGES &&
+      lastMessages.every((m) => m.user?.id === userId)
+    ) {
+      throw new BadRequestException('consecutive_message_limit_reached');
     }
   }
 
@@ -310,6 +344,7 @@ export class ConversationsService {
   async listMessages(groupId: string, viewerId: string) {
     const group = await this.findGroupOrThrow(groupId);
     await this.findUser(viewerId);
+    await this.assertParticipant(group.id, viewerId);
 
     const messages = await this.messagesRepo
       .createQueryBuilder('m')
@@ -362,6 +397,7 @@ export class ConversationsService {
 
   async postMessage(groupId: string, dto: CreateConversationMessageDto, userId: string) {
     const [group, user] = await Promise.all([this.findGroupOrThrow(groupId), this.findUser(userId)]);
+    await this.assertParticipant(group.id, user.id);
 
     const content = this.normalize(dto.content);
     if (!content) {
@@ -370,7 +406,6 @@ export class ConversationsService {
 
     this.assertMessagePolicy(content);
     await this.assertCanPost(group, user.id);
-    await this.ensureParticipant(group, user);
 
     const message = this.messagesRepo.create({
       group,
@@ -402,6 +437,8 @@ export class ConversationsService {
     if (!message || message.status === 'DELETED') {
       throw new NotFoundException('message_not_found');
     }
+
+    await this.assertParticipant(message.group.id, userId);
 
     if (message.user.id === userId) {
       throw new BadRequestException('cannot_report_own_message');

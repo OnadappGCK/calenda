@@ -303,7 +303,7 @@
                       <p>{{ m.content }}</p>
                       <div class="msgActions">
                         <button class="btn btnTiny" type="button" (click)="likeMessage(m.id)">👍 {{ m.likeCount }}</button>
-                        <button class="btn btnTiny" type="button" (click)="reportMessage(m.id)">Signaler</button>
+                        <button class="btn btnTiny" type="button" (click)="reportProfile(m.user.id)">Signaler le profil</button>
                       </div>
                     </div>
                   </article>

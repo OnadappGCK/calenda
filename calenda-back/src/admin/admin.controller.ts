@@ -7,6 +7,7 @@ import { ListEventsQueryDto } from '../events/dto/list-events.query';
 import { EventsService } from '../events/events.service';
 import { EtablissementsService } from '../etablissements/etablissements.service';
 import { User } from '../users/user.entity';
+import { UserProfileReport } from '../users/user-profile-report.entity';
 import { MartiguesMergeService } from './martigues-merge.service';
 import { SalsaOlivierMergeService } from './salsa-olivier-merge.service';
 import { CarryLeRouetMergeService } from './carry-le-rouet-merge.service';
@@ -28,6 +29,7 @@ export class AdminController {
     private readonly salsaMerge: SalsaOlivierMergeService,
     private readonly carryMerge: CarryLeRouetMergeService,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    @InjectRepository(UserProfileReport) private readonly userProfileReportsRepo: Repository<UserProfileReport>,
   ) {}
 
   private validateProfileImageForRole(isAdmin: boolean, profileImage: string) {
@@ -55,6 +57,7 @@ export class AdminController {
       ville: u.ville,
       lieu: u.lieu,
       isAdmin: u.isAdmin,
+      isBanned: u.isBanned,
       emailVerified: u.emailVerified,
       profileImage: u.profileImage,
       numero: u.numero,
@@ -123,6 +126,45 @@ export class AdminController {
     qb.orderBy('u.pseudo', 'ASC');
     const users = await qb.getMany();
     return users.map((u) => this.userDto(u));
+  }
+
+  @Get('user-reports')
+  async listUserReports() {
+    const reports = await this.userProfileReportsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.reporter', 'reporter')
+      .leftJoinAndSelect('r.reported', 'reported')
+      .orderBy('r.createdAt', 'DESC')
+      .getMany();
+
+    return reports.map((r) => ({
+      id: r.id,
+      reason: r.reason,
+      createdAt: r.createdAt,
+      reporter: {
+        id: r.reporter.id,
+        pseudo: r.reporter.pseudo,
+        email: r.reporter.email,
+      },
+      reported: {
+        id: r.reported.id,
+        pseudo: r.reported.pseudo,
+        email: r.reported.email,
+        isBanned: r.reported.isBanned,
+      },
+    }));
+  }
+
+  @Patch('users/:id/ban')
+  async setUserBan(@Param('id') id: string, @Body() body: { isBanned?: boolean }) {
+    const user = await this.usersRepo.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('user_not_found');
+    }
+
+    user.isBanned = !!body?.isBanned;
+    await this.usersRepo.save(user);
+    return this.userDto(user);
   }
 
   @Post('users')

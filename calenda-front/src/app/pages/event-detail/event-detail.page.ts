@@ -23,6 +23,7 @@ import { FavoritesService } from '../../core/favorites.service';
 import { profileImageUrl } from '../../core/profile-images';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
 import { ConversationGroupCardDto, ConversationMessageDto, ConversationsService } from '../../core/conversations.service';
+import { UsersService } from '../../core/users.service';
 
 type Draft = {
   titre: string;
@@ -62,6 +63,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly adminService = inject(AdminService);
   private readonly conversationsService = inject(ConversationsService);
+  private readonly usersService = inject(UsersService);
   protected readonly i18n = inject(I18nService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
@@ -553,20 +555,15 @@ export class EventDetailPage implements OnInit, OnDestroy {
     }
   }
 
-  async reportMessage(messageId: string) {
+  async reportProfile(userId: string) {
+    const me = this.auth.user();
+    if (!me || me.id === userId) {
+      return;
+    }
+
+    const reason = (globalThis.prompt?.('Raison du signalement (optionnel)') ?? '').trim();
     try {
-      const res = await this.conversationsService.reportMessage(messageId).toPromise();
-      this.groupMessages.update((messages) =>
-        messages.map((m) =>
-          m.id === messageId
-            ? {
-                ...m,
-                reportCount: Number.isFinite(res?.reportCount as number) ? Number(res?.reportCount) : m.reportCount,
-                status: ((res?.status as any) ?? m.status) as ConversationMessageDto['status'],
-              }
-            : m,
-        ),
-      );
+      await this.usersService.reportProfile(userId, { reason: reason || undefined }).toPromise();
     } catch {
       // ignore
     }

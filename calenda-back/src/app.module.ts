@@ -25,6 +25,7 @@ import { Etablissement } from './etablissements/etablissement.entity';
 import { EtablissementsModule } from './etablissements/etablissements.module';
 import { SeedModule } from './seed/seed.module';
 import { User } from './users/user.entity';
+import { UserProfileReport } from './users/user-profile-report.entity';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -65,6 +66,7 @@ import { UsersModule } from './users/users.module';
               ConversationParticipant,
               ConversationBlock,
               ConversationMessageLike,
+              UserProfileReport,
             ],
             synchronize,
             uuidExtension: 'pgcrypto' as const,
@@ -87,6 +89,7 @@ import { UsersModule } from './users/users.module';
             ConversationParticipant,
             ConversationBlock,
             ConversationMessageLike,
+            UserProfileReport,
           ],
           synchronize,
         };

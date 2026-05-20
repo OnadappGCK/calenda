@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -12,10 +13,19 @@ type UserDto = {
   lieu: string;
   numero?: string | null;
   isAdmin: boolean;
+  isBanned: boolean;
   emailVerified: boolean;
   profileImage: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+type UserReportDto = {
+  id: string;
+  reason: string | null;
+  createdAt: string;
+  reporter: { id: string; pseudo: string; email: string };
+  reported: { id: string; pseudo: string; email: string; isBanned: boolean };
 };
 
 type SortKey = 'pseudo' | 'email' | 'isAdmin' | 'createdAt';
@@ -48,14 +58,16 @@ type CreateModel = {
 
 @Component({
   selector: 'app-admin-accounts-page',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, DatePipe],
   templateUrl: './admin-accounts.page.html',
   styleUrl: './admin-accounts.page.scss',
 })
 export class AdminAccountsPage implements OnInit {
   private readonly adminService = inject(AdminService);
 
+  readonly tab = signal<'users' | 'reports'>('users');
   readonly items = signal<UserDto[]>([]);
+  readonly reports = signal<UserReportDto[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -127,13 +139,31 @@ export class AdminAccountsPage implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const users = await this.adminService.users().toPromise();
-      this.items.set((users ?? []) as any);
+      if (this.tab() === 'reports') {
+        const reports = await this.adminService.userReports().toPromise();
+        this.reports.set((reports ?? []) as any);
+      } else {
+        const users = await this.adminService.users().toPromise();
+        this.items.set((users ?? []) as any);
+      }
     } catch {
       this.error.set('load_failed');
     } finally {
       this.loading.set(false);
     }
+  }
+
+  async setTab(next: 'users' | 'reports') {
+    if (this.tab() === next) {
+      return;
+    }
+    this.tab.set(next);
+    await this.reload();
+  }
+
+  async setBan(userId: string, isBanned: boolean) {
+    await this.adminService.setUserBan(userId, isBanned).toPromise();
+    await this.reload();
   }
 
   openCreate() {
