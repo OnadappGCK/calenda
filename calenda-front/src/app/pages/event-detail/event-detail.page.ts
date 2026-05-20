@@ -22,6 +22,7 @@ import { EventCategory, EventsService, EventDto, EventSlotDto, EventTag, Highlig
 import { FavoritesService } from '../../core/favorites.service';
 import { profileImageUrl } from '../../core/profile-images';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
+import { ConversationGroupCardDto, ConversationMessageDto, ConversationsService } from '../../core/conversations.service';
 
 type Draft = {
   titre: string;
@@ -60,6 +61,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
   private readonly favoritesService = inject(FavoritesService);
   private readonly auth = inject(AuthService);
   private readonly adminService = inject(AdminService);
+  private readonly conversationsService = inject(ConversationsService);
   protected readonly i18n = inject(I18nService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
@@ -113,6 +115,27 @@ export class EventDetailPage implements OnInit, OnDestroy {
     Math.max(0, (this.event()?.slots?.length ?? 0) - this.SLOTS_PREVIEW),
   );
 
+  readonly canUseConversations = computed(() => this.auth.isLoggedIn());
+  readonly conversationGroups = signal<ConversationGroupCardDto[]>([]);
+  readonly groupsLoading = signal(false);
+  readonly groupsError = signal<string | null>(null);
+  readonly createGroupOpen = signal(false);
+  readonly creatingGroup = signal(false);
+  readonly createGroupError = signal<string | null>(null);
+  readonly newGroupTitle = signal('');
+  readonly newGroupMessage = signal('');
+  readonly newGroupVilleDepart = signal('');
+  readonly newGroupTrancheAge = signal('');
+  readonly newGroupAmbiance = signal('');
+
+  readonly activeGroupId = signal<string | null>(null);
+  readonly groupMessages = signal<ConversationMessageDto[]>([]);
+  readonly messagesLoading = signal(false);
+  readonly messagesError = signal<string | null>(null);
+  readonly sendingMessage = signal(false);
+  readonly sendMessageError = signal<string | null>(null);
+  readonly newMessageContent = signal('');
+
   readonly lightboxOpen = signal(false);
   readonly imageEditorOpen = signal(false);
   private prevBodyOverflow: string | null = null;
@@ -121,11 +144,11 @@ export class EventDetailPage implements OnInit, OnDestroy {
   private geocodeToken = 0;
 
   readonly defaultImageChoices = computed(() => [
-    { label: this.i18n.t('eventDetail.defaultImageSpectacle'), path: 'img/categorie/SPECTACLE/spec1.png' },
-    { label: this.i18n.t('eventDetail.defaultImageFestival'), path: 'img/categorie/FESTIVAL/fest1.png' },
-    { label: this.i18n.t('eventDetail.defaultImageExposition'), path: 'img/categorie/EXPOSITION/expo1.png' },
-    { label: this.i18n.t('eventDetail.defaultImageOther'), path: 'img/categorie/AUTRE/autre1.png' },
-    { label: this.i18n.t('eventDetail.defaultImageMeeting'), path: 'img/categorie/REUNION/reu1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageSpectacle'), path: 'img/categorie/CULTURE_SPECTACLE/spec1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageFestival'), path: 'img/categorie/VIE_LOCALE/locale1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageExposition'), path: 'img/categorie/ARTS_EXPOS/expo1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageOther'), path: 'img/categorie/SPECIAL/special1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageMeeting'), path: 'img/categorie/ACTIVITES/act1.png' },
   ]);
 
   readonly isAdmin = computed(() => !!this.auth.user()?.isAdmin);
@@ -169,7 +192,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
   readonly boostError = signal<string | null>(null);
   readonly boostSuccess = signal(false);
 
-  readonly categories: EventCategory[] = ['Culture & spectacle', 'Arts & expos', 'Vie sociale', 'Activités', 'Vie locale', 'Famille', 'Spécial'];
+  readonly categories: EventCategory[] = ['Culture & spectacle', 'Arts & expos', 'Sortie', 'Activités', 'Vie locale', 'Famille', 'Spécial'];
   readonly tags: EventTag[] = [
     'CONCERT', 'SPORT', 'DANSE', 'CONCOURS', 'FEU_DARTIFICE',
     'ENFANT', 'FAMILLE', 'ADULTE', 'TOUT_PUBLIC',
@@ -270,7 +293,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
   draftImagePreviewUrl() {
     const d = this.draft();
     if (!d) return '';
-    return resolveEventImageUrl(d.categorie, d.imageUrl);
+    return resolveEventImageUrl(d.categorie, d.imageUrl, `draft-${d.titre || 'event'}`);
   }
 
   private lockBodyScroll() {
@@ -344,11 +367,209 @@ export class EventDetailPage implements OnInit, OnDestroy {
   private adresseSuggestToken = 0;
 
   imageUrlFor(e: EventDto) {
-    return resolveEventImageUrl(e.categorie, e.imageUrl);
+    return resolveEventImageUrl(e.categorie, e.imageUrl, e.id);
   }
 
   organizerAvatarUrl(e: EventDto) {
     return profileImageUrl(e.organisateur?.profileImage ?? null);
+  }
+
+  profileAvatar(path: string | null | undefined) {
+    return profileImageUrl(path ?? null);
+  }
+
+  private async loadConversationGroups(eventId: string) {
+    this.groupsLoading.set(true);
+    this.groupsError.set(null);
+    try {
+      const list = await this.conversationsService.listGroups(eventId).toPromise();
+      this.conversationGroups.set(list ?? []);
+    } catch {
+      this.conversationGroups.set([]);
+      this.groupsError.set('groups_load_failed');
+    } finally {
+      this.groupsLoading.set(false);
+    }
+  }
+
+  openCreateGroup() {
+    if (!this.canUseConversations()) {
+      void this.router.navigateByUrl('/login');
+      return;
+    }
+    this.createGroupError.set(null);
+    this.createGroupOpen.set(true);
+    this.newGroupTitle.set('');
+    this.newGroupVilleDepart.set('');
+    this.newGroupTrancheAge.set('');
+    this.newGroupAmbiance.set('');
+    this.newGroupMessage.set('Je souhaite trouver des gens pour aller à cet événement 😊');
+  }
+
+  closeCreateGroup() {
+    if (this.creatingGroup()) return;
+    this.createGroupOpen.set(false);
+  }
+
+  async submitCreateGroup() {
+    const e = this.event();
+    if (!e || !this.canUseConversations()) return;
+    const title = this.newGroupTitle().trim();
+    const firstMessage = this.newGroupMessage().trim();
+    if (!title || !firstMessage) {
+      this.createGroupError.set('create_group_invalid');
+      return;
+    }
+
+    this.creatingGroup.set(true);
+    this.createGroupError.set(null);
+    try {
+      await this.conversationsService
+        .createGroup(e.id, {
+          title,
+          firstMessage,
+          villeDepart: this.newGroupVilleDepart().trim() || undefined,
+          trancheAge: this.newGroupTrancheAge().trim() || undefined,
+          ambiance: this.newGroupAmbiance().trim() || undefined,
+        })
+        .toPromise();
+      await this.loadConversationGroups(e.id);
+      this.createGroupOpen.set(false);
+    } catch {
+      this.createGroupError.set('create_group_failed');
+    } finally {
+      this.creatingGroup.set(false);
+    }
+  }
+
+  isGroupCreator(group: ConversationGroupCardDto) {
+    return group.creator.id === (this.auth.user()?.id ?? null);
+  }
+
+  groupActionLabel(group: ConversationGroupCardDto) {
+    if (this.isGroupCreator(group)) return 'Supprimer le groupe';
+    return group.joinedByMe ? 'Quitter le groupe' : 'Rejoindre le groupe';
+  }
+
+  async onGroupPrimaryAction(group: ConversationGroupCardDto) {
+    if (!this.canUseConversations()) {
+      await this.router.navigateByUrl('/login');
+      return;
+    }
+    try {
+      if (this.isGroupCreator(group)) {
+        await this.conversationsService.deleteGroup(group.id).toPromise();
+        this.conversationGroups.update((groups) => groups.filter((g) => g.id !== group.id));
+        if (this.activeGroupId() === group.id) {
+          this.closeConversation();
+        }
+        return;
+      }
+
+      if (group.joinedByMe) {
+        await this.conversationsService.leaveGroup(group.id).toPromise();
+        this.conversationGroups.update((groups) =>
+          groups.map((g) =>
+            g.id === group.id
+              ? { ...g, joinedByMe: false, participantCount: Math.max(0, g.participantCount - 1) }
+              : g,
+          ),
+        );
+      } else {
+        await this.conversationsService.joinGroup(group.id).toPromise();
+        this.conversationGroups.update((groups) =>
+          groups.map((g) =>
+            g.id === group.id
+              ? { ...g, joinedByMe: true, participantCount: g.participantCount + (g.joinedByMe ? 0 : 1) }
+              : g,
+          ),
+        );
+      }
+    } catch {
+      this.groupsError.set('group_action_failed');
+    }
+  }
+
+  async openConversation(groupId: string) {
+    if (!this.canUseConversations()) {
+      await this.router.navigateByUrl('/login');
+      return;
+    }
+    this.activeGroupId.set(groupId);
+    this.messagesLoading.set(true);
+    this.messagesError.set(null);
+    this.groupMessages.set([]);
+    try {
+      const list = await this.conversationsService.listMessages(groupId).toPromise();
+      this.groupMessages.set(list ?? []);
+    } catch {
+      this.messagesError.set('messages_load_failed');
+    } finally {
+      this.messagesLoading.set(false);
+    }
+  }
+
+  closeConversation() {
+    this.activeGroupId.set(null);
+    this.groupMessages.set([]);
+    this.newMessageContent.set('');
+    this.sendMessageError.set(null);
+  }
+
+  async sendConversationMessage() {
+    const groupId = this.activeGroupId();
+    if (!groupId) return;
+    const content = this.newMessageContent().trim();
+    if (!content) return;
+    this.sendingMessage.set(true);
+    this.sendMessageError.set(null);
+    try {
+      await this.conversationsService.postMessage(groupId, { content }).toPromise();
+      this.newMessageContent.set('');
+      await this.openConversation(groupId);
+    } catch {
+      this.sendMessageError.set('message_send_failed');
+    } finally {
+      this.sendingMessage.set(false);
+    }
+  }
+
+  async likeMessage(messageId: string) {
+    try {
+      const res = await this.conversationsService.toggleLike(messageId).toPromise();
+      this.groupMessages.update((messages) =>
+        messages.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                likedByMe: !!res?.liked,
+                likeCount: Number.isFinite(res?.likeCount as number) ? Number(res?.likeCount) : m.likeCount,
+              }
+            : m,
+        ),
+      );
+    } catch {
+      // ignore
+    }
+  }
+
+  async reportMessage(messageId: string) {
+    try {
+      const res = await this.conversationsService.reportMessage(messageId).toPromise();
+      this.groupMessages.update((messages) =>
+        messages.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                reportCount: Number.isFinite(res?.reportCount as number) ? Number(res?.reportCount) : m.reportCount,
+                status: ((res?.status as any) ?? m.status) as ConversationMessageDto['status'],
+              }
+            : m,
+        ),
+      );
+    } catch {
+      // ignore
+    }
   }
 
   private async reloadFavorites() {
@@ -423,7 +644,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
   private categoryKey(category: EventCategory) {
     if (category === 'Culture & spectacle') return 'cultureSpectacle';
     if (category === 'Arts & expos') return 'artsExpos';
-    if (category === 'Vie sociale') return 'vieSociale';
+    if (category === 'Sortie' || category === ('Vie sociale' as EventCategory)) return 'vieSociale';
     if (category === 'Activités') return 'activites';
     if (category === 'Vie locale') return 'vieLocale';
     if (category === 'Famille') return 'famille';
@@ -762,6 +983,11 @@ export class EventDetailPage implements OnInit, OnDestroy {
     this.highlights.set([]);
     this.highlightForm.set(null);
     this.highlightError.set(null);
+    this.conversationGroups.set([]);
+    this.groupsError.set(null);
+    this.activeGroupId.set(null);
+    this.groupMessages.set([]);
+    this.messagesError.set(null);
   }
 
   private async maybeGeocodeEvent(e: EventDto | null) {
@@ -857,6 +1083,9 @@ export class EventDetailPage implements OnInit, OnDestroy {
     this.event.set(normalized);
     this.highlights.set((normalized?.highlights ?? []));
     void this.maybeGeocodeEvent(normalized);
+    if (normalized?.id) {
+      void this.loadConversationGroups(normalized.id);
+    }
 
     try {
       const sim = await this.eventsService.similar(id).toPromise();

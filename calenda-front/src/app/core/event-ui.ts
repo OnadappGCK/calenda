@@ -5,7 +5,8 @@ export function normalizeCategory(cat: string): EventCategory {
   switch (cat) {
     case 'Concert':
     case 'Spectacle':           return 'Culture & spectacle';
-    case 'Danse':               return 'Vie sociale';
+    case 'Danse':
+    case 'Vie sociale':         return 'Sortie';
     case 'Exposition':          return 'Arts & expos';
     case "Feux d'artifice":
     case 'Autre':               return 'Spécial';
@@ -19,32 +20,77 @@ function isHttpUrl(url: string) {
 }
 
 function assetUrl(path: string) {
-  const p = path.trim();
+  const p = path.trim().replace(/\\/g, '/');
   if (!p) return '';
-  if (p.startsWith('/')) return p;
-  return `/assets/${p}`;
+  const normalized = p
+    .replace('/img/categorie/SPECTACLE/', '/img/categorie/CULTURE_SPECTACLE/')
+    .replace('/img/categorie/EXPOSITION/', '/img/categorie/ARTS_EXPOS/')
+    .replace('/img/categorie/VIE_SOCIALE/', '/img/categorie/SORTIE/')
+    .replace('/img/categorie/FESTIVAL/', '/img/categorie/VIE_LOCALE/')
+    .replace('/img/categorie/REUNION/', '/img/categorie/ACTIVITES/')
+    .replace('/img/categorie/AUTRE/', '/img/categorie/SPECIAL/');
+  if (normalized.startsWith('/')) return normalized;
+  return `/assets/${normalized}`;
 }
 
-export function defaultCategoryImageUrl(category: string): string {
-  const category2 = normalizeCategory(category);
-  switch (category2) {
-    case 'Culture & spectacle':
-      return '/assets/img/categorie/SPECTACLE/spec1.png';
-    case 'Vie sociale':
-      return '/assets/img/categorie/SPECTACLE/spec1.png';
-    case 'Spécial':
-      return '/assets/img/categorie/FESTIVAL/fest1.png';
-    case 'Arts & expos':
-      return '/assets/img/categorie/EXPOSITION/expo1.png';
-    default:
-      return '/assets/img/categorie/AUTRE/autre1.png';
+const CATEGORY_IMAGE_FILES: Record<EventCategory, string[]> = {
+  'Culture & spectacle': ['spec1.png', 'spec2.png', 'spec3.png'],
+  'Arts & expos': ['expo1.png', 'expo2.png', 'expo3.png'],
+  'Sortie': ['social1.png', 'social2.png', 'social3.png'],
+  'Activités': ['act1.png', 'act2.png', 'act3.png'],
+  'Vie locale': ['locale1.png', 'locale2.png', 'locale3.png'],
+  'Famille': ['fam1.png', 'fam2.png', 'fam3.png'],
+  'Spécial': ['special1.png', 'special2.png', 'special3.png'],
+};
+
+const CATEGORY_IMAGE_FOLDER: Record<EventCategory, string> = {
+  'Culture & spectacle': 'CULTURE_SPECTACLE',
+  'Arts & expos': 'ARTS_EXPOS',
+  'Sortie': 'SORTIE',
+  'Activités': 'ACTIVITES',
+  'Vie locale': 'VIE_LOCALE',
+  'Famille': 'FAMILLE',
+  'Spécial': 'SPECIAL',
+};
+
+const FALLBACK_PLACEHOLDER =
+  'data:image/svg+xml;charset=utf-8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360"><rect width="640" height="360" fill="#0f2746"/><text x="50%" y="50%" dy=".35em" text-anchor="middle" fill="#dbeafe" font-family="Arial" font-size="28">Image indisponible</text></svg>',
+  );
+
+function hashString(input: string) {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i += 1) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
   }
+  return (h >>> 0);
 }
 
-export function resolveEventImageUrl(category: EventCategory, imageUrl?: string | null): string {
+function rotateBySeed<T>(list: T[], seed: string) {
+  if (list.length <= 1) return [...list];
+  const shift = hashString(seed) % list.length;
+  return [...list.slice(shift), ...list.slice(0, shift)];
+}
+
+function categoryFallbackCandidates(category: string, seed: string) {
+  const c = normalizeCategory(category);
+  const folder = CATEGORY_IMAGE_FOLDER[c];
+  const files = CATEGORY_IMAGE_FILES[c] ?? [];
+  const ordered = rotateBySeed(files, seed || c);
+  return ordered.map((file) => `/assets/img/categorie/${folder}/${file}`);
+}
+
+export function defaultCategoryImageUrl(category: string, seed = ''): string {
+  const candidates = categoryFallbackCandidates(category, seed);
+  return candidates[0] ?? FALLBACK_PLACEHOLDER;
+}
+
+export function resolveEventImageUrl(category: EventCategory, imageUrl?: string | null, seed = ''): string {
   const raw = (imageUrl ?? '').trim();
   if (!raw) {
-    return defaultCategoryImageUrl(category);
+    return defaultCategoryImageUrl(category, seed);
   }
   if (isHttpUrl(raw)) {
     return raw;
@@ -97,7 +143,7 @@ export function categoryColor(category: string): string {
   switch (c) {
     case 'Culture & spectacle': return '#5C6BC0';
     case 'Arts & expos':        return '#E85D5D';
-    case 'Vie sociale':         return '#2FBF71';
+    case 'Sortie':              return '#2FBF71';
     case 'Activités':          return '#FF7043';
     case 'Vie locale':          return '#AB47BC';
     case 'Famille':             return '#F06292';
@@ -124,7 +170,7 @@ export function categoryIcon(category: string): string {
   switch (c) {
     case 'Culture & spectacle': return '🎭';
     case 'Arts & expos':        return '🎨';
-    case 'Vie sociale':         return '💃';
+    case 'Sortie':              return '💃';
     case 'Activités':          return '🏃';
     case 'Vie locale':          return '🛍️';
     case 'Famille':             return '👨‍👩‍👧‍👦';

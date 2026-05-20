@@ -1983,7 +1983,7 @@ export class MartiguesMergeService {
     const t = titre.toLowerCase();
     if (/(exposition|galerie|mus[eé]e)/i.test(t)) return EventCategory.ARTS_EXPOS;
     if (/(concert|spectacle|th[eé][aâ]tre|humour|cin[eé]ma)/i.test(t)) return EventCategory.CULTURE_SPECTACLE;
-    if (/(soir[eé]e|danse|festival|afterwork|salsa|tango|bachata)/i.test(t)) return EventCategory.VIE_SOCIALE;
+    if (/(soir[eé]e|danse|festival|afterwork|salsa|tango|bachata)/i.test(t)) return EventCategory.SORTIE;
     if (/(sport|bien.?[eê]tre|atelier|cours\b)/i.test(t)) return EventCategory.ACTIVITES;
     if (/(march[eé]|brocante|salon\b)/i.test(t)) return EventCategory.VIE_LOCALE;
     if (/(enfants?|famille|kids|jeunesse)/i.test(t)) return EventCategory.FAMILLE;

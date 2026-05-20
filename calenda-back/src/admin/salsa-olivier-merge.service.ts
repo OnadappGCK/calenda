@@ -634,7 +634,7 @@ export class SalsaOlivierMergeService {
         adresse,
         latitude: null,
         longitude: null,
-        categorie: EventCategory.VIE_SOCIALE,
+        categorie: EventCategory.SORTIE,
         caracteristiques: [EventTag.DANSE, EventTag.MUSIQUE],
       },
       reason: 'ok',

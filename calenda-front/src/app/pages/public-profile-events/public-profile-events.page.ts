@@ -33,7 +33,7 @@ export class PublicProfileEventsPage implements OnInit {
   readonly categories: EventCategory[] = [
     'Culture & spectacle',
     'Arts & expos',
-    'Vie sociale',
+    'Sortie',
     'Activités',
     'Vie locale',
     'Famille',

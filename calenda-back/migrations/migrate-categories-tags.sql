@@ -2,7 +2,7 @@
 -- Mapping:
 --   Concert          -> Culture & spectacle
 --   Spectacle        -> Culture & spectacle
---   Danse            -> Vie sociale
+--   Danse            -> Sortie
 --   Feux d'artifice  -> Spécial
 --   Exposition       -> Arts & expos
 --   Autre            -> Spécial
@@ -12,8 +12,12 @@ SET categorie = 'Culture & spectacle'
 WHERE categorie IN ('Concert', 'Spectacle');
 
 UPDATE event
-SET categorie = 'Vie sociale'
+SET categorie = 'Sortie'
 WHERE categorie = 'Danse';
+
+UPDATE event
+SET categorie = 'Sortie'
+WHERE categorie = 'Vie sociale';
 
 UPDATE event
 SET categorie = 'Arts & expos'

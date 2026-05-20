@@ -98,7 +98,21 @@
     }
 
     @if (!editing()) {
-      <h1>{{ event()!.titre }}</h1>
+      <div class="titleRow">
+        <h1>{{ event()!.titre }}</h1>
+        <div class="actions titleActions">
+          <button
+            class="heartBtn"
+            type="button"
+            (click)="toggleFavorite()"
+            [attr.aria-label]="i18n.t('common.favorite')"
+            [style.color]="isFavorite() ? '#ffffff' : '#64748b'"
+          >
+            {{ isFavorite() ? '♥' : '♡' }}
+          </button>
+          <a class="btn" routerLink="/favorites">{{ i18n.t('eventDetail.myFavorites') }}</a>
+        </div>
+      </div>
       <div class="meta">
         {{ categoryLabel(event()!.categorie) }} · {{ event()!.ville }}
       </div>
@@ -171,18 +185,149 @@
         </div>
       }
 
-      <div class="actions">
-        <button
-          class="heartBtn"
-          type="button"
-          (click)="toggleFavorite()"
-          [attr.aria-label]="i18n.t('common.favorite')"
-          [style.color]="isFavorite() ? '#ffffff' : '#64748b'"
-        >
-          {{ isFavorite() ? '♥' : '♡' }}
-        </button>
-        <a class="btn" routerLink="/favorites">{{ i18n.t('eventDetail.myFavorites') }}</a>
-      </div>
+      <section class="convSection">
+        <div class="convHeader">
+          <h2>Groupes de conversation</h2>
+          <button class="btn" type="button" (click)="openCreateGroup()">Créer un groupe de sortie</button>
+        </div>
+
+        @if (groupsLoading()) {
+          <p class="meta">Chargement des groupes…</p>
+        } @else if (groupsError()) {
+          <p class="meta">Impossible de charger les groupes.</p>
+        } @else if (conversationGroups().length === 0) {
+          <p class="meta">Aucun groupe pour cet événement pour le moment.</p>
+        } @else {
+          <div class="convCards">
+            @for (g of conversationGroups(); track g.id) {
+              <article class="convCard">
+                <div class="convCardTop">
+                  <div>
+                    <h3>{{ g.title }}</h3>
+                    <p class="metaSmall">
+                      Créé par {{ g.creator.pseudo }} · {{ g.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+                    </p>
+                  </div>
+                  <img class="convAvatar" [src]="profileAvatar(g.creator.profileImage)" alt="" loading="lazy" />
+                </div>
+
+                <div class="convMetaLine">👥 {{ g.participantCount }} participants</div>
+                <p class="convPreview">{{ g.firstMessagePreview || 'Aucun message.' }}</p>
+
+                @if (g.options.villeDepart || g.options.trancheAge || g.options.ambiance) {
+                  <div class="convOptions">
+                    @if (g.options.villeDepart) {
+                      <span class="pill">Départ : {{ g.options.villeDepart }}</span>
+                    }
+                    @if (g.options.trancheAge) {
+                      <span class="pill">Âge : {{ g.options.trancheAge }}</span>
+                    }
+                    @if (g.options.ambiance) {
+                      <span class="pill">Ambiance : {{ g.options.ambiance }}</span>
+                    }
+                  </div>
+                }
+
+                <div class="convActions">
+                  <button class="btn" type="button" (click)="onGroupPrimaryAction(g)">{{ groupActionLabel(g) }}</button>
+                  <button class="btn btnPrimary" type="button" (click)="openConversation(g.id)">Voir la conversation</button>
+                </div>
+              </article>
+            }
+          </div>
+        }
+
+        @if (createGroupOpen()) {
+          <div class="convCreateBox">
+            <h3>Nouveau groupe</h3>
+            <label class="field">
+              Titre du groupe
+              <input type="text" [ngModel]="newGroupTitle()" (ngModelChange)="newGroupTitle.set($event)" maxlength="120" />
+            </label>
+            <label class="field">
+              Premier message
+              <textarea rows="4" [ngModel]="newGroupMessage()" (ngModelChange)="newGroupMessage.set($event)" maxlength="500"></textarea>
+            </label>
+
+            <div class="convOptionGrid">
+              <label class="field">
+                Ville de départ (optionnel)
+                <input type="text" [ngModel]="newGroupVilleDepart()" (ngModelChange)="newGroupVilleDepart.set($event)" maxlength="120" />
+              </label>
+              <label class="field">
+                Tranche d'âge (optionnel)
+                <input type="text" [ngModel]="newGroupTrancheAge()" (ngModelChange)="newGroupTrancheAge.set($event)" maxlength="80" />
+              </label>
+              <label class="field">
+                Ambiance (optionnel)
+                <input type="text" [ngModel]="newGroupAmbiance()" (ngModelChange)="newGroupAmbiance.set($event)" maxlength="80" />
+              </label>
+            </div>
+
+            @if (createGroupError()) {
+              <p class="meta">Création impossible. Vérifie le contenu et réessaie.</p>
+            }
+
+            <div class="convActions">
+              <button class="btn" type="button" (click)="closeCreateGroup()" [disabled]="creatingGroup()">Annuler</button>
+              <button class="btn btnPrimary" type="button" (click)="submitCreateGroup()" [disabled]="creatingGroup()">
+                @if (creatingGroup()) { Création… } @else { Créer le groupe }
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (activeGroupId()) {
+          <div class="convThread">
+            <div class="convThreadHeader">
+              <h3>Conversation</h3>
+              <button class="btn" type="button" (click)="closeConversation()">Fermer</button>
+            </div>
+
+            @if (messagesLoading()) {
+              <p class="meta">Chargement des messages…</p>
+            } @else if (messagesError()) {
+              <p class="meta">Impossible de charger la conversation.</p>
+            } @else if (groupMessages().length === 0) {
+              <p class="meta">Aucun message pour l’instant.</p>
+            } @else {
+              <div class="msgList">
+                @for (m of groupMessages(); track m.id) {
+                  <article class="msgRow">
+                    <img class="msgAvatar" [src]="profileAvatar(m.user.profileImage)" alt="" loading="lazy" />
+                    <div class="msgBody">
+                      <div class="msgHead">
+                        <strong>{{ m.user.pseudo }}</strong>
+                        <span class="metaSmall">{{ m.createdAt | date: 'dd/MM HH:mm' }}</span>
+                      </div>
+                      <p>{{ m.content }}</p>
+                      <div class="msgActions">
+                        <button class="btn btnTiny" type="button" (click)="likeMessage(m.id)">👍 {{ m.likeCount }}</button>
+                        <button class="btn btnTiny" type="button" (click)="reportMessage(m.id)">Signaler</button>
+                      </div>
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+
+            <label class="field">
+              Nouveau message
+              <textarea rows="3" [ngModel]="newMessageContent()" (ngModelChange)="newMessageContent.set($event)" maxlength="500"></textarea>
+            </label>
+
+            @if (sendMessageError()) {
+              <p class="meta">Message non envoyé (rate limit, contenu refusé ou groupe fermé).</p>
+            }
+
+            <div class="convActions">
+              <button class="btn btnPrimary" type="button" (click)="sendConversationMessage()" [disabled]="sendingMessage()">
+                @if (sendingMessage()) { Envoi… } @else { Envoyer }
+              </button>
+            </div>
+          </div>
+        }
+      </section>
     } @else {
       <div class="editForm">
         <label class="field">
