@@ -98,6 +98,10 @@ export class AuthService {
       throw new UnauthorizedException('invalid_credentials');
     }
 
+    if (user.isBanned) {
+      throw new UnauthorizedException('account_banned');
+    }
+
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,

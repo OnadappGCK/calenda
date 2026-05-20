@@ -23,6 +23,7 @@ export class AdminService {
         lieu: string;
         numero?: string | null;
         isAdmin: boolean;
+        isBanned: boolean;
         emailVerified: boolean;
         profileImage: string | null;
         createdAt: string;
@@ -60,6 +61,22 @@ export class AdminService {
     },
   ) {
     return this.http.patch(`${this.apiBaseUrl}/admin/users/${id}`, payload);
+  }
+
+  userReports() {
+    return this.http.get<
+      {
+        id: string;
+        reason: string | null;
+        createdAt: string;
+        reporter: { id: string; pseudo: string; email: string };
+        reported: { id: string; pseudo: string; email: string; isBanned: boolean };
+      }[]
+    >(`${this.apiBaseUrl}/admin/user-reports`);
+  }
+
+  setUserBan(id: string, isBanned: boolean) {
+    return this.http.patch(`${this.apiBaseUrl}/admin/users/${id}/ban`, { isBanned });
   }
 
   /** Liste les événements en attente de validation (admin). */

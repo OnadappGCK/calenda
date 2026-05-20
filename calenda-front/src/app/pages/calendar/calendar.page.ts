@@ -82,13 +82,13 @@ function isIgnoredFilterValue(value: string): boolean {
 }
 
 const CATEGORY_IMAGE_CHOICES: Record<EventCategory, ImageChoice[]> = {
-  'Culture & spectacle': [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
-  'Arts & expos':        [{ label: 'Générique', value: 'img/categorie/EXPOSITION/expo1.png' }],
-  'Vie sociale':         [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
-  'Activités':          [{ label: 'Générique', value: 'img/categorie/AUTRE/autre1.png' }],
-  'Vie locale':          [{ label: 'Générique', value: 'img/categorie/FESTIVAL/fest1.png' }],
-  'Famille':             [{ label: 'Générique', value: 'img/categorie/AUTRE/autre1.png' }],
-  'Spécial':            [{ label: 'Générique', value: 'img/categorie/AUTRE/autre1.png' }],
+  'Culture & spectacle': [{ label: 'Générique', value: 'img/categorie/CULTURE_SPECTACLE/spec1.png' }],
+  'Arts & expos':        [{ label: 'Générique', value: 'img/categorie/ARTS_EXPOS/expo1.png' }],
+  'Sortie':              [{ label: 'Générique', value: 'img/categorie/SORTIE/social1.png' }],
+  'Activités':           [{ label: 'Générique', value: 'img/categorie/ACTIVITES/act1.png' }],
+  'Vie locale':          [{ label: 'Générique', value: 'img/categorie/VIE_LOCALE/locale1.png' }],
+  'Famille':             [{ label: 'Générique', value: 'img/categorie/FAMILLE/fam1.png' }],
+  'Spécial':             [{ label: 'Générique', value: 'img/categorie/SPECIAL/special1.png' }],
 };
 
 @Component({
@@ -522,7 +522,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   protected readonly tagIconUrl = tagIconUrl;
 
   eventImageUrl(e: EventDto) {
-    return resolveEventImageUrl(e.categorie, e.imageUrl);
+    return resolveEventImageUrl(e.categorie, e.imageUrl, e.id);
   }
 
   displayAdresse(e: EventDto) {
@@ -615,7 +615,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   newImagePreviewUrl() {
-    return resolveEventImageUrl(this.newCategorie, this.newImageUrl ? this.newImageUrl : null);
+    return resolveEventImageUrl(this.newCategorie, this.newImageUrl ? this.newImageUrl : null, 'new-event-preview');
   }
 
   onNewCategorieChange() {

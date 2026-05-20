@@ -2,7 +2,7 @@
 export enum EventCategory {
   CULTURE_SPECTACLE = 'Culture & spectacle',
   ARTS_EXPOS        = 'Arts & expos',
-  VIE_SOCIALE       = 'Vie sociale',
+  SORTIE            = 'Sortie',
   ACTIVITES         = 'Activités',
   VIE_LOCALE        = 'Vie locale',
   FAMILLE           = 'Famille',

@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuard
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { ReportProfileDto } from './dto/report-profile.dto';
 
 @Controller('users')
 /**
@@ -39,6 +40,12 @@ export class UsersController {
   @Get(':id/profile')
   async publicProfile(@Param('id') id: string) {
     return this.usersService.getPublicProfile(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/report')
+  async reportProfile(@Req() req: any, @Param('id') id: string, @Body() dto: ReportProfileDto) {
+    return this.usersService.reportProfile(req.user.id, id, dto);
   }
 
   @Get(':id/events')

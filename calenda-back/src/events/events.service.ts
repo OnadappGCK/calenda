@@ -248,6 +248,9 @@ export class EventsService {
     if (!organisateur) {
       throw new NotFoundException('user_not_found');
     }
+    if (organisateur.isBanned) {
+      throw new ForbiddenException('account_banned');
+    }
 
     const isAdmin = !!(user?.isAdmin || organisateur.isAdmin);
 

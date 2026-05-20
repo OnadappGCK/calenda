@@ -195,7 +195,7 @@ export class SeedService {
     const categories: EventCategory[] = [
       EventCategory.CULTURE_SPECTACLE,
       EventCategory.ARTS_EXPOS,
-      EventCategory.VIE_SOCIALE,
+      EventCategory.SORTIE,
       EventCategory.ACTIVITES,
       EventCategory.VIE_LOCALE,
       EventCategory.SPECIAL,
@@ -264,7 +264,7 @@ export class SeedService {
       {
         titre: 'DEMO - Danse (chevauchement)',
         description: 'Atelier danse. Chevauchement partiel avec le concert.',
-        categorie: EventCategory.VIE_SOCIALE,
+        categorie: EventCategory.SORTIE,
         origin: EventOrigin.MANUAL,
         ville: 'Dev',
         lieu: 'Maison des associations',

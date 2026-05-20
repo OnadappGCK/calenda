@@ -173,7 +173,7 @@ export const es: TranslationTree = {
     categories: {
       cultureSpectacle: '🎭 Cultura & espectáculo',
       artsExpos: '🎨 Arte & exposiciones',
-      vieSociale: '💃 Vida social / salidas',
+      vieSociale: '💃 Salida',
       activites: '🏃 Actividades',
       vieLocale: '🛍️ Vida local',
       famille: '👨‍👩‍👧‍👦 Familia',

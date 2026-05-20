@@ -110,8 +110,8 @@
               <button class="rowNavBtn" type="button" (click)="rowScroll.scrollLeft -= rowScroll.offsetWidth * 0.8" aria-label="Précédent">‹</button>
               <div class="categoryScroll" #rowScroll>
                 @for (ev of entry[1]; track ev.id) {
-                  <a class="eventCard" [routerLink]="['/events', ev.id]"
-                     [style.background-image]="'url(' + resolveEventImageUrl(ev.categorie, ev.imageUrl) + ')'">
+                  <a class="eventCard" [routerLink]="['/events', ev.id]">
+                    <img class="eventCardImg" [src]="resolveEventImageUrl(ev.categorie, ev.imageUrl, ev.id)" alt="" loading="lazy" />
                     <div class="eventCardOverlay">
                       <span class="eventCardCat" [style.background]="categoryColor($any(ev.categorie))">{{ ev.categorie }}</span>
                       <div class="eventCardTitle">{{ ev.titre }}</div>

@@ -13,7 +13,7 @@
 |---|---|---|---|
 | Culture & spectacle | `CULTURE_SPECTACLE` | `#5C6BC0` | 🎭 |
 | Arts & expos | `ARTS_EXPOS` | `#E85D5D` | 🎨 |
-| Vie sociale | `VIE_SOCIALE` | `#2FBF71` | 💃 |
+| Sortie | `SORTIE` | `#2FBF71` | 💃 |
 | Activités | `ACTIVITES` | `#FF7043` | 🏃 |
 | Vie locale | `VIE_LOCALE` | `#AB47BC` | 🛍️ |
 | Spécial | `SPECIAL` | `#F5B841` | 🎆 |
@@ -24,7 +24,7 @@
 |---|---|
 | Culture & spectacle | concert, musique, jazz, rock, théâtre, spectacle, comédie, humour, cinéma |
 | Arts & expos | exposition, galerie, vernissage, musée, peinture, sculpture, photo |
-| Vie sociale | danse, salsa, tango, bachata, festival, soirée |
+| Sortie | danse, salsa, tango, bachata, festival, soirée |
 | Activités | sport, atelier, bien-être, yoga, pilates, randonnée |
 | Vie locale | marché, brocante, salon |
 | Spécial | feux d'artifice, pyro *(fallback par défaut)* |
@@ -63,7 +63,8 @@ Règles d'affichage :
 - Une galerie d'images par défaut est disponible dans l'édition d'un événement.
 
 Mapping par défaut :
-- Culture & spectacle / Vie sociale -> `img/categorie/SPECTACLE/spec1.png`
+- Culture & spectacle -> `img/categorie/CULTURE_SPECTACLE/spec1.png`
+- Sortie -> `img/categorie/SORTIE/social1.png`
 - Spécial -> `img/categorie/FESTIVAL/fest1.png`
 - Arts & expos -> `img/categorie/EXPOSITION/expo1.png`
 - Activités / Vie locale -> `img/categorie/AUTRE/autre1.png`

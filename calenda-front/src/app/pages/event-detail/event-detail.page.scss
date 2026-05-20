@@ -37,14 +37,17 @@
     padding: 0.18rem 0.38rem;
   }
 
-  .actions {
-    flex-direction: column;
-    align-items: stretch;
+  .titleRow {
+    align-items: flex-start;
   }
 
-  .actions .btn {
+  .titleActions {
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
+  }
+
+  .titleActions .btn {
+    width: auto;
   }
 
   .editBar {
@@ -376,6 +379,24 @@
 .desc {
   margin-top: 1rem;
   white-space: pre-line;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.titleRow h1 {
+  margin: 0;
+}
+
+.titleActions {
+  margin: 0;
+  margin-left: auto;
+  align-items: center;
 }
 
 .actions {
@@ -946,4 +967,158 @@
 
 .boostSuccessIcon {
   font-size: 3rem;
+}
+
+.convSection {
+  margin-top: 1.25rem;
+  border: 1px solid $border-1;
+  border-radius: 0.9rem;
+  padding: 0.85rem;
+  background: $surface-1;
+}
+
+.convHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-bottom: 0.65rem;
+}
+
+.convHeader h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.convCards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.7rem;
+}
+
+.convCard {
+  border: 1px solid $border-1;
+  border-radius: 0.75rem;
+  padding: 0.7rem;
+  background: $overlay-1;
+}
+
+.convCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.convCardTop h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.convAvatar,
+.msgAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid $border-1;
+}
+
+.metaSmall {
+  margin: 0.1rem 0 0;
+  color: $text-muted-4;
+  font-size: 0.8rem;
+}
+
+.convMetaLine {
+  margin-top: 0.5rem;
+  color: $text-muted-4;
+  font-size: 0.86rem;
+}
+
+.convPreview {
+  margin: 0.45rem 0;
+}
+
+.convOptions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.convActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.55rem;
+}
+
+.convCreateBox,
+.convThread {
+  margin-top: 0.85rem;
+  border: 1px solid $border-1;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background: $surface-2;
+}
+
+.convOptionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.55rem;
+}
+
+.convThreadHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.convThreadHeader h3 {
+  margin: 0;
+}
+
+.msgList {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.6rem 0;
+}
+
+.msgRow {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+}
+
+.msgBody {
+  flex: 1;
+  border: 1px solid $border-1;
+  background: $overlay-1;
+  border-radius: 0.65rem;
+  padding: 0.55rem;
+}
+
+.msgHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.msgBody p {
+  margin: 0.3rem 0 0.5rem;
+  white-space: pre-wrap;
+}
+
+.msgActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.btnTiny {
+  padding: 0.18rem 0.45rem;
+  border-radius: 0.45rem;
+  font-size: 0.78rem;
 }

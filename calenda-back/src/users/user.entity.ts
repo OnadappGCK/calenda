@@ -53,6 +53,9 @@ export class User {
   /** Indique si l'email est vérifié. */
   emailVerified!: boolean;
 
+  @Column({ default: false })
+  isBanned!: boolean;
+
   @Column({ type: 'text', nullable: true })
   /** Token de vérification email (null si non utilisé). */
   emailVerificationToken!: string | null;

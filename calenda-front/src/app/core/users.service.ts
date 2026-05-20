@@ -74,4 +74,8 @@ export class UsersService {
   verifyEmail(token: string) {
     return this.http.get<{ ok: true }>(`${this.apiBaseUrl}/users/verify-email`, { params: { token } });
   }
+
+  reportProfile(userId: string, payload?: { reason?: string }) {
+    return this.http.post<{ ok: true; alreadyReported: boolean }>(`${this.apiBaseUrl}/users/${userId}/report`, payload ?? {});
+  }
 }

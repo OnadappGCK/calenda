@@ -104,7 +104,7 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   featuredImageUrl(e: EventDto) {
-    return resolveEventImageUrl(e.categorie, e.imageUrl);
+    return resolveEventImageUrl(e.categorie, e.imageUrl, e.id);
   }
 
   private autoTimer: any = null;

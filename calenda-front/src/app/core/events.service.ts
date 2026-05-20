@@ -6,7 +6,7 @@ import { API_BASE_URL } from './api.config';
 export type EventCategory =
   | 'Culture & spectacle'
   | 'Arts & expos'
-  | 'Vie sociale'
+  | 'Sortie'
   | 'Activités'
   | 'Vie locale'
   | 'Famille'

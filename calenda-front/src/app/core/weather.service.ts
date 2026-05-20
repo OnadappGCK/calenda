@@ -80,13 +80,13 @@ export function moonPhaseIconUrl(dateKey: string): string {
 
   const shapes: Record<number, string> = {
     0: '',
-    1: crescentRightLit,
+    1: `${fullLit}${crescentLeftDark}`,
     2: quarterRightLit,
-    3: `${fullLit}${crescentLeftDark}`,
+    3: crescentRightLit,
     4: fullLit,
-    5: `${fullLit}${crescentRightDark}`,
+    5: crescentLeftLit,
     6: quarterLeftLit,
-    7: crescentLeftLit,
+    7: `${fullLit}${crescentRightDark}`,
   };
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${base}${shapes[idx] ?? ''}</svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
