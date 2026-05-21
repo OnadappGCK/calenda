@@ -1,9 +1,10 @@
 /** Enum des catégories d'événements (partagé front/back via chaînes). */
 export enum EventCategory {
-  DANSE = 'Danse',
-  CONCERT = 'Concert',
-  SPECTACLE = 'Spectacle',
-  FEUX_D_ARTIFICE = "Feux d’artifice",
-  EXPOSITION = 'Exposition',
-  AUTRE = 'Autre',
+  CULTURE_SPECTACLE = 'Culture & spectacle',
+  ARTS_EXPOS        = 'Arts & expos',
+  SORTIE            = 'Sortie',
+  ACTIVITES         = 'Activités',
+  VIE_LOCALE        = 'Vie locale',
+  FAMILLE           = 'Famille',
+  SPECIAL           = 'Spécial',
 }

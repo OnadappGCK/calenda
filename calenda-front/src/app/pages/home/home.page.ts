@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { API_BASE_URL } from '../../core/api.config';
 import { EventsService, EventDto } from '../../core/events.service';
 import { NewsService, NewsDto } from '../../core/news.service';
-import { categoryColor, resolveEventImageUrl, tagIcon } from '../../core/event-ui';
+import { categoryColor, normalizeCategory, resolveEventImageUrl, tagIcon } from '../../core/event-ui';
 import { I18nService } from '../../core/i18n.service';
 
 @Component({
@@ -32,15 +32,44 @@ export class HomePage implements OnInit, OnDestroy {
 
   readonly eventsByCategory = computed(() => {
     const now = new Date();
-    const upcoming = this.allEvents().filter(e => {
-      const end = e.dateFin ? new Date(e.dateFin) : new Date(e.dateDebut);
-      return end >= now;
-    });
+    const seenIds = new Set<string>();
+    // key = titre normalisé + catégorie → garde uniquement le prochain créneau
+    const byTitleCat = new Map<string, EventDto>();
+
+    for (const e of this.allEvents()) {
+      if (seenIds.has(e.id)) continue;
+      seenIds.add(e.id);
+
+      let nextDate: Date | null = null;
+
+      if (e.slots && e.slots.length > 0) {
+        const upcoming = e.slots
+          .map(s => new Date(`${s.date}T${s.heureDebut}:00`))
+          .filter(d => d >= now)
+          .sort((a, b) => a.getTime() - b.getTime());
+        if (upcoming.length === 0) continue;
+        nextDate = upcoming[0];
+      } else {
+        const end = e.dateFin ? new Date(e.dateFin) : new Date(e.dateDebut);
+        if (end < now) continue;
+        nextDate = new Date(e.dateDebut);
+      }
+
+      const key = `${e.categorie}||${e.titre.trim().toLowerCase()}`;
+      const existing = byTitleCat.get(key);
+      if (!existing || nextDate.getTime() < new Date(existing.dateDebut).getTime()) {
+        byTitleCat.set(key, { ...e, dateDebut: nextDate.toISOString() });
+      }
+    }
+
     const map = new Map<string, EventDto[]>();
-    for (const e of upcoming) {
-      const cat = e.categorie;
+    for (const e of byTitleCat.values()) {
+      const cat = normalizeCategory(e.categorie);
       if (!map.has(cat)) map.set(cat, []);
-      map.get(cat)!.push(e);
+      map.get(cat)!.push({ ...e, categorie: cat });
+    }
+    for (const evts of map.values()) {
+      evts.sort((a, b) => new Date(a.dateDebut).getTime() - new Date(b.dateDebut).getTime());
     }
     return Array.from(map.entries()).filter(([, evts]) => evts.length > 0);
   });
@@ -75,13 +104,29 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   featuredImageUrl(e: EventDto) {
-    return resolveEventImageUrl(e.categorie, e.imageUrl);
+    return resolveEventImageUrl(e.categorie, e.imageUrl, e.id);
   }
 
   private autoTimer: any = null;
+  private scrollTimers: any[] = [];
+
+  private forceTopSequence() {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    for (const delay of [0, 80, 250, 800, 1600]) {
+      const timer = setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      }, delay);
+      this.scrollTimers.push(timer);
+    }
+  }
 
   /** Hook Angular: charge featured + news, et démarre l'auto-rotation côté navigateur. */
   async ngOnInit() {
+    this.forceTopSequence();
+
     const featured = await this.eventsService.featured().toPromise();
     this.featured.set(featured ?? []);
 
@@ -96,6 +141,8 @@ export class HomePage implements OnInit, OnDestroy {
 
     const all = await this.eventsService.list().toPromise();
     this.allEvents.set(all ?? []);
+
+    this.forceTopSequence();
   }
 
   /** Hook Angular: stoppe le timer d'auto-rotation du carrousel. */
@@ -104,6 +151,11 @@ export class HomePage implements OnInit, OnDestroy {
       clearInterval(this.autoTimer);
       this.autoTimer = null;
     }
+
+    for (const timer of this.scrollTimers) {
+      clearTimeout(timer);
+    }
+    this.scrollTimers = [];
   }
 
   /** Va au slide précédent du carrousel. */

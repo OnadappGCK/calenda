@@ -18,9 +18,12 @@ import { AdminService } from '../../core/admin.service';
 import { AuthService } from '../../core/auth.service';
 import { categoryColor, resolveEventImageUrl, tagIcon as tagIconFn } from '../../core/event-ui';
 import { I18nService } from '../../core/i18n.service';
-import { EventCategory, EventsService, EventDto, EventTag } from '../../core/events.service';
+import { EventCategory, EventsService, EventDto, EventSlotDto, EventTag, HighlightDto } from '../../core/events.service';
 import { FavoritesService } from '../../core/favorites.service';
+import { profileImageUrl } from '../../core/profile-images';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
+import { ConversationGroupCardDto, ConversationMessageDto, ConversationsService } from '../../core/conversations.service';
+import { UsersService } from '../../core/users.service';
 
 type Draft = {
   titre: string;
@@ -36,10 +39,9 @@ type Draft = {
   tarif: string | null;
   contact: string;
   organisateurId: string;
-  dateDebutLocal: string;
-  dateFinLocal: string;
+  /** Créneaux horaires de l'événement en cours d'édition. */
+  slots: { date: string; heureDebut: string; heureFin: string }[];
   public: boolean;
-  enAvant: boolean;
   couleur: string | null;
 };
 
@@ -60,6 +62,8 @@ export class EventDetailPage implements OnInit, OnDestroy {
   private readonly favoritesService = inject(FavoritesService);
   private readonly auth = inject(AuthService);
   private readonly adminService = inject(AdminService);
+  private readonly conversationsService = inject(ConversationsService);
+  private readonly usersService = inject(UsersService);
   protected readonly i18n = inject(I18nService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
@@ -87,6 +91,11 @@ export class EventDetailPage implements OnInit, OnDestroy {
 
   private organizersLoaded = false;
 
+  readonly highlights = signal<HighlightDto[]>([]);
+  readonly highlightForm = signal<{ id: string | null; startAt: string; endAt: string; priority: number } | null>(null);
+  readonly highlightSaving = signal(false);
+  readonly highlightError = signal<string | null>(null);
+
   readonly canLike = computed(() => this.auth.isLoggedIn());
   readonly favoriteIds = signal<Set<string>>(new Set());
   readonly isFavorite = computed(() => {
@@ -94,6 +103,40 @@ export class EventDetailPage implements OnInit, OnDestroy {
     if (!e) return false;
     return this.favoriteIds().has(e.id);
   });
+
+  readonly slotsExpanded = signal(false);
+  private readonly SLOTS_PREVIEW = 5;
+
+  readonly visibleSlots = computed(() => {
+    const slots = this.event()?.slots ?? [];
+    if (this.slotsExpanded() || slots.length <= this.SLOTS_PREVIEW) return slots;
+    return slots.slice(0, this.SLOTS_PREVIEW);
+  });
+
+  readonly hiddenSlotsCount = computed(() =>
+    Math.max(0, (this.event()?.slots?.length ?? 0) - this.SLOTS_PREVIEW),
+  );
+
+  readonly canUseConversations = computed(() => this.auth.isLoggedIn());
+  readonly conversationGroups = signal<ConversationGroupCardDto[]>([]);
+  readonly groupsLoading = signal(false);
+  readonly groupsError = signal<string | null>(null);
+  readonly createGroupOpen = signal(false);
+  readonly creatingGroup = signal(false);
+  readonly createGroupError = signal<string | null>(null);
+  readonly newGroupTitle = signal('');
+  readonly newGroupMessage = signal('');
+  readonly newGroupVilleDepart = signal('');
+  readonly newGroupTrancheAge = signal('');
+  readonly newGroupAmbiance = signal('');
+
+  readonly activeGroupId = signal<string | null>(null);
+  readonly groupMessages = signal<ConversationMessageDto[]>([]);
+  readonly messagesLoading = signal(false);
+  readonly messagesError = signal<string | null>(null);
+  readonly sendingMessage = signal(false);
+  readonly sendMessageError = signal<string | null>(null);
+  readonly newMessageContent = signal('');
 
   readonly lightboxOpen = signal(false);
   readonly imageEditorOpen = signal(false);
@@ -103,11 +146,11 @@ export class EventDetailPage implements OnInit, OnDestroy {
   private geocodeToken = 0;
 
   readonly defaultImageChoices = computed(() => [
-    { label: this.i18n.t('eventDetail.defaultImageSpectacle'), path: 'img/categorie/SPECTACLE/spec1.png' },
-    { label: this.i18n.t('eventDetail.defaultImageFestival'), path: 'img/categorie/FESTIVAL/fest1.png' },
-    { label: this.i18n.t('eventDetail.defaultImageExposition'), path: 'img/categorie/EXPOSITION/expo1.png' },
-    { label: this.i18n.t('eventDetail.defaultImageOther'), path: 'img/categorie/AUTRE/autre1.png' },
-    { label: this.i18n.t('eventDetail.defaultImageMeeting'), path: 'img/categorie/REUNION/reu1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageSpectacle'), path: 'img/categorie/CULTURE_SPECTACLE/spec1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageFestival'), path: 'img/categorie/VIE_LOCALE/locale1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageExposition'), path: 'img/categorie/ARTS_EXPOS/expo1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageOther'), path: 'img/categorie/SPECIAL/special1.png' },
+    { label: this.i18n.t('eventDetail.defaultImageMeeting'), path: 'img/categorie/ACTIVITES/act1.png' },
   ]);
 
   readonly isAdmin = computed(() => !!this.auth.user()?.isAdmin);
@@ -117,9 +160,48 @@ export class EventDetailPage implements OnInit, OnDestroy {
     if (!u || !e) return false;
     return u.isAdmin || e.organisateur?.id === u.id;
   });
+  /** Propriétaire non-admin : peut ouvrir la modale de boost. */
+  readonly canBoost = computed(() => {
+    const u = this.auth.user();
+    const e = this.event();
+    if (!u || !e || u.isAdmin) return false;
+    return e.organisateur?.id === u.id;
+  });
 
-  readonly categories: EventCategory[] = ['Danse', 'Concert', 'Spectacle', 'Feux d\u2019artifice', 'Exposition', 'Autre'];
-  readonly tags: EventTag[] = ['MUSIQUE', 'DANSE', 'PLEIN AIR', 'RENCONTRE', 'FEU D’ARTIFICE', 'SPORT', 'MARCHÉ', 'COMPÉTITION', 'HUMOUR', 'ART', 'VISITE'];
+  readonly weeklySlotForm = signal<{
+    dateDebut: string;
+    dateFin: string;
+    heureDebut: string;
+    heureFin: string;
+    days: Set<number>;
+  } | null>(null);
+  readonly weeklySlotFormError = signal<string | null>(null);
+
+  readonly weekDays = [
+    { num: 1, label: 'Lundi' },
+    { num: 2, label: 'Mardi' },
+    { num: 3, label: 'Mercredi' },
+    { num: 4, label: 'Jeudi' },
+    { num: 5, label: 'Vendredi' },
+    { num: 6, label: 'Samedi' },
+    { num: 0, label: 'Dimanche' },
+  ] as const;
+
+  readonly boostOpen = signal(false);
+  readonly boostDays = signal(30);
+  readonly boostStartDate = signal('');
+  readonly boostSaving = signal(false);
+  readonly boostError = signal<string | null>(null);
+  readonly boostSuccess = signal(false);
+
+  readonly categories: EventCategory[] = ['Culture & spectacle', 'Arts & expos', 'Sortie', 'Activités', 'Vie locale', 'Famille', 'Spécial'];
+  readonly tags: EventTag[] = [
+    'CONCERT', 'SPORT', 'DANSE', 'CONCOURS', 'FEU_DARTIFICE',
+    'ENFANT', 'FAMILLE', 'ADULTE', 'TOUT_PUBLIC',
+    'PLEIN_AIR', 'INTERIEUR', 'MUSIQUE', 'FESTIF', 'CALME',
+    'CULTUREL', 'RENCONTRE', 'NETWORKING',
+    'FOOD', 'BOISSON', 'DJ', 'LIVE',
+  ];
 
   readonly dateLocale = computed(() => {
     const lang = this.i18n.lang();
@@ -213,7 +295,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
   draftImagePreviewUrl() {
     const d = this.draft();
     if (!d) return '';
-    return resolveEventImageUrl(d.categorie, d.imageUrl);
+    return resolveEventImageUrl(d.categorie, d.imageUrl, `draft-${d.titre || 'event'}`);
   }
 
   private lockBodyScroll() {
@@ -287,7 +369,204 @@ export class EventDetailPage implements OnInit, OnDestroy {
   private adresseSuggestToken = 0;
 
   imageUrlFor(e: EventDto) {
-    return resolveEventImageUrl(e.categorie, e.imageUrl);
+    return resolveEventImageUrl(e.categorie, e.imageUrl, e.id);
+  }
+
+  organizerAvatarUrl(e: EventDto) {
+    return profileImageUrl(e.organisateur?.profileImage ?? null);
+  }
+
+  profileAvatar(path: string | null | undefined) {
+    return profileImageUrl(path ?? null);
+  }
+
+  private async loadConversationGroups(eventId: string) {
+    this.groupsLoading.set(true);
+    this.groupsError.set(null);
+    try {
+      const list = await this.conversationsService.listGroups(eventId).toPromise();
+      this.conversationGroups.set(list ?? []);
+    } catch {
+      this.conversationGroups.set([]);
+      this.groupsError.set('groups_load_failed');
+    } finally {
+      this.groupsLoading.set(false);
+    }
+  }
+
+  openCreateGroup() {
+    if (!this.canUseConversations()) {
+      void this.router.navigateByUrl('/login');
+      return;
+    }
+    this.createGroupError.set(null);
+    this.createGroupOpen.set(true);
+    this.newGroupTitle.set('');
+    this.newGroupVilleDepart.set('');
+    this.newGroupTrancheAge.set('');
+    this.newGroupAmbiance.set('');
+    this.newGroupMessage.set('Je souhaite trouver des gens pour aller à cet événement 😊');
+  }
+
+  closeCreateGroup() {
+    if (this.creatingGroup()) return;
+    this.createGroupOpen.set(false);
+  }
+
+  async submitCreateGroup() {
+    const e = this.event();
+    if (!e || !this.canUseConversations()) return;
+    const title = this.newGroupTitle().trim();
+    const firstMessage = this.newGroupMessage().trim();
+    if (!title || !firstMessage) {
+      this.createGroupError.set('create_group_invalid');
+      return;
+    }
+
+    this.creatingGroup.set(true);
+    this.createGroupError.set(null);
+    try {
+      await this.conversationsService
+        .createGroup(e.id, {
+          title,
+          firstMessage,
+          villeDepart: this.newGroupVilleDepart().trim() || undefined,
+          trancheAge: this.newGroupTrancheAge().trim() || undefined,
+          ambiance: this.newGroupAmbiance().trim() || undefined,
+        })
+        .toPromise();
+      await this.loadConversationGroups(e.id);
+      this.createGroupOpen.set(false);
+    } catch {
+      this.createGroupError.set('create_group_failed');
+    } finally {
+      this.creatingGroup.set(false);
+    }
+  }
+
+  isGroupCreator(group: ConversationGroupCardDto) {
+    return group.creator.id === (this.auth.user()?.id ?? null);
+  }
+
+  groupActionLabel(group: ConversationGroupCardDto) {
+    if (this.isGroupCreator(group)) return 'Supprimer le groupe';
+    return group.joinedByMe ? 'Quitter le groupe' : 'Rejoindre le groupe';
+  }
+
+  async onGroupPrimaryAction(group: ConversationGroupCardDto) {
+    if (!this.canUseConversations()) {
+      await this.router.navigateByUrl('/login');
+      return;
+    }
+    try {
+      if (this.isGroupCreator(group)) {
+        await this.conversationsService.deleteGroup(group.id).toPromise();
+        this.conversationGroups.update((groups) => groups.filter((g) => g.id !== group.id));
+        if (this.activeGroupId() === group.id) {
+          this.closeConversation();
+        }
+        return;
+      }
+
+      if (group.joinedByMe) {
+        await this.conversationsService.leaveGroup(group.id).toPromise();
+        this.conversationGroups.update((groups) =>
+          groups.map((g) =>
+            g.id === group.id
+              ? { ...g, joinedByMe: false, participantCount: Math.max(0, g.participantCount - 1) }
+              : g,
+          ),
+        );
+      } else {
+        await this.conversationsService.joinGroup(group.id).toPromise();
+        this.conversationGroups.update((groups) =>
+          groups.map((g) =>
+            g.id === group.id
+              ? { ...g, joinedByMe: true, participantCount: g.participantCount + (g.joinedByMe ? 0 : 1) }
+              : g,
+          ),
+        );
+      }
+    } catch {
+      this.groupsError.set('group_action_failed');
+    }
+  }
+
+  async openConversation(groupId: string) {
+    if (!this.canUseConversations()) {
+      await this.router.navigateByUrl('/login');
+      return;
+    }
+    this.activeGroupId.set(groupId);
+    this.messagesLoading.set(true);
+    this.messagesError.set(null);
+    this.groupMessages.set([]);
+    try {
+      const list = await this.conversationsService.listMessages(groupId).toPromise();
+      this.groupMessages.set(list ?? []);
+    } catch {
+      this.messagesError.set('messages_load_failed');
+    } finally {
+      this.messagesLoading.set(false);
+    }
+  }
+
+  closeConversation() {
+    this.activeGroupId.set(null);
+    this.groupMessages.set([]);
+    this.newMessageContent.set('');
+    this.sendMessageError.set(null);
+  }
+
+  async sendConversationMessage() {
+    const groupId = this.activeGroupId();
+    if (!groupId) return;
+    const content = this.newMessageContent().trim();
+    if (!content) return;
+    this.sendingMessage.set(true);
+    this.sendMessageError.set(null);
+    try {
+      await this.conversationsService.postMessage(groupId, { content }).toPromise();
+      this.newMessageContent.set('');
+      await this.openConversation(groupId);
+    } catch {
+      this.sendMessageError.set('message_send_failed');
+    } finally {
+      this.sendingMessage.set(false);
+    }
+  }
+
+  async likeMessage(messageId: string) {
+    try {
+      const res = await this.conversationsService.toggleLike(messageId).toPromise();
+      this.groupMessages.update((messages) =>
+        messages.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                likedByMe: !!res?.liked,
+                likeCount: Number.isFinite(res?.likeCount as number) ? Number(res?.likeCount) : m.likeCount,
+              }
+            : m,
+        ),
+      );
+    } catch {
+      // ignore
+    }
+  }
+
+  async reportProfile(userId: string) {
+    const me = this.auth.user();
+    if (!me || me.id === userId) {
+      return;
+    }
+
+    const reason = (globalThis.prompt?.('Raison du signalement (optionnel)') ?? '').trim();
+    try {
+      await this.usersService.reportProfile(userId, { reason: reason || undefined }).toPromise();
+    } catch {
+      // ignore
+    }
   }
 
   private async reloadFavorites() {
@@ -360,26 +639,145 @@ export class EventDetailPage implements OnInit, OnDestroy {
   }
 
   private categoryKey(category: EventCategory) {
-    if (category === 'Danse') return 'danse';
-    if (category === 'Concert') return 'concert';
-    if (category === 'Spectacle') return 'spectacle';
-    if (category === 'Feux d’artifice') return 'fireworks';
-    if (category === 'Exposition') return 'exhibition';
-    return 'other';
+    if (category === 'Culture & spectacle') return 'cultureSpectacle';
+    if (category === 'Arts & expos') return 'artsExpos';
+    if (category === 'Sortie' || category === ('Vie sociale' as EventCategory)) return 'vieSociale';
+    if (category === 'Activités') return 'activites';
+    if (category === 'Vie locale') return 'vieLocale';
+    if (category === 'Famille') return 'famille';
+    return 'special';
   }
 
   private tagKey(tag: EventTag) {
-    if (tag === 'MUSIQUE') return 'music';
-    if (tag === 'DANSE') return 'dance';
-    if (tag === 'PLEIN AIR') return 'outdoor';
-    if (tag === 'RENCONTRE') return 'social';
-    if (tag === 'FEU D’ARTIFICE') return 'fireworks';
-    if (tag === 'SPORT') return 'sport';
-    if (tag === 'COMPÉTITION') return 'competition';
-    if (tag === 'HUMOUR') return 'humour';
-    if (tag === 'ART') return 'art';
-    if (tag === 'VISITE') return 'visite';
-    return 'market';
+    const map: Record<string, string> = {
+      CONCERT: 'concert', SPORT: 'sport', DANSE: 'danse', CONCOURS: 'concours',
+      FEU_DARTIFICE: 'feuDartifice', ENFANT: 'enfant', FAMILLE: 'famille',
+      ADULTE: 'adulte', TOUT_PUBLIC: 'toutPublic', PLEIN_AIR: 'pleinAir',
+      INTERIEUR: 'interieur', MUSIQUE: 'musique', FESTIF: 'festif',
+      CALME: 'calme', CULTUREL: 'culturel', RENCONTRE: 'rencontre',
+      NETWORKING: 'networking',
+      FOOD: 'food', BOISSON: 'boisson', DJ: 'dj', LIVE: 'live',
+    };
+    return map[tag] ?? tag.toLowerCase();
+  }
+
+  /** Construit les slots draft depuis un EventDto (utilise event.slots si dispo, sinon dateDebut/dateFin). */
+  private slotsFromEvent(e: EventDto): { date: string; heureDebut: string; heureFin: string }[] {
+    if (e.slots && e.slots.length > 0) {
+      return e.slots.map((s) => ({ date: s.date, heureDebut: s.heureDebut, heureFin: s.heureFin }));
+    }
+    const date = e.dateDebut ? e.dateDebut.slice(0, 10) : '';
+    const heureDebut = e.dateDebut ? e.dateDebut.slice(11, 16) : '09:00';
+    const heureFin = e.dateFin ? e.dateFin.slice(11, 16) : '23:59';
+    return date ? [{ date, heureDebut, heureFin }] : [];
+  }
+
+  openWeeklySlotForm() {
+    const d = this.draft();
+    if (!d) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const last = d.slots[d.slots.length - 1];
+    this.weeklySlotFormError.set(null);
+    this.weeklySlotForm.set({
+      dateDebut: last?.date ?? today,
+      dateFin: last?.date ?? today,
+      heureDebut: last?.heureDebut ?? '09:00',
+      heureFin: last?.heureFin ?? '18:00',
+      days: new Set<number>(),
+    });
+    this.lockBodyScroll();
+  }
+
+  closeWeeklySlotForm() {
+    this.weeklySlotForm.set(null);
+    this.weeklySlotFormError.set(null);
+    this.unlockBodyScroll();
+  }
+
+  patchWeeklyForm(patch: Partial<{ dateDebut: string; dateFin: string; heureDebut: string; heureFin: string }>) {
+    const f = this.weeklySlotForm();
+    if (!f) return;
+    this.weeklySlotForm.set({ ...f, ...patch });
+  }
+
+  toggleWeeklyDay(num: number) {
+    const f = this.weeklySlotForm();
+    if (!f) return;
+    const days = new Set(f.days);
+    if (days.has(num)) days.delete(num); else days.add(num);
+    this.weeklySlotForm.set({ ...f, days });
+  }
+
+  applyWeeklySlots() {
+    const f = this.weeklySlotForm();
+    const d = this.draft();
+    if (!f || !d) return;
+
+    if (!f.dateDebut || !f.dateFin) {
+      this.weeklySlotFormError.set('Veuillez renseigner les dates de début et de fin.');
+      return;
+    }
+    if (f.dateFin < f.dateDebut) {
+      this.weeklySlotFormError.set('La date de fin doit être après la date de début.');
+      return;
+    }
+    if (f.days.size === 0) {
+      this.weeklySlotFormError.set('Sélectionnez au moins un jour de la semaine.');
+      return;
+    }
+
+    const generated: { date: string; heureDebut: string; heureFin: string }[] = [];
+    const cur = new Date(f.dateDebut + 'T00:00:00');
+    const end = new Date(f.dateFin + 'T00:00:00');
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    while (cur <= end && generated.length < 730) {
+      if (f.days.has(cur.getDay())) {
+        const key = `${cur.getFullYear()}-${pad2(cur.getMonth() + 1)}-${pad2(cur.getDate())}`;
+        generated.push({ date: key, heureDebut: f.heureDebut, heureFin: f.heureFin });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    if (generated.length === 0) {
+      this.weeklySlotFormError.set('Aucun créneau généré : aucune occurrence des jours sélectionnés dans cet intervalle.');
+      return;
+    }
+
+    const existingDates = new Set(d.slots.map((s) => s.date));
+    const newSlots = generated.filter((s) => !existingDates.has(s.date));
+    const merged = [...d.slots, ...newSlots].sort((a, b) => a.date.localeCompare(b.date));
+    this.setDraft({ slots: merged });
+    this.closeWeeklySlotForm();
+  }
+
+  addDraftSlot() {
+    const d = this.draft();
+    if (!d) return;
+    const last = d.slots[d.slots.length - 1];
+    const nextDate = last ? this.nextDayStr(last.date) : new Date().toISOString().slice(0, 10);
+    const heureDebut = last?.heureDebut ?? '09:00';
+    const heureFin = last?.heureFin ?? '18:00';
+    this.setDraft({ slots: [...d.slots, { date: nextDate, heureDebut, heureFin }] });
+  }
+
+  removeDraftSlot(idx: number) {
+    const d = this.draft();
+    if (!d || d.slots.length <= 1) return;
+    const slots = d.slots.filter((_, i) => i !== idx);
+    this.setDraft({ slots });
+  }
+
+  updateDraftSlot(idx: number, field: 'date' | 'heureDebut' | 'heureFin', value: string) {
+    const d = this.draft();
+    if (!d) return;
+    const slots = d.slots.map((s, i) => (i === idx ? { ...s, [field]: value } : s));
+    this.setDraft({ slots });
+  }
+
+  private nextDayStr(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
   }
 
   private formatDateTimeLocal(iso: string | null | undefined) {
@@ -448,10 +846,8 @@ export class EventDetailPage implements OnInit, OnDestroy {
       tarif: e.tarif ?? null,
       contact: (e.contact ?? '').trim(),
       organisateurId: '',
-      dateDebutLocal: this.formatDateTimeLocal(e.dateDebut),
-      dateFinLocal: this.formatDateTimeLocal(e.dateFin),
+      slots: this.slotsFromEvent(e),
       public: e.public,
-      enAvant: e.enAvant,
       couleur: e.couleur ?? null,
     });
 
@@ -471,6 +867,8 @@ export class EventDetailPage implements OnInit, OnDestroy {
     this.showDeleteConfirm.set(false);
     this.deleting.set(false);
     this.deleteError.set(null);
+    this.highlightForm.set(null);
+    this.highlightError.set(null);
   }
 
   openDeleteConfirm() {
@@ -519,7 +917,6 @@ export class EventDetailPage implements OnInit, OnDestroy {
     this.saveError.set(null);
 
     try {
-      const rawEnd = (d.dateFinLocal ?? '').trim();
       const rawContact = (d.contact ?? '').trim();
       const payload: any = {
         titre: d.titre.trim(),
@@ -529,8 +926,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
         adresse: d.adresse.trim(),
         latitude: d.latitude,
         longitude: d.longitude,
-        dateDebut: this.toIsoFromLocal(d.dateDebutLocal),
-        dateFin: rawEnd ? this.toIsoFromLocal(rawEnd) : null,
+        slots: d.slots,
       };
 
       const theme = this.cleanText(d.theme);
@@ -555,7 +951,6 @@ export class EventDetailPage implements OnInit, OnDestroy {
 
       if (this.isAdmin()) {
         payload.public = d.public;
-        payload.enAvant = d.enAvant;
         if (d.organisateurId) {
           payload.organisateurId = d.organisateurId;
         }
@@ -582,6 +977,14 @@ export class EventDetailPage implements OnInit, OnDestroy {
     this.geocodedCoords.set(null);
     this.event.set(null);
     this.similar.set([]);
+    this.highlights.set([]);
+    this.highlightForm.set(null);
+    this.highlightError.set(null);
+    this.conversationGroups.set([]);
+    this.groupsError.set(null);
+    this.activeGroupId.set(null);
+    this.groupMessages.set([]);
+    this.messagesError.set(null);
   }
 
   private async maybeGeocodeEvent(e: EventDto | null) {
@@ -675,7 +1078,11 @@ export class EventDetailPage implements OnInit, OnDestroy {
     }
 
     this.event.set(normalized);
+    this.highlights.set((normalized?.highlights ?? []));
     void this.maybeGeocodeEvent(normalized);
+    if (normalized?.id) {
+      void this.loadConversationGroups(normalized.id);
+    }
 
     try {
       const sim = await this.eventsService.similar(id).toPromise();
@@ -702,6 +1109,136 @@ export class EventDetailPage implements OnInit, OnDestroy {
       if (!id) return;
       void this.loadEvent(id);
     });
+  }
+
+  openBoost() {
+    const today = new Date().toISOString().slice(0, 10);
+    this.boostStartDate.set(today);
+    this.boostDays.set(30);
+    this.boostError.set(null);
+    this.boostSuccess.set(false);
+    this.boostOpen.set(true);
+  }
+
+  closeBoost() {
+    if (this.boostSaving()) return;
+    this.boostOpen.set(false);
+    this.boostError.set(null);
+    this.boostSuccess.set(false);
+  }
+
+  async submitBoost() {
+    const e = this.event();
+    if (!e) return;
+    const days = this.boostDays();
+    const startRaw = this.boostStartDate();
+    if (!startRaw || days < 1) {
+      this.boostError.set('boost_invalid');
+      return;
+    }
+    const startAt = new Date(startRaw);
+    startAt.setHours(0, 0, 0, 0);
+    const endAt = new Date(startAt.getTime() + days * 24 * 60 * 60 * 1000);
+    this.boostSaving.set(true);
+    this.boostError.set(null);
+    try {
+      const created = await this.eventsService
+        .createHighlight(e.id, {
+          startAt: startAt.toISOString(),
+          endAt: endAt.toISOString(),
+          priority: 0,
+        })
+        .toPromise();
+      if (created) {
+        this.highlights.update((list) => [...list, created]);
+      }
+      this.boostSuccess.set(true);
+    } catch {
+      this.boostError.set('boost_failed');
+    } finally {
+      this.boostSaving.set(false);
+    }
+  }
+
+  openNewHighlight() {
+    const now = new Date();
+    const start = now.toISOString().slice(0, 16);
+    const end30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+    this.highlightForm.set({ id: null, startAt: start, endAt: end30, priority: 0 });
+    this.highlightError.set(null);
+  }
+
+  openEditHighlight(h: HighlightDto) {
+    this.highlightForm.set({
+      id: h.id,
+      startAt: h.startAt.slice(0, 16),
+      endAt: h.endAt.slice(0, 16),
+      priority: h.priority,
+    });
+    this.highlightError.set(null);
+  }
+
+  cancelHighlightForm() {
+    this.highlightForm.set(null);
+    this.highlightError.set(null);
+  }
+
+  async saveHighlight() {
+    const e = this.event();
+    const f = this.highlightForm();
+    if (!e || !f) return;
+    this.highlightSaving.set(true);
+    this.highlightError.set(null);
+    try {
+      const payload = {
+        startAt: new Date(f.startAt).toISOString(),
+        endAt: new Date(f.endAt).toISOString(),
+        priority: f.priority,
+      };
+      if (f.id) {
+        const updated = await this.eventsService.updateHighlight(f.id, payload).toPromise();
+        if (updated) {
+          this.highlights.update((list) => list.map((h) => (h.id === f.id ? updated : h)));
+        }
+      } else {
+        const created = await this.eventsService.createHighlight(e.id, payload).toPromise();
+        if (created) {
+          this.highlights.update((list) => [...list, created]);
+        }
+      }
+      this.highlightForm.set(null);
+    } catch {
+      this.highlightError.set('highlight_save_failed');
+    } finally {
+      this.highlightSaving.set(false);
+    }
+  }
+
+  async deleteHighlight(id: string) {
+    this.highlightSaving.set(true);
+    this.highlightError.set(null);
+    try {
+      await this.eventsService.deleteHighlight(id).toPromise();
+      this.highlights.update((list) => list.filter((h) => h.id !== id));
+      if (this.highlightForm()?.id === id) {
+        this.highlightForm.set(null);
+      }
+    } catch {
+      this.highlightError.set('highlight_save_failed');
+    } finally {
+      this.highlightSaving.set(false);
+    }
+  }
+
+  isHighlightActive(h: HighlightDto): boolean {
+    const now = Date.now();
+    return new Date(h.startAt).getTime() <= now && new Date(h.endAt).getTime() >= now;
+  }
+
+  setHighlightFormField(field: 'startAt' | 'endAt' | 'priority', value: string | number) {
+    const f = this.highlightForm();
+    if (!f) return;
+    this.highlightForm.set({ ...f, [field]: value });
   }
 
   /** Ajoute/retire l'événement courant des favoris (si connecté). */

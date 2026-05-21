@@ -25,6 +25,10 @@ export class UpdateMeDto {
   @IsString()
   numero?: string;
 
+  @IsOptional()
+  @IsString()
+  bio?: string;
+
   /** Nouveau mot de passe (min 8). */
   @IsOptional()
   @IsString()

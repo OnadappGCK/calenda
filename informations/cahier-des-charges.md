@@ -1,4 +1,4 @@
-# Cahier des charges – Site de calendrier en ligne d’événements
+# Cahier des charges – Site de calendrier en ligne d'événements
 
 ## Données
 
@@ -7,7 +7,7 @@
 - titre: string
 - description: string
 - catégorie: enum [DANSE, CONCERT, SPECTACLE, FEUX_D_ARTIFICE, EXPOSITION, AUTRE]
-- caractéristiques: liste de tags (max 3) [MUSIQUE, DANSE, PLEIN AIR, RENCONTRE, FEU D’ARTIFICE, SPORT, MARCHÉ]
+- caractéristiques: liste de tags (max 3) [MUSIQUE, DANSE, PLEIN AIR, RENCONTRE, FEU D'ARTIFICE, SPORT, MARCHÉ]
 - ville: string
 - lieu: string
 - adresse: string | null
@@ -19,13 +19,21 @@
 - imageUrl: string | null
 - tarif: string | null
 - contact: string | null
-- dateDébut: datetime (ISO)
-- dateFin: datetime (ISO) | null
+- dateDébut: datetime (ISO) — calculée automatiquement comme le plus tôt des créneaux si des créneaux existent
+- dateFin: datetime (ISO) | null — calculée automatiquement comme le plus tard des créneaux si des créneaux existent
+- slots: EventSlot[] — liste de créneaux discrets (peut être vide)
 - public: boolean
 - enAvant: boolean
 - couleur: string | null
 - createdAt: datetime
 - updatedAt: datetime
+
+### EventSlot
+- id: UUID
+- date: string (YYYY-MM-DD)
+- heureDebut: string (HH:mm)
+- heureFin: string (HH:mm)
+- event: Événement (relation ManyToOne)
 
 ### Utilisateur
 - id: UUID
@@ -79,6 +87,10 @@
   - Rotation automatique (8 s) côté navigateur
   - Slide : image + panneau titre/description/lieu/date/lien
 - Sections événements par catégorie avec scroll horizontal et boutons de navigation
+  - Déduplication par titre normalisé + catégorie : un seul bloc par événement récurrent
+  - Date affichée = prochain créneau à venir (issu des slots ou de dateDébut)
+  - Événements sans créneau futur exclus automatiquement
+  - Tri par date croissante au sein de chaque catégorie
 - Actualités (aperçu de la page 1) sous forme de grille responsive
 
 ### 2. Connexion
@@ -112,6 +124,11 @@
 - ADMIN/ORGANISATEUR/UTILISATEUR connecté : bouton "Proposer un événement"
   - Formulaire en popup organisé en sections : Événement, Dates, Lieu, Caractéristiques, Description et contact
   - Champs obligatoires marqués, placeholders explicatifs
+  - Bouton "Créneaux hebdomadaires" : modale de génération de créneaux récurrents
+    - Saisie plage de dates (début/fin), heures (début/fin), jours de la semaine
+    - Génération automatique de créneaux jour par jour selon les jours sélectionnés
+    - Déduplication contre les créneaux déjà existants
+    - Ajout en bloc à la liste des créneaux de l'événement
 - Utilisateur non connecté: popup d'accès (connexion / création de compte)
 - Libellés traduits (menus, navigation, période, filtres)
 
@@ -119,10 +136,15 @@
 - Grille 7 colonnes (jours), lignes horaires de 6h à 23h
 - Lignes pleines (heures), pointillées (demi-heures) darrière les blocs evenements.
 - Heures et demi heures à gauche du calendrier et à la base des lignes des heures correspondantes.
+- Blocs événements positionnés selon les créneaux (EventSlot) quand ils existent, sinon selon dateDébut/dateFin
+  - Un événement multi-créneaux apparaît une seule fois par créneau, à la bonne journée et heure
 - Blocs événements : couleur par catégorie, tags (icônes), cœur (favori)
-- Groupement événements :
-  - 1 à 3 → côte à côte
-  - 4+ → bloc fusionné "n événements"
+- Algorithme de colonnes (2 passes) :
+  - Passe 1 – sweep-line : détection des plages horaires avec > 3 événements simultanés
+  - Passe 2 – greedy : affectation à 3 colonnes max en réutilisant les colonnes libérées
+  - Les événements touchant une plage surchargée forment un bloc fusionné
+  - Blocs fusionnés et événements individuels partagent les mêmes colonnes (leftPct / widthPct) sans chevauchement visuel
+  - Un bloc fusionné "N événements" ne couvre que la durée réelle des événements concernés
 - Navigation swipe tactile (mobile/tablette)
 - Bouton "événements nocturnes" par jour
 - Clic bloc événement → apparition menu latéral :
@@ -148,8 +170,13 @@
 - Section "autres événements" (même jour ou catégorie)
 - Lightbox image
 - Mode édition (organisateur propriétaire ou admin)
-- Édition de l'image avec prévisualisation + galerie d'images par défaut
-- Édition de l'adresse avec suggestions et géocodage
+  - Édition de l'image avec prévisualisation + galerie d'images par défaut
+  - Édition de l'adresse avec suggestions et géocodage
+  - Gestion des créneaux (EventSlot) : ajout/suppression de créneaux individuels
+  - Bouton "Créneaux hebdomadaires" : même modale de génération récurrente qu'à la création
+  - Section mises en avant :
+    - ADMIN : peut ajouter, modifier et supprimer les mises en avant
+    - ORGANISATEUR/éditeur non-admin : affichage en lecture seule des mises en avant existantes (sans possibilité de modification)
 - Carte OpenStreetMap + lien Google Maps
 - Suppression avec confirmation
 - Champs administrables (admin): visibilité publique, mise en avant, réassignation organisateur
@@ -203,6 +230,7 @@
 - Droits ORGANISATEUR +
 - Voir tous les événements en attente
 - Valider / Supprimer événements en attente
+- Gérer les mises en avant sur toutes les pages événement
 - Lancer des merges (prévu)
 
 ---
@@ -213,7 +241,9 @@
 - Server-Side Rendering (SSR) Angular activé
 - Authentification JWT
 - API REST
-- TypeORM (entités `events`, `users`, `news`)
+- TypeORM (entités `events`, `event_slots`, `users`, `news`)
+- Relation OneToMany entre `events` et `event_slots` ; les slots sont inclus dans les réponses `GET /events` et `GET /events/:id`
+- `dateDébut` / `dateFin` de l'événement recalculées automatiquement depuis les slots lors de chaque sauvegarde
 - Cible DB configurable (SQLite/Postgres)
 - Script de migration de données SQLite vers Postgres
 - Rate limiting sur la connexion (5/min)
