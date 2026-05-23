@@ -62,7 +62,6 @@ export class EventsService {
     const qb = this.eventsRepo
       .createQueryBuilder('event')
       .select('event.ville', 'ville')
-      .distinct(true)
       .where('event.ville IS NOT NULL')
       .andWhere("TRIM(event.ville) != ''");
 
@@ -70,10 +69,23 @@ export class EventsService {
       qb.andWhere('event.public = :isPublic', { isPublic: true });
     }
 
-    qb.orderBy('LOWER(event.ville)', 'ASC');
-
     const rows = await qb.getRawMany<{ ville: string }>();
-    return rows.map((r) => r.ville).filter(Boolean);
+
+    const unique = new Map<string, string>();
+    for (const row of rows) {
+      const ville = row.ville?.trim();
+      if (!ville) {
+        continue;
+      }
+      const key = ville.toLocaleLowerCase('fr-FR');
+      if (!unique.has(key)) {
+        unique.set(key, ville);
+      }
+    }
+
+    return Array.from(unique.values()).sort((a, b) =>
+      a.localeCompare(b, 'fr-FR', { sensitivity: 'base' }),
+    );
   }
 
   /** Liste les événements selon filtres et contexte utilisateur (favoris, non-public). */

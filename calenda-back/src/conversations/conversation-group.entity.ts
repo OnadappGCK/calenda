@@ -30,7 +30,7 @@ export class ConversationGroup {
   @Column({ type: 'text', default: 'OPEN' })
   status!: 'OPEN' | 'LOCKED' | 'DELETED';
 
-  @Column({ type: 'datetime' })
+  @Column()
   expiresAt!: Date;
 
   @OneToMany(() => ConversationMessage, (message) => message.group, { cascade: false })
