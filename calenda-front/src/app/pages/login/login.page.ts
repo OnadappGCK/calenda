@@ -19,7 +19,12 @@ export class LoginPage {
 
   email = '';
   password = '';
+  readonly showPassword = signal(false);
   readonly error = signal<string | null>(null);
+
+  togglePasswordVisibility() {
+    this.showPassword.update((value) => !value);
+  }
 
   /** Soumet le formulaire: tente un login puis navigation, sinon affiche une erreur. */
   async submit() {

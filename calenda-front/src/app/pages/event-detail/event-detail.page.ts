@@ -129,6 +129,17 @@ export class EventDetailPage implements OnInit, OnDestroy {
   readonly newGroupVilleDepart = signal('');
   readonly newGroupTrancheAge = signal('');
   readonly newGroupAmbiance = signal('');
+  readonly hasOwnActiveGroupForEvent = computed(() => {
+    const me = this.auth.user();
+    if (!me) return false;
+    return this.conversationGroups().some((group) => group.creator.id === me.id && group.status !== 'DELETED');
+  });
+  readonly canCreateConversationGroup = computed(() => {
+    const me = this.auth.user();
+    if (!me) return false;
+    if (me.isAdmin) return true;
+    return !this.hasOwnActiveGroupForEvent();
+  });
 
   readonly activeGroupId = signal<string | null>(null);
   readonly groupMessages = signal<ConversationMessageDto[]>([]);
@@ -386,6 +397,9 @@ export class EventDetailPage implements OnInit, OnDestroy {
     try {
       const list = await this.conversationsService.listGroups(eventId).toPromise();
       this.conversationGroups.set(list ?? []);
+      if (this.createGroupOpen() && !this.canCreateConversationGroup()) {
+        this.createGroupOpen.set(false);
+      }
     } catch {
       this.conversationGroups.set([]);
       this.groupsError.set('groups_load_failed');
@@ -397,6 +411,9 @@ export class EventDetailPage implements OnInit, OnDestroy {
   openCreateGroup() {
     if (!this.canUseConversations()) {
       void this.router.navigateByUrl('/login');
+      return;
+    }
+    if (!this.canCreateConversationGroup()) {
       return;
     }
     this.createGroupError.set(null);
@@ -416,6 +433,10 @@ export class EventDetailPage implements OnInit, OnDestroy {
   async submitCreateGroup() {
     const e = this.event();
     if (!e || !this.canUseConversations()) return;
+    if (!this.canCreateConversationGroup()) {
+      this.createGroupError.set('group_creation_limit_reached');
+      return;
+    }
     const title = this.newGroupTitle().trim();
     const firstMessage = this.newGroupMessage().trim();
     if (!title || !firstMessage) {
@@ -437,8 +458,12 @@ export class EventDetailPage implements OnInit, OnDestroy {
         .toPromise();
       await this.loadConversationGroups(e.id);
       this.createGroupOpen.set(false);
-    } catch {
-      this.createGroupError.set('create_group_failed');
+    } catch (error: any) {
+      if (error?.error?.message === 'group_creation_limit_reached') {
+        this.createGroupError.set('group_creation_limit_reached');
+      } else {
+        this.createGroupError.set('create_group_failed');
+      }
     } finally {
       this.creatingGroup.set(false);
     }

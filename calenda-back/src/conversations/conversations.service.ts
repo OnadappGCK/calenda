@@ -265,6 +265,21 @@ export class ConversationsService {
   async createGroup(eventId: string, dto: CreateConversationGroupDto, creatorId: string) {
     const [event, creator] = await Promise.all([this.findPublicEvent(eventId), this.findUser(creatorId)]);
 
+    if (!creator.isAdmin) {
+      const alreadyCreatedGroup = await this.groupsRepo
+        .createQueryBuilder('g')
+        .leftJoin('g.event', 'event')
+        .leftJoin('g.creator', 'creator')
+        .where('event.id = :eventId', { eventId })
+        .andWhere('creator.id = :creatorId', { creatorId: creator.id })
+        .andWhere('g.status != :deleted', { deleted: 'DELETED' })
+        .getExists();
+
+      if (alreadyCreatedGroup) {
+        throw new BadRequestException('group_creation_limit_reached');
+      }
+    }
+
     const firstMessage = this.normalize(dto.firstMessage);
     this.assertMessagePolicy(firstMessage);
 

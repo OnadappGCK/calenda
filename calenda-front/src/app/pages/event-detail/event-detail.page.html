@@ -188,8 +188,19 @@
       <section class="convSection">
         <div class="convHeader">
           <h2>Groupes de conversation</h2>
-          <button class="btn" type="button" (click)="openCreateGroup()">Créer un groupe de sortie</button>
+          <button
+            class="btn"
+            type="button"
+            (click)="openCreateGroup()"
+            [disabled]="!canCreateConversationGroup()"
+          >
+            Créer un groupe de sortie
+          </button>
         </div>
+
+        @if (hasOwnActiveGroupForEvent() && !isAdmin()) {
+          <p class="meta">Vous avez déjà un groupe actif pour cet événement.</p>
+        }
 
         @if (groupsLoading()) {
           <p class="meta">Chargement des groupes…</p>
@@ -265,7 +276,13 @@
             </div>
 
             @if (createGroupError()) {
-              <p class="meta">Création impossible. Vérifie le contenu et réessaie.</p>
+              <p class="meta">
+                @if (createGroupError() === 'group_creation_limit_reached') {
+                  Vous avez déjà un groupe actif pour cet événement.
+                } @else {
+                  Création impossible. Vérifie le contenu et réessaie.
+                }
+              </p>
             }
 
             <div class="convActions">

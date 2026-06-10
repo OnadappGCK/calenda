@@ -517,6 +517,11 @@
   color: inherit;
 }
 
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .editForm {
   margin-top: 0.75rem;
   display: grid;
