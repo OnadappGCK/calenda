@@ -144,6 +144,16 @@
   display: block;
 }
 
+.verifyModal {
+  width: min(480px, 92vw);
+}
+
+.verifyInfo {
+  color: $text-muted-4;
+  margin: 0.25rem 0 0;
+  line-height: 1.5;
+}
+
 .field textarea {
   width: 100%;
   border: 1px solid $border-2;

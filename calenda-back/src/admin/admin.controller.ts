@@ -245,6 +245,13 @@ export class AdminController {
 
     if (dto.isAdmin !== undefined) user.isAdmin = dto.isAdmin;
 
+    if (dto.emailVerified !== undefined) {
+      user.emailVerified = !!dto.emailVerified;
+      if (user.emailVerified) {
+        user.emailVerificationToken = null;
+      }
+    }
+
     if (dto.profileImage !== undefined) {
       const img = (dto.profileImage ?? '').trim();
       if (img) {

@@ -1,4 +1,5 @@
 import { EventCategory, EventTag } from './events.service';
+import { CATEGORY_FOLDER_FILES } from './category-image-manifest';
 
 /** Convertit les anciennes valeurs de catégorie (stockées en DB) vers les nouvelles. */
 export function normalizeCategory(cat: string): EventCategory {
@@ -33,24 +34,14 @@ function assetUrl(path: string) {
   return `/assets/${normalized}`;
 }
 
-const CATEGORY_IMAGE_FILES: Record<EventCategory, string[]> = {
-  'Culture & spectacle': ['spec1.png', 'spec2.png', 'spec3.png'],
-  'Arts & expos': ['expo1.png', 'expo2.png', 'expo3.png'],
-  'Sortie': ['social1.png', 'social2.png', 'social3.png'],
-  'Activités': ['act1.png', 'act2.png', 'act3.png'],
-  'Vie locale': ['locale1.png', 'locale2.png', 'locale3.png'],
-  'Famille': ['fam1.png', 'fam2.png', 'fam3.png'],
-  'Spécial': ['special1.png', 'special2.png', 'special3.png'],
-};
-
-const CATEGORY_IMAGE_FOLDER: Record<EventCategory, string> = {
-  'Culture & spectacle': 'CULTURE_SPECTACLE',
-  'Arts & expos': 'ARTS_EXPOS',
-  'Sortie': 'SORTIE',
-  'Activités': 'ACTIVITES',
-  'Vie locale': 'VIE_LOCALE',
-  'Famille': 'FAMILLE',
-  'Spécial': 'SPECIAL',
+const CATEGORY_IMAGE_FOLDER: Record<EventCategory, string[]> = {
+  'Culture & spectacle': ['CULTURE_SPECTACLE'],
+  'Arts & expos': ['ARTS_EXPOS'],
+  'Sortie': ['VIE_LOCALE'],
+  'Activités': ['ACTIVITES'],
+  'Vie locale': ['VIE_LOCALE'],
+  'Famille': ['ACTIVITES'],
+  'Spécial': ['SPECIAL'],
 };
 
 const FALLBACK_PLACEHOLDER =
@@ -76,10 +67,16 @@ function rotateBySeed<T>(list: T[], seed: string) {
 
 function categoryFallbackCandidates(category: string, seed: string) {
   const c = normalizeCategory(category);
-  const folder = CATEGORY_IMAGE_FOLDER[c];
-  const files = CATEGORY_IMAGE_FILES[c] ?? [];
-  const ordered = rotateBySeed(files, seed || c);
-  return ordered.map((file) => `/assets/img/categorie/${folder}/${file}`);
+  const folders = CATEGORY_IMAGE_FOLDER[c] ?? [];
+  const candidates: string[] = [];
+  for (const folder of folders) {
+    const files = CATEGORY_FOLDER_FILES[folder] ?? [];
+    const ordered = rotateBySeed(files, seed || `${c}-${folder}`);
+    for (const file of ordered) {
+      candidates.push(`/assets/img/categorie/${folder}/${file}`);
+    }
+  }
+  return candidates;
 }
 
 export function defaultCategoryImageUrl(category: string, seed = ''): string {

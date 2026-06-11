@@ -172,4 +172,9 @@ export class EventsService {
   remove(id: string) {
     return this.http.delete<{ ok: true }>(`${this.apiBaseUrl}/events/${id}`);
   }
+
+  /** Envoie une demande de mise en avant à l'administrateur. */
+  boostRequest(eventId: string, phone: string, message: string) {
+    return this.http.post<{ ok: true }>(`${this.apiBaseUrl}/events/${eventId}/boost-request`, { phone, message });
+  }
 }

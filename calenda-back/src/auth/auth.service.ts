@@ -5,6 +5,8 @@ import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { CaptchaService } from '../common/services/captcha.service';
+import { EmailVerificationService } from '../common/services/email-verification.service';
+import { MailService } from '../common/services/mail.service';
 import { User } from '../users/user.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -19,13 +21,22 @@ export class AuthService {
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly captchaService: CaptchaService,
+    private readonly emailVerificationService: EmailVerificationService,
+    private readonly mailService: MailService,
   ) {}
+
+  async requestRegisterVerification(email: string, captchaToken?: string) {
+    await this.captchaService.verify(captchaToken);
+    return this.emailVerificationService.issueCode({ email, purpose: 'register' });
+  }
 
   /**
    * Inscription: vérifie captcha, valide unicité email/pseudo, hash le mot de passe et crée un user.
    */
   async register(dto: RegisterDto) {
     await this.captchaService.verify(dto.captchaToken);
+
+    const normalizedEmail = (dto.email ?? '').trim().toLowerCase();
 
     const adresse = (dto.adresse ?? '').trim();
     const ville = (dto.ville ?? '').trim();
@@ -39,7 +50,7 @@ export class AuthService {
       throw new BadRequestException('password_mismatch');
     }
 
-    const existingEmail = await this.usersRepo.findOne({ where: { email: dto.email } });
+    const existingEmail = await this.usersRepo.findOne({ where: { email: normalizedEmail } });
     if (existingEmail) {
       throw new BadRequestException('email_already_used');
     }
@@ -57,7 +68,7 @@ export class AuthService {
     }
 
     const user = this.usersRepo.create({
-      email: dto.email,
+      email: normalizedEmail,
       pseudo: dto.pseudo,
       ville: ville || adresse,
       lieu: lieu || adresse,
@@ -70,6 +81,10 @@ export class AuthService {
     });
 
     await this.usersRepo.save(user);
+
+    const frontBase = (process.env.FRONT_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '');
+    const verifyUrl = `${frontBase}/verify-email?token=${encodeURIComponent(user.emailVerificationToken ?? '')}`;
+    await this.mailService.sendVerificationLink(user.email, verifyUrl);
 
     return {
       id: user.id,
@@ -100,6 +115,10 @@ export class AuthService {
 
     if (user.isBanned) {
       throw new UnauthorizedException('account_banned');
+    }
+
+    if (!user.emailVerified) {
+      throw new UnauthorizedException('email_not_verified');
     }
 
     const accessToken = await this.jwtService.signAsync({

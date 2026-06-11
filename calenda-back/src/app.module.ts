@@ -9,6 +9,7 @@ import { AppService } from './app.service';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
+import { EmailVerificationCode } from './common/email-verification-code.entity';
 import { Event } from './events/event.entity';
 import { EventSlot } from './events/event-slot.entity';
 import { Highlight } from './events/highlight.entity';
@@ -67,6 +68,7 @@ import { UsersModule } from './users/users.module';
               ConversationBlock,
               ConversationMessageLike,
               UserProfileReport,
+              EmailVerificationCode,
             ],
             synchronize,
             uuidExtension: 'pgcrypto' as const,
@@ -90,6 +92,7 @@ import { UsersModule } from './users/users.module';
             ConversationBlock,
             ConversationMessageLike,
             UserProfileReport,
+            EmailVerificationCode,
           ],
           synchronize,
         };

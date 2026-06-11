@@ -55,6 +55,7 @@ export class AdminService {
       lieu?: string;
       numero?: string | null;
       isAdmin?: boolean;
+      emailVerified?: boolean;
       profileImage?: string | null;
       password?: string;
       passwordConfirmation?: string;

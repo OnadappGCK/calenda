@@ -258,6 +258,7 @@ export class AdminAccountsPage implements OnInit {
       lieu: e.lieu.trim(),
       numero: e.numero.trim() || null,
       isAdmin: e.isAdmin,
+      emailVerified: e.emailVerified,
       profileImage: e.profileImage,
     };
 

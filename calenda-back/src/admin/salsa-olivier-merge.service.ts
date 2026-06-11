@@ -666,8 +666,14 @@ export class SalsaOlivierMergeService {
     return new Date(y, mo - 1, d);
   }
 
+  private normalizeFrenchTimeWords(s: string): string {
+    return s
+      .replace(/\bminuit\b/gi, '00h00')
+      .replace(/\bmidi\b/gi, '12h00');
+  }
+
   private parseHourToken(token: string): { hh: number; mm: number } | null {
-    const raw = (token ?? '').trim().toLowerCase();
+    const raw = this.normalizeFrenchTimeWords((token ?? '').trim().toLowerCase());
     if (!raw) return null;
 
     let hh: number;
@@ -692,7 +698,7 @@ export class SalsaOlivierMergeService {
   }
 
   private extractTimeRange(text: string): { start: { hh: number; mm: number }; end: { hh: number; mm: number } } | null {
-    const s = (text ?? '').replace(/\s+/g, ' ');
+    const s = this.normalizeFrenchTimeWords((text ?? '').replace(/\s+/g, ' '));
     const re = /(\d{1,2}(?:h\d{0,2}|:\d{2})?)\s*[→\-–]\s*(\d{1,2}(?:h\d{0,2}|:\d{2})?)/gi;
 
     let minStart: number | null = null;

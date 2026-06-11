@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'node:crypto';
 import { Brackets, Repository } from 'typeorm';
+import { EmailVerificationService } from '../common/services/email-verification.service';
+import { MailService } from '../common/services/mail.service';
 import { Event } from '../events/event.entity';
 import { User } from './user.entity';
 import { UserProfileReport } from './user-profile-report.entity';
@@ -19,6 +21,8 @@ export class UsersService {
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
     @InjectRepository(UserProfileReport) private readonly userProfileReportsRepo: Repository<UserProfileReport>,
+    private readonly emailVerificationService: EmailVerificationService,
+    private readonly mailService: MailService,
   ) {}
 
   /** Récupère un user par id ou lève `user_not_found`. */
@@ -171,7 +175,10 @@ export class UsersService {
     const token = randomUUID();
     user.emailVerificationToken = token;
     await this.usersRepo.save(user);
-    return { ok: true, token };
+    const frontBase = (process.env.FRONT_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '');
+    const verifyUrl = `${frontBase}/verify-email?token=${encodeURIComponent(token)}`;
+    await this.mailService.sendVerificationLink(user.email, verifyUrl);
+    return { ok: true };
   }
 
   async verifyEmail(token: string) {
@@ -188,6 +195,50 @@ export class UsersService {
     user.emailVerified = true;
     user.emailVerificationToken = null;
     await this.usersRepo.save(user);
+    return { ok: true };
+  }
+
+  async requestEmailChangeVerification(userId: string, nextEmail: string) {
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('user_not_found');
+    }
+
+    const normalized = (nextEmail ?? '').trim().toLowerCase();
+    if (!normalized) {
+      throw new BadRequestException('email_required');
+    }
+
+    if (normalized === user.email) {
+      throw new BadRequestException('email_unchanged');
+    }
+
+    const exists = await this.usersRepo.findOne({ where: { email: normalized } });
+    if (exists) {
+      throw new BadRequestException('email_already_used');
+    }
+
+    await this.emailVerificationService.issueCode({
+      email: normalized,
+      purpose: 'email_change',
+      userId: user.id,
+    });
+
+    return { ok: true };
+  }
+
+  async requestPasswordChangeVerification(userId: string) {
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('user_not_found');
+    }
+
+    await this.emailVerificationService.issueCode({
+      email: user.email,
+      purpose: 'password_change',
+      userId: user.id,
+    });
+
     return { ok: true };
   }
 
@@ -274,6 +325,33 @@ export class UsersService {
       throw new NotFoundException('user_not_found');
     }
 
+    const verificationCode = (dto.emailVerificationCode ?? '').trim();
+    const nextEmailRaw = (dto.email ?? '').trim();
+    const nextEmail = nextEmailRaw.toLowerCase();
+    const wantsEmailChange = !!nextEmailRaw && nextEmail !== user.email;
+    const wantsPasswordChange = dto.password !== undefined || dto.passwordConfirmation !== undefined;
+
+    if ((wantsEmailChange || wantsPasswordChange) && !verificationCode) {
+      throw new BadRequestException('verification_code_required');
+    }
+
+    if (wantsEmailChange) {
+      const exists = await this.usersRepo.findOne({ where: { email: nextEmail } });
+      if (exists && exists.id !== user.id) {
+        throw new BadRequestException('email_already_used');
+      }
+
+      await this.emailVerificationService.consumeCode({
+        email: nextEmail,
+        purpose: 'email_change',
+        code: verificationCode,
+        userId: user.id,
+      });
+
+      user.email = nextEmail;
+      user.emailVerified = true;
+    }
+
     if (dto.pseudo !== undefined) {
       const exists = await this.usersRepo.findOne({ where: { pseudo: dto.pseudo } });
       if (exists && exists.id !== user.id) {
@@ -300,7 +378,7 @@ export class UsersService {
       user.bio = raw ? raw : null;
     }
 
-    if (dto.password !== undefined || dto.passwordConfirmation !== undefined) {
+    if (wantsPasswordChange) {
       if (!dto.password || !dto.passwordConfirmation) {
         throw new BadRequestException('password_required');
       }
@@ -308,6 +386,13 @@ export class UsersService {
       if (dto.password !== dto.passwordConfirmation) {
         throw new BadRequestException('password_mismatch');
       }
+
+      await this.emailVerificationService.consumeCode({
+        email: user.email,
+        purpose: 'password_change',
+        code: verificationCode,
+        userId: user.id,
+      });
 
       user.passwordHash = await bcrypt.hash(dto.password, 10);
     }

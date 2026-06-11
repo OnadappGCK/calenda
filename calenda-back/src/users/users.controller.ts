@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { ReportProfileDto } from './dto/report-profile.dto';
+import { RequestEmailChangeVerificationDto } from './dto/request-email-change-verification.dto';
 
 @Controller('users')
 /**
@@ -35,6 +36,18 @@ export class UsersController {
   @Get('verify-email')
   async verifyEmail(@Query('token') token: string) {
     return this.usersService.verifyEmail(token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/request-email-change-verification')
+  async requestEmailChangeVerification(@Req() req: any, @Body() dto: RequestEmailChangeVerificationDto) {
+    return this.usersService.requestEmailChangeVerification(req.user.id, dto.email);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/request-password-change-verification')
+  async requestPasswordChangeVerification(@Req() req: any) {
+    return this.usersService.requestPasswordChangeVerification(req.user.id);
   }
 
   @Get(':id/profile')

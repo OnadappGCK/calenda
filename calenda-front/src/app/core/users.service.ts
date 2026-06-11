@@ -30,6 +30,7 @@ export class UsersService {
 
   /** Met à jour le profil courant (pseudo/ville/lieu et éventuellement password). */
   updateMe(payload: {
+    email?: string;
     pseudo?: string;
     ville?: string;
     lieu?: string;
@@ -38,6 +39,7 @@ export class UsersService {
     bio?: string | null;
     password?: string;
     passwordConfirmation?: string;
+    emailVerificationCode?: string;
   }) {
     return this.http.patch(`${this.apiBaseUrl}/users/me`, payload);
   }
@@ -68,11 +70,23 @@ export class UsersService {
   }
 
   requestEmailVerification() {
-    return this.http.post<{ ok: true; token?: string }>(`${this.apiBaseUrl}/users/me/request-email-verification`, {});
+    return this.http.post<{ ok: true }>(`${this.apiBaseUrl}/users/me/request-email-verification`, {});
   }
 
-  verifyEmail(token: string) {
+  verifyEmail(code: string) {
+    return this.http.post<{ ok: true }>(`${this.apiBaseUrl}/users/me/verify-email`, { code });
+  }
+
+  verifyEmailToken(token: string) {
     return this.http.get<{ ok: true }>(`${this.apiBaseUrl}/users/verify-email`, { params: { token } });
+  }
+
+  requestEmailChangeVerification(email: string) {
+    return this.http.post<{ ok: true }>(`${this.apiBaseUrl}/users/me/request-email-change-verification`, { email });
+  }
+
+  requestPasswordChangeVerification() {
+    return this.http.post<{ ok: true }>(`${this.apiBaseUrl}/users/me/request-password-change-verification`, {});
   }
 
   reportProfile(userId: string, payload?: { reason?: string }) {

@@ -607,49 +607,47 @@
     @if (boostSuccess()) {
       <div class="boostSuccess">
         <div class="boostSuccessIcon">🎉</div>
-        <h2>{{ i18n.t('eventDetail.boost.successTitle') }}</h2>
-        <p>{{ i18n.t('eventDetail.boost.successMsg') }}</p>
+        <h2>Demande envoyée !</h2>
+        <p>Nous vous recontacterons au plus vite par téléphone pour mettre en avant votre événement.</p>
         <button class="btn btnPrimary" type="button" (click)="closeBoost()">{{ i18n.t('common.close') }}</button>
       </div>
     } @else {
       <button class="boostClose" type="button" (click)="closeBoost()" [disabled]="boostSaving()">✕</button>
       <div class="boostHero">⭐</div>
-      <h2>{{ i18n.t('eventDetail.boost.title') }}</h2>
-      <p class="boostIntro">{{ i18n.t('eventDetail.boost.intro') }}</p>
-
-      <ul class="boostPerks">
-        <li>📅 {{ i18n.t('eventDetail.boost.perk1') }}</li>
-        <li>🏠 {{ i18n.t('eventDetail.boost.perk2') }}</li>
-        <li>🔄 {{ i18n.t('eventDetail.boost.perk3') }}</li>
-      </ul>
+      <h2>Mettre en avant votre événement</h2>
+      <p class="boostIntro">Bonjour, je suis ravi que vous appréciez Calenda. La fonctionnalité pour mettre en avant soi-même un événement n'est pas encore en ligne. Vous pouvez m'envoyer vos coordonnées via ce formulaire, je vous répondrai au plus vite par téléphone pour mettre en avant votre événement.</p>
 
       <div class="boostForm">
         <label class="field">
-          {{ i18n.t('eventDetail.boost.startDate') }}
-          <input type="date"
-            [ngModel]="boostStartDate()"
-            (ngModelChange)="boostStartDate.set($event)" />
+          Numéro de téléphone <span style="color:var(--color-danger,#e55)">*</span>
+          <input
+            type="tel"
+            [(ngModel)]="boostPhone"
+            placeholder="Ex : 06 12 34 56 78"
+            [disabled]="boostSaving()"
+          />
         </label>
         <label class="field">
-          {{ i18n.t('eventDetail.boost.days') }}
-          <input type="number" min="1" max="365"
-            [ngModel]="boostDays()"
-            (ngModelChange)="boostDays.set(+$event)" />
+          Message (optionnel)
+          <textarea
+            rows="4"
+            [(ngModel)]="boostMessage"
+            placeholder="Décrivez votre demande, les dates souhaitées…"
+            [disabled]="boostSaving()"
+          ></textarea>
         </label>
       </div>
 
-      <p class="boostSummary">
-        {{ i18n.t('eventDetail.boost.summary', { days: boostDays() }) }}
-      </p>
-
-      @if (boostError()) {
-        <p class="error">{{ i18n.t('eventDetail.boost.' + boostError()) }}</p>
+      @if (boostError() === 'boost_phone_required') {
+        <p class="error">Veuillez renseigner votre numéro de téléphone.</p>
+      } @else if (boostError()) {
+        <p class="error">Une erreur est survenue. Veuillez réessayer.</p>
       }
 
       <div class="boostActions">
         <button class="btn" type="button" (click)="closeBoost()" [disabled]="boostSaving()">{{ i18n.t('common.cancel') }}</button>
         <button class="btn btnPrimary" type="button" (click)="submitBoost()" [disabled]="boostSaving()">
-          @if (boostSaving()) { {{ i18n.t('common.loading') }} } @else { {{ i18n.t('eventDetail.boost.submit') }} }
+          @if (boostSaving()) { Envoi… } @else { Envoyer }
         </button>
       </div>
     }

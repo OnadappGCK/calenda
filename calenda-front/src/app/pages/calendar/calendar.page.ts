@@ -31,8 +31,6 @@ import { I18nService } from '../../core/i18n.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
 import { WeatherService, WeatherDay, weatherCodeToEmoji, moonPhaseEmoji, moonPhaseIconUrl, isFullMoonPeak } from '../../core/weather.service';
 
-type ImageChoice = { label: string; value: string };
-
 /**
  * Villes toujours proposées en suggestion.
  * `label`      : texte affiché dans la bulle.
@@ -80,16 +78,6 @@ function normalizeFilterText(value: string): string {
 function isIgnoredFilterValue(value: string): boolean {
   return IGNORED_FILTER_VALUES.has(normalizeFilterText(value));
 }
-
-const CATEGORY_IMAGE_CHOICES: Record<EventCategory, ImageChoice[]> = {
-  'Culture & spectacle': [{ label: 'Générique', value: 'img/categorie/CULTURE_SPECTACLE/spec1.png' }],
-  'Arts & expos':        [{ label: 'Générique', value: 'img/categorie/ARTS_EXPOS/expo1.png' }],
-  'Sortie':              [{ label: 'Générique', value: 'img/categorie/SORTIE/social1.png' }],
-  'Activités':           [{ label: 'Générique', value: 'img/categorie/ACTIVITES/act1.png' }],
-  'Vie locale':          [{ label: 'Générique', value: 'img/categorie/VIE_LOCALE/locale1.png' }],
-  'Famille':             [{ label: 'Générique', value: 'img/categorie/FAMILLE/fam1.png' }],
-  'Spécial':             [{ label: 'Générique', value: 'img/categorie/SPECIAL/special1.png' }],
-};
 
 @Component({
   selector: 'app-calendar-page',
@@ -495,7 +483,9 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   readonly newAdresseSuggestOpen = signal<boolean>(false);
   private newAdresseSuggestToken = 0;
   newCaracteristiques: EventTag[] = [];
+  newImageMode: 'auto' | 'external' = 'auto';
   newImageUrl = '';
+  newImagePreviewState: 'idle' | 'loading' | 'loaded' | 'error' = 'idle';
   newContact = '';
   newSlots: { date: string; heureDebut: string; heureFin: string }[] = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
 
@@ -610,16 +600,40 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       .map(([tag]) => tag);
   }
 
-  newImageOptions(): ImageChoice[] {
-    return CATEGORY_IMAGE_CHOICES[this.newCategorie] ?? [];
-  }
-
   newImagePreviewUrl() {
-    return resolveEventImageUrl(this.newCategorie, this.newImageUrl ? this.newImageUrl : null, 'new-event-preview');
+    const externalUrl = (this.newImageUrl ?? '').trim();
+    const imageUrl = this.newImageMode === 'external' && externalUrl ? externalUrl : null;
+    return resolveEventImageUrl(this.newCategorie, imageUrl, 'new-event-preview');
   }
 
   onNewCategorieChange() {
-    this.newImageUrl = '';
+    if (this.newImageMode === 'auto') {
+      this.newImageUrl = '';
+    }
+  }
+
+  onNewImageModeChange() {
+    if (this.newImageMode === 'auto') {
+      this.newImageUrl = '';
+      this.newImagePreviewState = 'idle';
+      return;
+    }
+    this.newImagePreviewState = (this.newImageUrl ?? '').trim() ? 'loading' : 'idle';
+  }
+
+  onNewExternalImageUrlChange(value: string) {
+    this.newImageUrl = (value ?? '').trim();
+    this.newImagePreviewState = this.newImageUrl ? 'loading' : 'idle';
+  }
+
+  onNewImagePreviewLoad() {
+    if (this.newImageMode !== 'external' || !this.newImageUrl) return;
+    this.newImagePreviewState = 'loaded';
+  }
+
+  onNewImagePreviewError() {
+    if (this.newImageMode !== 'external' || !this.newImageUrl) return;
+    this.newImagePreviewState = 'error';
   }
 
   readonly availableTags: EventTag[] = [
@@ -2123,7 +2137,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       latitude: this.newLatitude,
       longitude: this.newLongitude,
       caracteristiques: this.newCaracteristiques.slice(0, 3),
-      imageUrl: this.newImageUrl ? this.newImageUrl : undefined,
+      imageUrl: this.newImageMode === 'external' && this.newImageUrl ? this.newImageUrl : undefined,
       slots: this.newSlots.filter((s) => s.date).map((s) => ({
         date: s.date,
         heureDebut: s.heureDebut,
@@ -2148,7 +2162,9 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.newAdresseSuggestions.set([]);
     this.newAdresseSuggestOpen.set(false);
     this.newCaracteristiques = [];
+    this.newImageMode = 'auto';
     this.newImageUrl = '';
+    this.newImagePreviewState = 'idle';
     this.newContact = '';
     this.newSlots = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
     this.newHoneypot = '';

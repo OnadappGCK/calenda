@@ -97,6 +97,7 @@
                   <span class="role">{{ u.isAdmin ? 'ADMIN' : '' }} {{ u.isBanned ? '· BANNI' : '' }}</span>
                 </div>
                 <div class="line2">{{ u.email }}</div>
+                <div class="line2">{{ u.emailVerified ? 'Email vérifié' : 'Email non vérifié' }}</div>
                 <div class="line3">{{ u.ville }} · {{ u.lieu }}</div>
               </div>
               <div class="actions">
@@ -199,6 +200,15 @@
           (ngModelChange)="onEditIsAdminChange($event)"
         />
         Admin
+      </label>
+
+      <label class="check">
+        <input
+          type="checkbox"
+          [ngModel]="edit()!.emailVerified"
+          (ngModelChange)="edit.set({ ...edit()!, emailVerified: $event })"
+        />
+        Email vérifié
       </label>
 
       <label class="field">

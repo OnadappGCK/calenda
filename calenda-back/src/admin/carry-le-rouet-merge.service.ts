@@ -1223,8 +1223,14 @@ export class CarryLeRouetMergeService {
 
   // ─── Time extraction ────────────────────────────────────────────────────────
 
+  private normalizeFrenchTimeWords(s: string): string {
+    return s
+      .replace(/\bminuit\b/gi, '00h00')
+      .replace(/\bmidi\b/gi, '12h00');
+  }
+
   private extractHoursRange(text: string): { start: { hh: number; mm: number }; end: { hh: number; mm: number } } | null {
-    const s = (text ?? '');
+    const s = this.normalizeFrenchTimeWords(text ?? '');
     const patterns = [
       // "de 10h à 18h" / "de 10h30 à 18h00"
       /de\s+(\d{1,2})[h:](\d{0,2})\s+[àa]\s+(\d{1,2})[h:](\d{0,2})/i,
@@ -1245,7 +1251,8 @@ export class CarryLeRouetMergeService {
   }
 
   private extractTime(text: string, re: RegExp): { hh: number; mm: number } | null {
-    const m = re.exec(text ?? '');
+    const normalized = this.normalizeFrenchTimeWords(text ?? '');
+    const m = re.exec(normalized);
     if (!m?.[1]) return null;
     const raw = m[1].trim().replace(/h/i, ':');
     const parts = raw.split(':');

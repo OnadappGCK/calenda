@@ -199,11 +199,11 @@ export class EventDetailPage implements OnInit, OnDestroy {
   ] as const;
 
   readonly boostOpen = signal(false);
-  readonly boostDays = signal(30);
-  readonly boostStartDate = signal('');
   readonly boostSaving = signal(false);
   readonly boostError = signal<string | null>(null);
   readonly boostSuccess = signal(false);
+  boostPhone = '';
+  boostMessage = '';
 
   readonly categories: EventCategory[] = ['Culture & spectacle', 'Arts & expos', 'Sortie', 'Activités', 'Vie locale', 'Famille', 'Spécial'];
   readonly tags: EventTag[] = [
@@ -1137,9 +1137,8 @@ export class EventDetailPage implements OnInit, OnDestroy {
   }
 
   openBoost() {
-    const today = new Date().toISOString().slice(0, 10);
-    this.boostStartDate.set(today);
-    this.boostDays.set(30);
+    this.boostPhone = '';
+    this.boostMessage = '';
     this.boostError.set(null);
     this.boostSuccess.set(false);
     this.boostOpen.set(true);
@@ -1155,28 +1154,14 @@ export class EventDetailPage implements OnInit, OnDestroy {
   async submitBoost() {
     const e = this.event();
     if (!e) return;
-    const days = this.boostDays();
-    const startRaw = this.boostStartDate();
-    if (!startRaw || days < 1) {
-      this.boostError.set('boost_invalid');
+    if (!this.boostPhone.trim()) {
+      this.boostError.set('boost_phone_required');
       return;
     }
-    const startAt = new Date(startRaw);
-    startAt.setHours(0, 0, 0, 0);
-    const endAt = new Date(startAt.getTime() + days * 24 * 60 * 60 * 1000);
     this.boostSaving.set(true);
     this.boostError.set(null);
     try {
-      const created = await this.eventsService
-        .createHighlight(e.id, {
-          startAt: startAt.toISOString(),
-          endAt: endAt.toISOString(),
-          priority: 0,
-        })
-        .toPromise();
-      if (created) {
-        this.highlights.update((list) => [...list, created]);
-      }
+      await this.eventsService.boostRequest(e.id, this.boostPhone.trim(), this.boostMessage.trim()).toPromise();
       this.boostSuccess.set(true);
     } catch {
       this.boostError.set('boost_failed');

@@ -463,16 +463,46 @@
       </label>
       <label>
         Image
-        <select [(ngModel)]="newImageUrl" name="newImageUrl">
-          <option value="">Auto (par catégorie)</option>
-          @for (opt of newImageOptions(); track opt.value) {
-            <option [value]="opt.value">{{ opt.label }}</option>
-          }
+        <select [(ngModel)]="newImageMode" name="newImageMode" (ngModelChange)="onNewImageModeChange()">
+          <option value="auto">Image automatique</option>
+          <option value="external">Image externe</option>
         </select>
       </label>
+      @if (newImageMode === 'external') {
+        <label class="span2">
+          URL de l'image externe
+          <input
+            type="url"
+            [ngModel]="newImageUrl"
+            (ngModelChange)="onNewExternalImageUrlChange($event)"
+            name="newImageUrl"
+            placeholder="https://..."
+          />
+        </label>
+      }
       <div class="imgPreview span2">
         <div class="imgPreviewLabel">Aperçu de l'image</div>
-        <img class="imgPreviewImg" [src]="newImagePreviewUrl()" alt="" loading="lazy" />
+        <img
+          class="imgPreviewImg"
+          [src]="newImagePreviewUrl()"
+          alt=""
+          loading="lazy"
+          (load)="onNewImagePreviewLoad()"
+          (error)="onNewImagePreviewError()"
+        />
+        @if (newImageMode === 'external') {
+          <div class="imgPreviewState">
+            @if (!newImageUrl) {
+              Colle une URL d'image externe pour tester l'aperçu.
+            } @else if (newImagePreviewState === 'loading') {
+              Vérification de l'image…
+            } @else if (newImagePreviewState === 'loaded') {
+              Image chargée avec succès.
+            } @else if (newImagePreviewState === 'error') {
+              Impossible de charger cette image. Vérifie l'URL.
+            }
+          </div>
+        }
       </div>
     </div>
 

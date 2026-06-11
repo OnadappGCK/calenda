@@ -14,6 +14,7 @@ import { ProfilePage } from './pages/profile/profile.page';
 import { PublicProfileEventsPage } from './pages/public-profile-events/public-profile-events.page';
 import { PublicProfilePage } from './pages/public-profile/public-profile.page';
 import { RegisterPage } from './pages/register/register.page';
+import { VerifyEmailPage } from './pages/verify-email/verify-email.page';
 import { PlacesPage } from './pages/places/places.page';
 import { PlaceDetailPage } from './pages/place-detail/place-detail.page';
 
@@ -23,6 +24,7 @@ export const routes: Routes = [
   { path: 'contact', component: ContactPage },
   { path: 'login', component: LoginPage },
   { path: 'register', component: RegisterPage },
+  { path: 'verify-email', component: VerifyEmailPage },
   { path: 'calendar', component: CalendarPage },
   { path: 'events/:id', component: EventDetailPage },
   { path: 'places', component: PlacesPage },
