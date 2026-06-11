@@ -352,7 +352,7 @@
         } @else {
           @for (e of sideDayEvents(); track e.id) {
             <div class="sideCard" [style.background]="categoryGradient(e.categorie)" [style.color]="categoryForegroundColor(e.categorie)">
-              <img class="sideImg" [src]="eventImageUrl(e)" alt="" loading="lazy" />
+              <img class="sideImg" [src]="eventImageUrl(e)" [appEventImgFallback]="e.categorie" [eventSeed]="e.id" alt="" loading="lazy" />
               <div class="sideMain">
                 <div class="listName">{{ e.titre }}</div>
                 <div class="eventMeta">
@@ -389,7 +389,7 @@
         } @else {
           @for (e of sideNightEvents(); track e.id) {
             <div class="sideCard" [style.background]="categoryGradient(e.categorie)" [style.color]="categoryForegroundColor(e.categorie)">
-              <img class="sideImg" [src]="eventImageUrl(e)" alt="" loading="lazy" />
+              <img class="sideImg" [src]="eventImageUrl(e)" [appEventImgFallback]="e.categorie" [eventSeed]="e.id" alt="" loading="lazy" />
               <div class="sideMain">
                 <div class="listName">{{ e.titre }}</div>
                 <div class="eventMeta">

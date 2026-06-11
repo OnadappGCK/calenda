@@ -21,7 +21,7 @@
 
         <div class="slide">
           <div class="media">
-            <img class="mediaImg" [src]="featuredImageUrl(currentFeatured()!)" alt="" loading="lazy" />
+            <img class="mediaImg" [src]="featuredImageUrl(currentFeatured()!)" [appEventImgFallback]="currentFeatured()!.categorie" [eventSeed]="currentFeatured()!.id" alt="" loading="lazy" />
           </div>
 
           <div class="panel">
@@ -111,7 +111,7 @@
               <div class="categoryScroll" #rowScroll>
                 @for (ev of entry[1]; track ev.id) {
                   <a class="eventCard" [routerLink]="['/events', ev.id]">
-                    <img class="eventCardImg" [src]="resolveEventImageUrl(ev.categorie, ev.imageUrl, ev.id)" alt="" loading="lazy" />
+                    <img class="eventCardImg" [src]="resolveEventImageUrl(ev.categorie, ev.imageUrl, ev.id)" [appEventImgFallback]="ev.categorie" [eventSeed]="ev.id" alt="" loading="lazy" />
                     <div class="eventCardOverlay">
                       <span class="eventCardCat" [style.background]="categoryColor($any(ev.categorie))">{{ ev.categorie }}</span>
                       <div class="eventCardTitle">{{ ev.titre }}</div>

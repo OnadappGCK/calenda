@@ -27,6 +27,7 @@ import {
   tagIconUrl,
 } from '../../core/event-ui';
 import { FavoritesService } from '../../core/favorites.service';
+import { EventImgFallbackDirective } from '../../shared/event-img-fallback.directive';
 import { I18nService } from '../../core/i18n.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
 import { WeatherService, WeatherDay, weatherCodeToEmoji, moonPhaseEmoji, moonPhaseIconUrl, isFullMoonPeak } from '../../core/weather.service';
@@ -81,7 +82,7 @@ function isIgnoredFilterValue(value: string): boolean {
 
 @Component({
   selector: 'app-calendar-page',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, RouterLink, DatePipe, EventImgFallbackDirective],
   templateUrl: './calendar.page.html',
   styleUrl: './calendar.page.scss',
 })

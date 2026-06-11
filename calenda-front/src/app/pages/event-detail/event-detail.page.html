@@ -40,6 +40,8 @@
       <img
         class="hero"
         [src]="editing() ? draftImagePreviewUrl() : imageUrlFor(event()!)"
+        [appEventImgFallback]="editing() ? draft()!.categorie : event()!.categorie"
+        [eventSeed]="event()!.id"
         alt=""
         loading="lazy"
         (click)="onHeroClick()"
@@ -58,7 +60,7 @@
       <div class="lightboxBackdrop" (click)="closeLightbox()">
         <div class="lightboxInner" (click)="$event.stopPropagation()">
           <button class="lightboxClose" type="button" (click)="closeLightbox()" [attr.aria-label]="i18n.t('common.close')">×</button>
-          <img class="lightboxImg" [src]="imageUrlFor(event()!)" alt="" />
+          <img class="lightboxImg" [src]="imageUrlFor(event()!)" [appEventImgFallback]="event()!.categorie" [eventSeed]="event()!.id" alt="" />
         </div>
       </div>
     }
@@ -593,7 +595,7 @@
       <div class="grid">
         @for (e of similar(); track e.id) {
           <a class="card" [routerLink]="['/events', e.id]">
-            <img class="cardImg" [src]="imageUrlFor(e)" alt="" loading="lazy" />
+            <img class="cardImg" [src]="imageUrlFor(e)" [appEventImgFallback]="e.categorie" [eventSeed]="e.id" alt="" loading="lazy" />
             <div class="title">{{ e.titre }}</div>
             <div class="meta">{{ e.dateDebut | date: 'short':undefined:dateLocale() }}</div>
           </a>

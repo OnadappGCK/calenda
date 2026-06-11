@@ -17,6 +17,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AdminService } from '../../core/admin.service';
 import { AuthService } from '../../core/auth.service';
 import { categoryColor, resolveEventImageUrl, tagIcon as tagIconFn } from '../../core/event-ui';
+import { EventImgFallbackDirective } from '../../shared/event-img-fallback.directive';
 import { I18nService } from '../../core/i18n.service';
 import { EventCategory, EventsService, EventDto, EventSlotDto, EventTag, HighlightDto } from '../../core/events.service';
 import { FavoritesService } from '../../core/favorites.service';
@@ -47,7 +48,7 @@ type Draft = {
 
 @Component({
   selector: 'app-event-detail-page',
-  imports: [RouterLink, DatePipe, FormsModule],
+  imports: [RouterLink, DatePipe, FormsModule, EventImgFallbackDirective],
   templateUrl: './event-detail.page.html',
   styleUrl: './event-detail.page.scss',
 })

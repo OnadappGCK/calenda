@@ -6,11 +6,12 @@ import { API_BASE_URL } from '../../core/api.config';
 import { EventsService, EventDto } from '../../core/events.service';
 import { NewsService, NewsDto } from '../../core/news.service';
 import { categoryColor, normalizeCategory, resolveEventImageUrl, tagIcon } from '../../core/event-ui';
+import { EventImgFallbackDirective } from '../../shared/event-img-fallback.directive';
 import { I18nService } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-home-page',
-  imports: [RouterLink, DatePipe],
+  imports: [RouterLink, DatePipe, EventImgFallbackDirective],
   templateUrl: './home.page.html',
   styleUrl: './home.page.scss',
 })
