@@ -17,10 +17,10 @@ export class EmailVerificationCode {
   @Column({ type: 'text', nullable: true })
   userId!: string | null;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamptz' })
   expiresAt!: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   consumedAt!: Date | null;
 
   @CreateDateColumn()
