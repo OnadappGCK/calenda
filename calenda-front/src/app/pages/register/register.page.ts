@@ -1,10 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
 import { allowedProfileImagesForRole, profileImageUrl } from '../../core/profile-images';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
+import { TurnstileService } from '../../core/turnstile.service';
 
 @Component({
   selector: 'app-register-page',
@@ -16,10 +17,11 @@ import { PhotonFeature, PhotonService } from '../../core/photon.service';
  * Page d'inscription.
  * Envoie les infos à l'API via `AuthService.register`, puis redirige vers la connexion.
  */
-export class RegisterPage {
+export class RegisterPage implements AfterViewInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly photon = inject(PhotonService);
+  private readonly turnstile = inject(TurnstileService);
 
   pseudo = '';
   email = '';
@@ -53,6 +55,10 @@ export class RegisterPage {
 
   readonly error = signal<string | null>(null);
   readonly ok = signal<boolean>(false);
+  readonly captchaEnabled = signal<boolean>(false);
+  readonly submitting = signal<boolean>(false);
+  private captchaToken: string | null = null;
+  private captchaWidgetId: string | null = null;
 
   private parseErrorMessage(e: unknown): string {
     const fallback = 'Inscription échouée';
@@ -103,6 +109,12 @@ export class RegisterPage {
         return 'La confirmation du mot de passe est obligatoire.';
       case 'captcha_required':
         return 'Captcha requis.';
+      case 'captcha_invalid':
+        return 'Captcha invalide, merci de réessayer.';
+      case 'captcha_unavailable':
+        return 'Captcha indisponible pour le moment.';
+      case 'captcha_not_configured':
+        return 'Captcha non configuré côté serveur.';
       case 'profile_image_forbidden':
         return 'Photo de profil invalide.';
     }
@@ -142,8 +154,44 @@ export class RegisterPage {
     return this.photon.label(f);
   }
 
+  async ngAfterViewInit() {
+    const siteKey = this.turnstile.getSiteKey();
+    if (!siteKey || typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      this.captchaWidgetId = await this.turnstile.render(
+        '#registerTurnstile',
+        (token) => {
+          this.captchaToken = token;
+        },
+        () => {
+          this.captchaToken = null;
+        },
+      );
+      this.captchaEnabled.set(true);
+    } catch {
+      this.captchaEnabled.set(false);
+      this.captchaToken = null;
+      this.error.set('Captcha indisponible, recharge la page.');
+    }
+  }
+
+  ngOnDestroy() {
+    if (typeof window === 'undefined' || !window.turnstile || !this.captchaWidgetId) {
+      return;
+    }
+    window.turnstile.remove(this.captchaWidgetId);
+  }
+
   /** Soumet le formulaire d'inscription puis redirige vers `/login` en cas de succès. */
   async submit() {
+    if (this.submitting()) {
+      return;
+    }
+
+    this.submitting.set(true);
     this.error.set(null);
     this.ok.set(false);
 
@@ -157,6 +205,7 @@ export class RegisterPage {
         password: this.password,
         passwordConfirmation: this.passwordConfirmation,
         profileImage: this.profileImage,
+        captchaToken: this.captchaToken || undefined,
       });
       this.ok.set(true);
       window.alert(
@@ -165,6 +214,12 @@ export class RegisterPage {
       await this.router.navigateByUrl('/login');
     } catch (e) {
       this.error.set(this.parseErrorMessage(e));
+      this.captchaToken = null;
+      if (typeof window !== 'undefined' && window.turnstile && this.captchaWidgetId) {
+        window.turnstile.reset(this.captchaWidgetId);
+      }
+    } finally {
+      this.submitting.set(false);
     }
   }
 }

@@ -78,11 +78,12 @@ export class AuthService {
   }
 
   /** Authentifie via `/auth/login`, persiste le token, et met à jour le user courant. */
-  async login(email: string, password: string) {
+  async login(email: string, password: string, captchaToken?: string) {
     const result = await this.http
       .post<{ accessToken: string; user: AuthUser }>(`${this.apiBaseUrl}/auth/login`, {
         email,
         password,
+        captchaToken: captchaToken || undefined,
       })
       .toPromise();
 
@@ -105,6 +106,7 @@ export class AuthService {
     password: string;
     passwordConfirmation: string;
     profileImage?: string | null;
+    captchaToken?: string;
   }) {
     await this.http.post(`${this.apiBaseUrl}/auth/register`, payload).toPromise();
   }

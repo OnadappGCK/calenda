@@ -65,7 +65,9 @@
       />
     </label>
 
-    <button class="btn" type="submit">Créer mon compte</button>
+    <div id="registerTurnstile"></div>
+
+    <button class="btn" type="submit" [disabled]="submitting()">Créer mon compte</button>
   </form>
 
   <p class="hint">
