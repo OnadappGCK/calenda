@@ -1,4 +1,6 @@
-import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { EventSlotDto } from './event-slot.dto';
 import { EventCategory } from '../../common/enums/event-category.enum';
 import { EventTag } from '../../common/enums/event-tag.enum';
 
@@ -61,11 +63,22 @@ export class CreateEventDto {
   @IsString()
   contact?: string | null;
 
-  /** Date/heure de début (ISO). */
-  @IsDateString()
-  dateDebut!: string;
+  /**
+   * Créneaux horaires (date + heureDebut + heureFin).
+   * Si fournis, dateDebut/dateFin sont calculés automatiquement.
+   */
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EventSlotDto)
+  slots?: EventSlotDto[];
 
-  /** Date/heure de fin (ISO). */
+  /** Date/heure de début (ISO) — utilisé si slots absent. */
+  @IsOptional()
+  @IsDateString()
+  dateDebut?: string;
+
+  /** Date/heure de fin (ISO) — utilisé si slots absent. */
   @IsOptional()
   @IsDateString()
   dateFin?: string | null;

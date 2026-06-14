@@ -39,21 +39,22 @@ form {
   gap: 6px;
   padding: 8px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: $surface-1;
+  border: 1px solid $border-1;
 }
 
 .suggestItem {
   text-align: left;
   border: 0;
   background: transparent;
+  color: $text-1;
   padding: 8px 10px;
   border-radius: 10px;
   cursor: pointer;
 }
 
 .suggestItem:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: $overlay-2;
 }
 
 label {

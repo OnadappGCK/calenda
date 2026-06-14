@@ -4,9 +4,11 @@ import {
   Entity,
   ManyToMany,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { EventSlot } from './event-slot.entity';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
 import { EventTag } from '../common/enums/event-tag.enum';
@@ -96,6 +98,10 @@ export class Event {
   @ManyToOne(() => User, (user) => user.organizedEvents, { eager: true, nullable: true })
   /** Organisateur (relation n-1). */
   organisateur!: User | null;
+
+  @OneToMany(() => EventSlot, (slot) => slot.event, { cascade: ['insert', 'update', 'remove'], eager: false })
+  /** Créneaux horaires de l'événement (chaque slot = date + heure début + heure fin). */
+  slots!: EventSlot[];
 
   @ManyToMany(() => User, (user) => user.favorites)
   /** Utilisateurs ayant mis l'événement en favori (relation n-n). */

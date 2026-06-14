@@ -1,0 +1,66 @@
+<section class="wrap">
+  @if (loading()) {
+    <p>Chargement…</p>
+  } @else if (loadError()) {
+    <div class="error">{{ loadError() }}</div>
+  } @else if (profile(); as p) {
+    <div class="headCard">
+      <img class="avatar" [src]="avatarUrl()" alt="" loading="lazy" />
+      <div class="headMain">
+        <h1>{{ p.pseudo }}</h1>
+        <div class="meta">Tous les événements organisés</div>
+        <a class="btn" [routerLink]="['/profiles', p.id]">← Retour au profil</a>
+      </div>
+    </div>
+
+    <div class="filters">
+      <label class="field">
+        Mot-clé
+        <input type="text" [(ngModel)]="q" name="q" placeholder="Titre ou description" />
+      </label>
+
+      <label class="field">
+        Ville
+        <input type="text" [(ngModel)]="ville" name="ville" placeholder="Ville" />
+      </label>
+
+      <label class="field">
+        Catégorie
+        <select [(ngModel)]="categorie" name="categorie">
+          <option value="">Toutes</option>
+          @for (c of categories; track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field checkField">
+        <span>À venir uniquement</span>
+        <input type="checkbox" [(ngModel)]="upcomingOnly" name="upcomingOnly" />
+      </label>
+
+      <div class="actions">
+        <button class="btn btnPrimary" type="button" (click)="reloadEvents()">Filtrer</button>
+      </div>
+    </div>
+
+    @if (listLoading()) {
+      <div class="empty">Chargement…</div>
+    } @else if (events().length === 0) {
+      <div class="empty">Aucun événement trouvé.</div>
+    } @else {
+      <div class="list">
+        @for (e of events(); track e.id) {
+          <div class="listRow" [style.background]="categoryGradient(e.categorie)" [style.color]="categoryForegroundColor(e.categorie)">
+            <div class="main">
+              <div class="title">{{ e.titre }}</div>
+              <div class="line">{{ e.dateDebut | date: 'EEEE d MMMM yyyy · HH:mm' }}</div>
+              <div class="line">{{ e.ville }} · {{ e.adresse ?? e.lieu }}</div>
+            </div>
+            <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
+          </div>
+        }
+      </div>
+    }
+  }
+</section>

@@ -1,0 +1,19 @@
+<section class="wrap">
+  <h1>Validation e-mail</h1>
+
+  @if (loading()) {
+    <p class="info">Validation de votre compte en cours...</p>
+  } @else {
+    <p class="message" [class.success]="success()" [class.error]="!success()">
+      {{ message() }}
+    </p>
+
+    <div class="actions">
+      @if (success()) {
+        <a class="btn btnPrimary" routerLink="/login">Se connecter</a>
+      } @else {
+        <a class="btn" routerLink="/register">Retour à l'inscription</a>
+      }
+    </div>
+  }
+</section>

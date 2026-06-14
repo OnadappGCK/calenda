@@ -4,121 +4,157 @@
     <p>{{ i18n.t('home.tagline') }}</p>
     <div class="heroActions">
       <a class="btn btnPrimary" routerLink="/calendar">{{ i18n.t('home.openCalendar') }}</a>
-      <a class="btn" routerLink="/news">{{ i18n.t('home.seeNews') }}</a>
+      <a class="btn" routerLink="/calendar" [state]="{ openPropose: true }">{{ i18n.t('calendar.proposeEvent') }}</a>
     </div>
   </div>
 </div>
 
-<section class="container pageContent">
-  <h2 class="sectionTitle">{{ i18n.t('home.featured') }}</h2>
+<section class="homeBand homeBandBase waveTopOnly">
+  <div class="container pageContent">
+    <h2 class="sectionTitle">{{ i18n.t('home.featured') }}</h2>
 
-  @if (!currentFeatured()) {
-    <div class="empty">{{ i18n.t('home.noFeatured') }}</div>
-  } @else {
-    <div class="carousel">
-      <button class="navBtn" type="button" (click)="prevFeatured()" [attr.aria-label]="i18n.t('home.previous')">‹</button>
+    @if (!currentFeatured()) {
+      <div class="empty">{{ i18n.t('home.noFeatured') }}</div>
+    } @else {
+      <div class="carousel">
+        <button class="navBtn" type="button" (click)="prevFeatured()" [attr.aria-label]="i18n.t('home.previous')">‹</button>
 
-      <div class="slide">
-        <div class="media">
-          <img class="mediaImg" [src]="featuredImageUrl(currentFeatured()!)" alt="" loading="lazy" />
-        </div>
-
-        <div class="panel">
-          <div class="panelHeader">
-            <span class="cat">{{ currentFeatured()!.categorie }}</span>
-            <span class="catIcon">
-              @for (t of (currentFeatured()!.caracteristiques ?? []).slice(0, 3); track t) {
-                <span style="margin-left: 4px;">{{ tagIcon(t) }}</span>
-              }
-            </span>
+        <div class="slide">
+          <div class="media">
+            <img class="mediaImg" [src]="featuredImageUrl(currentFeatured()!)" [appEventImgFallback]="currentFeatured()!.categorie" [eventSeed]="currentFeatured()!.id" alt="" loading="lazy" />
           </div>
 
-          <div class="title">{{ currentFeatured()!.titre }}</div>
-          <div class="desc">{{ currentFeatured()!.description }}</div>
+          <div class="panel">
+            <div class="panelHeader">
+              <span class="cat">{{ currentFeatured()!.categorie }}</span>
+              <span class="catIcon">
+                @for (t of (currentFeatured()!.caracteristiques ?? []).slice(0, 3); track t) {
+                  <span style="margin-left: 4px;">{{ tagIcon(t) }}</span>
+                }
+              </span>
+            </div>
 
-          <div class="metaRow">
-            <div class="metaLine">{{ currentFeatured()!.ville }} - {{ currentFeatured()!.lieu }}</div>
-            <div class="metaLine">
-              {{ currentFeatured()!.dateDebut | date: 'short' }}
-              -
-              {{ currentFeatured()!.dateFin ? (currentFeatured()!.dateFin | date: 'short') : i18n.t('common.notMentioned') }}
+            <div class="title">{{ currentFeatured()!.titre }}</div>
+            <div class="desc">{{ currentFeatured()!.description }}</div>
+
+            <div class="metaRow">
+              <div class="metaLine">{{ currentFeatured()!.ville }} - {{ currentFeatured()!.lieu }}</div>
+              <div class="metaLine">
+                {{ currentFeatured()!.dateDebut | date: 'short' }}
+                -
+                {{ currentFeatured()!.dateFin ? (currentFeatured()!.dateFin | date: 'short') : i18n.t('common.notMentioned') }}
+              </div>
+            </div>
+
+            <div class="panelActions">
+              <a class="btn" [routerLink]="['/events', currentFeatured()!.id]">{{ i18n.t('common.seeMore') }}</a>
             </div>
           </div>
-
-          <div class="panelActions">
-            <a class="btn" [routerLink]="['/events', currentFeatured()!.id]">{{ i18n.t('common.seeMore') }}</a>
-          </div>
         </div>
+
+        <button class="navBtn" type="button" (click)="nextFeatured()" [attr.aria-label]="i18n.t('home.next')">›</button>
       </div>
 
-      <button class="navBtn" type="button" (click)="nextFeatured()" [attr.aria-label]="i18n.t('home.next')">›</button>
-    </div>
-
-    <div class="dots" [attr.aria-label]="i18n.t('home.carouselNav')">
-      @for (e of featured(); track e.id; let i = $index) {
-        <button
-          class="dot"
-          type="button"
-          (click)="setFeatured(i)"
-          [class.active]="i === normalizedFeaturedIndex()"
-          [attr.aria-label]="i18n.t('home.goToSlide')"
-        ></button>
-      }
-    </div>
-  }
-
-  @if (eventsByCategory().length > 0) {
-    <div class="categoriesSection">
-      @for (entry of eventsByCategory(); track entry[0]) {
-        <div class="categoryRow">
-          <div class="categoryRowHeader">
-            <span class="categoryRowBar" [style.background]="categoryColor($any(entry[0]))"></span>
-            <h3 class="categoryRowTitle">{{ entry[0] }}</h3>
-          </div>
-          <div class="categoryRowNav">
-            <button class="rowNavBtn" type="button" (click)="rowScroll.scrollLeft -= rowScroll.offsetWidth * 0.8" aria-label="Précédent">‹</button>
-            <div class="categoryScroll" #rowScroll>
-              @for (ev of entry[1]; track ev.id) {
-                <a class="eventCard" [routerLink]="['/events', ev.id]"
-                   [style.background-image]="'url(' + resolveEventImageUrl(ev.categorie, ev.imageUrl) + ')'">
-                  <div class="eventCardOverlay">
-                    <span class="eventCardCat" [style.background]="categoryColor($any(ev.categorie))">{{ ev.categorie }}</span>
-                    <div class="eventCardTitle">{{ ev.titre }}</div>
-                    <div class="eventCardMeta">{{ ev.ville }} · {{ ev.dateDebut | date: 'dd/MM/yy' }}</div>
-                  </div>
-                </a>
-              }
-            </div>
-            <button class="rowNavBtn" type="button" (click)="rowScroll.scrollLeft += rowScroll.offsetWidth * 0.8" aria-label="Suivant">›</button>
-          </div>
-        </div>
-      }
-    </div>
-  }
-
-  <div class="newsHeader">
-    <h2 class="sectionTitle">{{ i18n.t('home.news') }}</h2>
-    <a class="btn" routerLink="/news">{{ i18n.t('home.seeAll') }}</a>
+      <div class="dots" [attr.aria-label]="i18n.t('home.carouselNav')">
+        @for (e of featured(); track e.id; let i = $index) {
+          <button
+            class="dot"
+            type="button"
+            (click)="setFeatured(i)"
+            [class.active]="i === normalizedFeaturedIndex()"
+            [attr.aria-label]="i18n.t('home.goToSlide')"
+          ></button>
+        }
+      </div>
+    }
   </div>
+</section>
 
-  @if (news().length === 0) {
-    <div class="empty">{{ i18n.t('home.noNews') }}</div>
-  } @else {
-    <div class="newsGrid">
-      @for (n of news(); track n.id) {
-        <article class="newsCard" routerLink="/news">
-          @if (newsImageUrl(n.image)) {
-            <div class="newsCardImg" [style.background-image]="'url(' + newsImageUrl(n.image) + ')'"></div>
-          } @else {
-            <div class="newsCardImgPlaceholder"></div>
-          }
-          <div class="newsCardBody">
-            <div class="newsCardMeta">{{ n.datePublication | date }}</div>
-            <div class="newsCardTitle">{{ n.titre }}</div>
-            <div class="newsCardText">{{ n.texte }}</div>
-          </div>
-        </article>
-      }
+<section class="homeBand homeBandTaupe waveTopOnly">
+  <div class="container pageContent">
+    <div class="sortieSectionWrap">
+      <h2 class="sectionTitle">💡 Idée de sortie ?</h2>
+      <div class="sortieButtons">
+        <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'RESTAURANT' }">
+          <span class="sortieBtnIcon">🍽️</span>
+          <span>Pour manger</span>
+        </a>
+        <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'SORTIE' }">
+          <span class="sortieBtnIcon">🎭</span>
+          <span>Pour sortir</span>
+        </a>
+        <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'BAR' }">
+          <span class="sortieBtnIcon">🍸</span>
+          <span>Pour boire un coup</span>
+        </a>
+        <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'ACTIVITE' }">
+          <span class="sortieBtnIcon">🏃</span>
+          <span>Pour s'activer</span>
+        </a>
+      </div>
     </div>
-  }
+  </div>
+</section>
+
+@if (eventsByCategory().length > 0) {
+  <section class="homeBand homeBandOrange homeBandOnOrange waveTopOnly">
+    <div class="container pageContent">
+      <div class="categoriesSection">
+        @for (entry of eventsByCategory(); track entry[0]) {
+          <div class="categoryRow">
+            <div class="categoryRowHeader">
+              <span class="categoryRowBar" [style.background]="categoryColor($any(entry[0]))"></span>
+              <h3 class="categoryRowTitle">{{ entry[0] }}</h3>
+            </div>
+            <div class="categoryRowNav">
+              <button class="rowNavBtn" type="button" (click)="rowScroll.scrollLeft -= rowScroll.offsetWidth * 0.8" aria-label="Précédent">‹</button>
+              <div class="categoryScroll" #rowScroll>
+                @for (ev of entry[1]; track ev.id) {
+                  <a class="eventCard" [routerLink]="['/events', ev.id]">
+                    <img class="eventCardImg" [src]="resolveEventImageUrl(ev.categorie, ev.imageUrl, ev.id)" [appEventImgFallback]="ev.categorie" [eventSeed]="ev.id" alt="" loading="lazy" />
+                    <div class="eventCardOverlay">
+                      <span class="eventCardCat" [style.background]="categoryColor($any(ev.categorie))">{{ ev.categorie }}</span>
+                      <div class="eventCardTitle">{{ ev.titre }}</div>
+                      <div class="eventCardMeta">{{ ev.ville }} · {{ ev.dateDebut | date: 'dd/MM/yy' }}</div>
+                    </div>
+                  </a>
+                }
+              </div>
+              <button class="rowNavBtn" type="button" (click)="rowScroll.scrollLeft += rowScroll.offsetWidth * 0.8" aria-label="Suivant">›</button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+}
+
+<section class="homeBand homeBandBase homeBandLast">
+  <div class="container pageContent">
+    <div class="newsHeader">
+      <h2 class="sectionTitle">{{ i18n.t('home.news') }}</h2>
+      <a class="btn" routerLink="/news">{{ i18n.t('home.seeAll') }}</a>
+    </div>
+
+    @if (news().length === 0) {
+      <div class="empty">{{ i18n.t('home.noNews') }}</div>
+    } @else {
+      <div class="newsGrid">
+        @for (n of news().slice(0, 3); track n.id) {
+          <article class="newsCard" routerLink="/news">
+            @if (newsImageUrl(n.image)) {
+              <div class="newsCardImg" [style.background-image]="'url(' + newsImageUrl(n.image) + ')'"></div>
+            } @else {
+              <div class="newsCardImgPlaceholder"></div>
+            }
+            <div class="newsCardBody">
+              <div class="newsCardMeta">{{ n.datePublication | date }}</div>
+              <div class="newsCardTitle">{{ n.titre }}</div>
+              <div class="newsCardText">{{ n.texte }}</div>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </div>
 </section>

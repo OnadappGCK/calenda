@@ -1,0 +1,120 @@
+@use 'palette' as *;
+
+.wrap {
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.card {
+  width: min(900px, 95vw);
+  border: 1px solid $border-1;
+  border-radius: 1rem;
+  background: $surface-1;
+  padding: 1rem;
+}
+
+.avatar {
+  width: 124px;
+  height: 124px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid $border-1;
+  display: block;
+  margin: 0 auto;
+}
+
+.pseudo {
+  margin: 0.75rem 0 0;
+  text-align: center;
+}
+
+.meta {
+  text-align: center;
+  color: $text-muted-2;
+}
+
+.bio {
+  margin: 0.9rem 0;
+  white-space: pre-line;
+}
+
+.muted {
+  color: $text-muted-2;
+}
+
+.counts {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0;
+}
+
+.pill {
+  border: 1px solid $border-1;
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  background: $overlay-1;
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border: 1px solid $border-1;
+  border-radius: 0.5rem;
+  background: $surface-1;
+  color: inherit;
+  text-decoration: none;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+}
+
+.btnPrimary {
+  border-color: $brand-primary;
+  background: $brand-primary;
+  color: #fff;
+}
+
+.assocBox {
+  margin-top: 0.9rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.listRow {
+  border: 1px solid $border-1;
+  border-radius: 0.75rem;
+  padding: 0.65rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.main {
+  min-width: 0;
+}
+
+.title {
+  font-weight: 800;
+}
+
+.line {
+  opacity: 0.88;
+}
+
+.error {
+  border: 1px solid $status-danger-border;
+  background: $status-danger-surface;
+  border-radius: 0.75rem;
+  padding: 0.7rem;
+}
+
+.empty {
+  color: $text-muted-2;
+}

@@ -45,32 +45,68 @@
     </label>
   </div>
 
+  <div class="tabs">
+    <button class="tabBtn" type="button" [class.isActive]="tab() === 'users'" (click)="setTab('users')">Comptes</button>
+    <button class="tabBtn" type="button" [class.isActive]="tab() === 'reports'" (click)="setTab('reports')">Reports profils</button>
+  </div>
+
   @if (loading()) {
     <div class="empty">Chargement…</div>
   } @else if (error()) {
     <div class="empty">Erreur: {{ error() }}</div>
   } @else {
-    @if (filteredSorted().length === 0) {
-      <div class="empty">Aucun compte.</div>
-    } @else {
-      <div class="list">
-        @for (u of filteredSorted(); track u.id) {
-          <div class="row">
-            <img class="avatar" [src]="profileImageUrl(u.profileImage)" alt="" />
-            <div class="main">
-              <div class="line1">
-                <span class="pseudo">{{ u.pseudo }}</span>
-                <span class="role">{{ u.isAdmin ? 'ADMIN' : '' }}</span>
+    @if (tab() === 'reports') {
+      @if (reports().length === 0) {
+        <div class="empty">Aucun report profil.</div>
+      } @else {
+        <div class="list">
+          @for (r of reports(); track r.id) {
+            <div class="row reportRow">
+              <div class="main">
+                <div class="line1">
+                  <span class="pseudo">{{ r.reported.pseudo }}</span>
+                  <span class="role">{{ r.reported.isBanned ? 'BANNI' : 'ACTIF' }}</span>
+                </div>
+                <div class="line2">Signalé par {{ r.reporter.pseudo }} ({{ r.reporter.email }})</div>
+                <div class="line2">Cible: {{ r.reported.email }}</div>
+                <div class="line3">{{ r.reason || 'Aucune raison fournie' }}</div>
+                <div class="line3">{{ r.createdAt | date: 'dd/MM/yyyy HH:mm' }}</div>
               </div>
-              <div class="line2">{{ u.email }}</div>
-              <div class="line3">{{ u.ville }} · {{ u.lieu }}</div>
+              <div class="actions">
+                @if (r.reported.isBanned) {
+                  <button class="btn" type="button" (click)="setBan(r.reported.id, false)">Débannir</button>
+                } @else {
+                  <button class="btn" type="button" (click)="setBan(r.reported.id, true)">Bannir</button>
+                }
+              </div>
             </div>
-            <div class="actions">
-              <button class="btn" type="button" (click)="openEdit(u)">Modifier</button>
+          }
+        </div>
+      }
+    } @else {
+      @if (filteredSorted().length === 0) {
+        <div class="empty">Aucun compte.</div>
+      } @else {
+        <div class="list">
+          @for (u of filteredSorted(); track u.id) {
+            <div class="row">
+              <img class="avatar" [src]="profileImageUrl(u.profileImage)" alt="" />
+              <div class="main">
+                <div class="line1">
+                  <span class="pseudo">{{ u.pseudo }}</span>
+                  <span class="role">{{ u.isAdmin ? 'ADMIN' : '' }} {{ u.isBanned ? '· BANNI' : '' }}</span>
+                </div>
+                <div class="line2">{{ u.email }}</div>
+                <div class="line2">{{ u.emailVerified ? 'Email vérifié' : 'Email non vérifié' }}</div>
+                <div class="line3">{{ u.ville }} · {{ u.lieu }}</div>
+              </div>
+              <div class="actions">
+                <button class="btn" type="button" (click)="openEdit(u)">Modifier</button>
+              </div>
             </div>
-          </div>
-        }
-      </div>
+          }
+        </div>
+      }
     }
   }
 </section>
@@ -164,6 +200,15 @@
           (ngModelChange)="onEditIsAdminChange($event)"
         />
         Admin
+      </label>
+
+      <label class="check">
+        <input
+          type="checkbox"
+          [ngModel]="edit()!.emailVerified"
+          (ngModelChange)="edit.set({ ...edit()!, emailVerified: $event })"
+        />
+        Email vérifié
       </label>
 
       <label class="field">

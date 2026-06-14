@@ -3,8 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+    "images:manifest": "node scripts/generate-category-image-manifest.cjs",
+    "prestart": "npm run images:manifest",
     "start": "ng serve",
+    "prebuild": "npm run images:manifest",
     "build": "ng build",
+    "prewatch": "npm run images:manifest",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:ssr:calenda-front": "node dist/calenda-front/server/server.mjs"

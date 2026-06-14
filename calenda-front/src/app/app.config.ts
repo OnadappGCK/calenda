@@ -5,7 +5,7 @@ import localeEn from '@angular/common/locales/en';
 import localeEs from '@angular/common/locales/es';
 import localeFr from '@angular/common/locales/fr';
 import localeIt from '@angular/common/locales/it';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
@@ -32,7 +32,13 @@ function resolveApiBaseUrl(): string {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter(
+      routes,
+      withInMemoryScrolling({
+        scrollPositionRestoration: 'top',
+        anchorScrolling: 'disabled',
+      }),
+    ),
     provideClientHydration(withEventReplay()),
     provideHttpClient(withInterceptors([authInterceptor])),
     {

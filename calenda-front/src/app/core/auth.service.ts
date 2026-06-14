@@ -14,6 +14,7 @@ export type AuthUser = {
   emailVerified: boolean;
   profileImage?: string | null;
   numero?: string | null;
+  bio?: string | null;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -64,9 +65,15 @@ export class AuthService {
       return;
     }
 
-    const me = await this.http.get<AuthUser>(`${this.apiBaseUrl}/users/me`).toPromise();
-    if (me) {
-      this.user.set(me);
+    try {
+      const me = await this.http.get<AuthUser>(`${this.apiBaseUrl}/users/me`).toPromise();
+      if (me) {
+        this.user.set(me);
+      }
+    } catch {
+      this.storage.remove(this.tokenKey);
+      this.token.set(null);
+      this.user.set(null);
     }
   }
 
