@@ -18,14 +18,14 @@ export class ConversationGroup {
   @Column({ type: 'text' })
   title!: string;
 
-  @Column({ type: 'text', nullable: true })
-  villeDepart!: string | null;
+  @Column({ name: 'villeDepart', type: 'text', nullable: true })
+  lieuRdv!: string | null;
 
-  @Column({ type: 'text', nullable: true })
-  trancheAge!: string | null;
+  @Column({ name: 'trancheAge', type: 'text', nullable: true })
+  heureRdv!: string | null;
 
-  @Column({ type: 'text', nullable: true })
-  ambiance!: string | null;
+  @Column({ name: 'ambiance', type: 'text', nullable: true })
+  contactRdv!: string | null;
 
   @Column({ type: 'text', default: 'OPEN' })
   status!: 'OPEN' | 'LOCKED' | 'DELETED';

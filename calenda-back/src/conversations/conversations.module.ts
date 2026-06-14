@@ -9,9 +9,11 @@ import { ConversationMessage } from './conversation-message.entity';
 import { ConversationParticipant } from './conversation-participant.entity';
 import { ConversationsController } from './conversations.controller';
 import { ConversationsService } from './conversations.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
+    NotificationsModule,
     TypeOrmModule.forFeature([
       Event,
       User,

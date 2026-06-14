@@ -28,6 +28,8 @@ import { SeedModule } from './seed/seed.module';
 import { User } from './users/user.entity';
 import { UserProfileReport } from './users/user-profile-report.entity';
 import { UsersModule } from './users/users.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { UserNotification } from './notifications/user-notification.entity';
 
 @Module({
   imports: [
@@ -69,6 +71,7 @@ import { UsersModule } from './users/users.module';
               ConversationMessageLike,
               UserProfileReport,
               EmailVerificationCode,
+              UserNotification,
             ],
             synchronize,
             uuidExtension: 'pgcrypto' as const,
@@ -93,6 +96,7 @@ import { UsersModule } from './users/users.module';
             ConversationMessageLike,
             UserProfileReport,
             EmailVerificationCode,
+            UserNotification,
           ],
           synchronize,
         };
@@ -104,6 +108,7 @@ import { UsersModule } from './users/users.module';
     EventsModule,
     NewsModule,
     ConversationsModule,
+    NotificationsModule,
     AdminModule,
     EtablissementsModule,
     SeedModule,

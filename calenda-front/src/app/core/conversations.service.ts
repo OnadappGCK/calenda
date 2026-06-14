@@ -10,7 +10,7 @@ export type ConversationGroupCardDto = {
   participantCount: number;
   firstMessagePreview: string;
   status: 'OPEN' | 'LOCKED' | 'DELETED';
-  options: { villeDepart: string | null; trancheAge: string | null; ambiance: string | null };
+  options: { lieuRdv: string | null; heureRdv: string | null; contactRdv: string | null };
   joinedByMe: boolean;
 };
 
@@ -48,9 +48,9 @@ export class ConversationsService {
     payload: {
       title: string;
       firstMessage: string;
-      villeDepart?: string;
-      trancheAge?: string;
-      ambiance?: string;
+      lieuRdv?: string;
+      heureRdv?: string;
+      contactRdv?: string;
     },
   ) {
     return this.http.post<{ id: string; title: string; createdAt: string; expiresAt: string; status: string }>(

@@ -3,20 +3,24 @@
 
 export const CATEGORY_FOLDER_FILES: Record<string, string[]> = {
   "ACTIVITES": [
-    "reu1.png"
+    "activite2.png"
   ],
   "ARTS_EXPOS": [
-    "expo1.png"
+    "art_expo2.png"
   ],
   "CULTURE_SPECTACLE": [
-    "spec1.png"
+    "culture_spectacle2.png"
   ],
-  "FAMILLE": [],
-  "SORTIE": [],
+  "FAMILLE": [
+    "famille2.png"
+  ],
+  "SORTIE": [
+    "sortie2.png"
+  ],
   "SPECIAL": [
-    "autre1.png"
+    "special2.png"
   ],
   "VIE_LOCALE": [
-    "fest1.png"
+    "vie_locale_2.png"
   ]
 };

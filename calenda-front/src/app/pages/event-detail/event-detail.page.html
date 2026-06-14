@@ -227,16 +227,16 @@
                 <div class="convMetaLine">👥 {{ g.participantCount }} participants</div>
                 <p class="convPreview">{{ g.firstMessagePreview || 'Aucun message.' }}</p>
 
-                @if (g.options.villeDepart || g.options.trancheAge || g.options.ambiance) {
+                @if (g.options.lieuRdv || g.options.heureRdv || g.options.contactRdv) {
                   <div class="convOptions">
-                    @if (g.options.villeDepart) {
-                      <span class="pill">Départ : {{ g.options.villeDepart }}</span>
+                    @if (g.options.lieuRdv) {
+                      <span class="pill">📍 {{ g.options.lieuRdv }}</span>
                     }
-                    @if (g.options.trancheAge) {
-                      <span class="pill">Âge : {{ g.options.trancheAge }}</span>
+                    @if (g.options.heureRdv) {
+                      <span class="pill">🕐 {{ g.options.heureRdv }}</span>
                     }
-                    @if (g.options.ambiance) {
-                      <span class="pill">Ambiance : {{ g.options.ambiance }}</span>
+                    @if (g.options.contactRdv) {
+                      <span class="pill">📞 {{ g.options.contactRdv }}</span>
                     }
                   </div>
                 }
@@ -264,16 +264,16 @@
 
             <div class="convOptionGrid">
               <label class="field">
-                Ville de départ (optionnel)
-                <input type="text" [ngModel]="newGroupVilleDepart()" (ngModelChange)="newGroupVilleDepart.set($event)" maxlength="120" />
+                Lieu de rendez-vous (optionnel)
+                <input type="text" [ngModel]="newGroupLieuRdv()" (ngModelChange)="newGroupLieuRdv.set($event)" maxlength="200" />
               </label>
               <label class="field">
-                Tranche d'âge (optionnel)
-                <input type="text" [ngModel]="newGroupTrancheAge()" (ngModelChange)="newGroupTrancheAge.set($event)" maxlength="80" />
+                Heure de rendez-vous (optionnel)
+                <input type="text" [ngModel]="newGroupHeureRdv()" (ngModelChange)="newGroupHeureRdv.set($event)" maxlength="80" />
               </label>
               <label class="field">
-                Ambiance (optionnel)
-                <input type="text" [ngModel]="newGroupAmbiance()" (ngModelChange)="newGroupAmbiance.set($event)" maxlength="80" />
+                Contact (optionnel)
+                <input type="text" [ngModel]="newGroupContactRdv()" (ngModelChange)="newGroupContactRdv.set($event)" maxlength="120" />
               </label>
             </div>
 

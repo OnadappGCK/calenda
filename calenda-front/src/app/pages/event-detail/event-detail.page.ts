@@ -127,9 +127,9 @@ export class EventDetailPage implements OnInit, OnDestroy {
   readonly createGroupError = signal<string | null>(null);
   readonly newGroupTitle = signal('');
   readonly newGroupMessage = signal('');
-  readonly newGroupVilleDepart = signal('');
-  readonly newGroupTrancheAge = signal('');
-  readonly newGroupAmbiance = signal('');
+  readonly newGroupLieuRdv = signal('');
+  readonly newGroupHeureRdv = signal('');
+  readonly newGroupContactRdv = signal('');
   readonly hasOwnActiveGroupForEvent = computed(() => {
     const me = this.auth.user();
     if (!me) return false;
@@ -420,9 +420,9 @@ export class EventDetailPage implements OnInit, OnDestroy {
     this.createGroupError.set(null);
     this.createGroupOpen.set(true);
     this.newGroupTitle.set('');
-    this.newGroupVilleDepart.set('');
-    this.newGroupTrancheAge.set('');
-    this.newGroupAmbiance.set('');
+    this.newGroupLieuRdv.set('');
+    this.newGroupHeureRdv.set('');
+    this.newGroupContactRdv.set('');
     this.newGroupMessage.set('Je souhaite trouver des gens pour aller à cet événement 😊');
   }
 
@@ -452,9 +452,9 @@ export class EventDetailPage implements OnInit, OnDestroy {
         .createGroup(e.id, {
           title,
           firstMessage,
-          villeDepart: this.newGroupVilleDepart().trim() || undefined,
-          trancheAge: this.newGroupTrancheAge().trim() || undefined,
-          ambiance: this.newGroupAmbiance().trim() || undefined,
+          lieuRdv: this.newGroupLieuRdv().trim() || undefined,
+          heureRdv: this.newGroupHeureRdv().trim() || undefined,
+          contactRdv: this.newGroupContactRdv().trim() || undefined,
         })
         .toPromise();
       await this.loadConversationGroups(e.id);

@@ -15,6 +15,7 @@ import { ConversationMessage } from './conversation-message.entity';
 import { ConversationParticipant } from './conversation-participant.entity';
 import { CreateConversationGroupDto } from './dto/create-conversation-group.dto';
 import { CreateConversationMessageDto } from './dto/create-conversation-message.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const MESSAGE_MIN_INTERVAL_MS = 15_000;
 const FLAG_THRESHOLD = 3;
@@ -30,6 +31,7 @@ export class ConversationsService {
     @InjectRepository(ConversationParticipant) private readonly participantsRepo: Repository<ConversationParticipant>,
     @InjectRepository(ConversationBlock) private readonly blocksRepo: Repository<ConversationBlock>,
     @InjectRepository(ConversationMessageLike) private readonly likesRepo: Repository<ConversationMessageLike>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private normalize(v: string | null | undefined) {
@@ -210,7 +212,7 @@ export class ConversationsService {
       participantCount: number;
       firstMessagePreview: string;
       status: 'OPEN' | 'LOCKED' | 'DELETED';
-      options: { villeDepart: string | null; trancheAge: string | null; ambiance: string | null };
+      options: { lieuRdv: string | null; heureRdv: string | null; contactRdv: string | null };
       joinedByMe: boolean;
     }>;
 
@@ -251,9 +253,9 @@ export class ConversationsService {
         firstMessagePreview: firstMessage?.content ?? '',
         status: group.status,
         options: {
-          villeDepart: group.villeDepart,
-          trancheAge: group.trancheAge,
-          ambiance: group.ambiance,
+          lieuRdv: group.lieuRdv,
+          heureRdv: group.heureRdv,
+          contactRdv: group.contactRdv,
         },
         joinedByMe: !!joined,
       });
@@ -290,9 +292,9 @@ export class ConversationsService {
       event,
       creator,
       title: this.normalize(dto.title),
-      villeDepart: this.cleanOptional(dto.villeDepart),
-      trancheAge: this.cleanOptional(dto.trancheAge),
-      ambiance: this.cleanOptional(dto.ambiance),
+      lieuRdv: this.cleanOptional(dto.lieuRdv),
+      heureRdv: this.cleanOptional(dto.heureRdv),
+      contactRdv: this.cleanOptional(dto.contactRdv),
       status: 'OPEN',
       expiresAt,
     });
@@ -431,6 +433,10 @@ export class ConversationsService {
     });
 
     const saved = await this.messagesRepo.save(message);
+
+    this.notificationsService
+      .createMessageNotification(group.id, group.event.id, group.event.titre, user.id, group.title)
+      .catch(() => {});
 
     return {
       id: saved.id,

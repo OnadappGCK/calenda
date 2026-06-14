@@ -13,16 +13,16 @@ export class CreateConversationGroupDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
+  lieuRdv?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  heureRdv?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(120)
-  villeDepart?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(80)
-  trancheAge?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(80)
-  ambiance?: string;
+  contactRdv?: string;
 }
