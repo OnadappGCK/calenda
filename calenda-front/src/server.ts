@@ -12,6 +12,13 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
+app.get('/runtime-config.js', (_req, res) => {
+  const turnstileSiteKey = JSON.stringify((process.env['TURNSTILE_SITE_KEY'] ?? '').trim());
+  res.setHeader('content-type', 'application/javascript; charset=utf-8');
+  res.setHeader('cache-control', 'no-store');
+  res.send(`window.__CALENDA_CONFIG__ = { turnstileSiteKey: ${turnstileSiteKey} };`);
+});
+
 /**
  * Example Express Rest API endpoints can be defined here.
  * Uncomment and define endpoints as necessary.

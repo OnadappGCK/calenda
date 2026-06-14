@@ -32,7 +32,9 @@
       </div>
     </label>
 
-    <button class="btn" type="submit">Se connecter</button>
+    <div id="loginTurnstile"></div>
+
+    <button class="btn" type="submit" [disabled]="submitting()">Se connecter</button>
   </form>
 
   <p class="hint">
