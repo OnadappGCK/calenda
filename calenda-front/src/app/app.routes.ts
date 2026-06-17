@@ -11,7 +11,13 @@ import { HomePage } from './pages/home/home.page';
 import { LoginPage } from './pages/login/login.page';
 import { NewsPage } from './pages/news/news.page';
 import { ProfilePage } from './pages/profile/profile.page';
+import { PublicProfileEventsPage } from './pages/public-profile-events/public-profile-events.page';
+import { PublicProfilePage } from './pages/public-profile/public-profile.page';
 import { RegisterPage } from './pages/register/register.page';
+import { VerifyEmailPage } from './pages/verify-email/verify-email.page';
+import { PlacesPage } from './pages/places/places.page';
+import { PlaceDetailPage } from './pages/place-detail/place-detail.page';
+import { QrRedirectPage } from './pages/qr-redirect/qr-redirect.page';
 
 export const routes: Routes = [
   { path: '', component: HomePage },
@@ -19,11 +25,17 @@ export const routes: Routes = [
   { path: 'contact', component: ContactPage },
   { path: 'login', component: LoginPage },
   { path: 'register', component: RegisterPage },
+  { path: 'verify-email', component: VerifyEmailPage },
   { path: 'calendar', component: CalendarPage },
   { path: 'events/:id', component: EventDetailPage },
+  { path: 'places', component: PlacesPage },
+  { path: 'places/:id', component: PlaceDetailPage },
   { path: 'favorites', component: FavoritesPage, canActivate: [requireAuthGuard] },
   { path: 'profile', component: ProfilePage, canActivate: [requireAuthGuard] },
+  { path: 'profiles/:id', component: PublicProfilePage },
+  { path: 'profiles/:id/events', component: PublicProfileEventsPage },
   { path: 'admin/pending-events', component: AdminPendingPage, canActivate: [requireAdminGuard] },
   { path: 'admin/accounts', component: AdminAccountsPage, canActivate: [requireAdminGuard] },
+  { path: 'redirect-qr', component: QrRedirectPage },
   { path: '**', redirectTo: '' },
 ];

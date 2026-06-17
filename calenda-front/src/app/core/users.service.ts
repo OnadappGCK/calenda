@@ -2,6 +2,18 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from './api.config';
 import { AuthUser } from './auth.service';
+import { EventDto } from './events.service';
+
+export type PublicProfileDto = {
+  id: string;
+  pseudo: string;
+  ville: string;
+  lieu: string;
+  profileImage: string | null;
+  bio: string | null;
+  upcomingCount: number;
+  totalCount: number;
+};
 
 @Injectable({ providedIn: 'root' })
 /** Service d'accès aux endpoints utilisateur (profil courant). */
@@ -11,27 +23,73 @@ export class UsersService {
 
   /** Récupère le profil complet de l'utilisateur courant. */
   me() {
-    return this.http.get<AuthUser & { ville: string; lieu: string; numero?: string | null }>(`${this.apiBaseUrl}/users/me`);
+    return this.http.get<AuthUser & { ville: string; lieu: string; numero?: string | null; bio?: string | null }>(
+      `${this.apiBaseUrl}/users/me`,
+    );
   }
 
   /** Met à jour le profil courant (pseudo/ville/lieu et éventuellement password). */
   updateMe(payload: {
+    email?: string;
     pseudo?: string;
     ville?: string;
     lieu?: string;
     profileImage?: string | null;
     numero?: string | null;
+    bio?: string | null;
     password?: string;
     passwordConfirmation?: string;
+    emailVerificationCode?: string;
   }) {
     return this.http.patch(`${this.apiBaseUrl}/users/me`, payload);
   }
 
-  requestEmailVerification() {
-    return this.http.post<{ ok: true; token?: string }>(`${this.apiBaseUrl}/users/me/request-email-verification`, {});
+  publicProfile(userId: string) {
+    return this.http.get<PublicProfileDto>(`${this.apiBaseUrl}/users/${userId}/profile`);
   }
 
-  verifyEmail(token: string) {
+  publicOrganizedEvents(
+    userId: string,
+    params?: {
+      upcoming?: 'true' | 'false';
+      q?: string;
+      categorie?: string;
+      ville?: string;
+      limit?: string;
+      offset?: string;
+    },
+  ) {
+    const cleanParams: Record<string, string> = {};
+    for (const [key, value] of Object.entries(params ?? {})) {
+      if (value === undefined || value === null) continue;
+      const trimmed = String(value).trim();
+      if (!trimmed) continue;
+      cleanParams[key] = trimmed;
+    }
+    return this.http.get<EventDto[]>(`${this.apiBaseUrl}/users/${userId}/events`, { params: cleanParams });
+  }
+
+  requestEmailVerification() {
+    return this.http.post<{ ok: true }>(`${this.apiBaseUrl}/users/me/request-email-verification`, {});
+  }
+
+  verifyEmail(code: string) {
+    return this.http.post<{ ok: true }>(`${this.apiBaseUrl}/users/me/verify-email`, { code });
+  }
+
+  verifyEmailToken(token: string) {
     return this.http.get<{ ok: true }>(`${this.apiBaseUrl}/users/verify-email`, { params: { token } });
+  }
+
+  requestEmailChangeVerification(email: string) {
+    return this.http.post<{ ok: true }>(`${this.apiBaseUrl}/users/me/request-email-change-verification`, { email });
+  }
+
+  requestPasswordChangeVerification() {
+    return this.http.post<{ ok: true }>(`${this.apiBaseUrl}/users/me/request-password-change-verification`, {});
+  }
+
+  reportProfile(userId: string, payload?: { reason?: string }) {
+    return this.http.post<{ ok: true; alreadyReported: boolean }>(`${this.apiBaseUrl}/users/${userId}/report`, payload ?? {});
   }
 }

@@ -98,6 +98,8 @@ app-calendar-page {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  max-width: 100%;
+  overflow-x: hidden;
 
   --cal-topbar-gap: 0.35rem;
   --cal-topbar-padding: 0.35rem;
@@ -155,7 +157,8 @@ app-calendar-page {
 }
 
 app-calendar-page .calendarContainer {
-  max-width: none;
+  max-width: 100%;
+  width: 100%;
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
@@ -163,6 +166,7 @@ app-calendar-page .calendarContainer {
   flex-direction: column;
   box-sizing: border-box;
   padding: 0.6rem;
+  overflow-x: hidden;
 }
 
 app-calendar-page .calendarViewport {
@@ -171,12 +175,16 @@ app-calendar-page .calendarViewport {
   height: auto;
   display: flex;
   flex-direction: column;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 app-calendar-page .scheduler {
   margin-top: 0.25rem;
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 app-calendar-page .schedScroll {
@@ -273,4 +281,39 @@ textarea {
   border-radius: 0.75rem;
   padding: 0.6rem 0.75rem;
   background: $surface-1;
+}
+
+/* ─── Rendu riche des actualités (Quill HTML via [innerHTML]) ─── */
+.newsContent h1,
+.newsContent h2,
+.newsContent h3 {
+  font-weight: 700;
+  margin: 0.6rem 0 0.3rem;
+}
+.newsContent h1 { font-size: 1.35rem; }
+.newsContent h2 { font-size: 1.15rem; }
+.newsContent h3 { font-size: 1rem; }
+
+.newsContent p { margin: 0.3rem 0; }
+
+.newsContent strong { font-weight: 700; }
+.newsContent em     { font-style: italic; }
+.newsContent u      { text-decoration: underline; }
+.newsContent s      { text-decoration: line-through; }
+
+.newsContent ul,
+.newsContent ol { padding-left: 1.4rem; margin: 0.3rem 0; }
+.newsContent li { margin: 0.15rem 0; }
+
+.newsContent a {
+  color: $brand-primary;
+  text-decoration: underline;
+}
+
+.newsContent img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.6rem;
+  margin: 0.5rem 0;
 }

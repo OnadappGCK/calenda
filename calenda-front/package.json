@@ -3,8 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+    "images:manifest": "node scripts/generate-category-image-manifest.cjs",
+    "prestart": "npm run images:manifest",
     "start": "ng serve",
+    "prebuild": "npm run images:manifest",
     "build": "ng build",
+    "prewatch": "npm run images:manifest",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:ssr:calenda-front": "node dist/calenda-front/server/server.mjs"
@@ -33,6 +37,8 @@
     "@angular/router": "^21.1.0",
     "@angular/ssr": "^21.1.0",
     "express": "^5.1.0",
+    "ngx-quill": "^30.1.3",
+    "quill": "^2.0.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

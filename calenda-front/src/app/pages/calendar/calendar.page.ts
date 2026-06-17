@@ -27,10 +27,10 @@ import {
   tagIconUrl,
 } from '../../core/event-ui';
 import { FavoritesService } from '../../core/favorites.service';
+import { EventImgFallbackDirective } from '../../shared/event-img-fallback.directive';
 import { I18nService } from '../../core/i18n.service';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
-
-type ImageChoice = { label: string; value: string };
+import { WeatherService, WeatherDay, weatherCodeToEmoji, moonPhaseEmoji, moonPhaseIconUrl, isFullMoonPeak } from '../../core/weather.service';
 
 /**
  * Villes toujours proposées en suggestion.
@@ -43,18 +43,46 @@ const PINNED_SUGGESTION_CITIES: Array<{ label: string; searchTerm: string }> = [
   { label: 'Carry-le-Rouet',  searchTerm: 'Carry'    },
 ];
 
-const CATEGORY_IMAGE_CHOICES: Record<EventCategory, ImageChoice[]> = {
-  Concert: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
-  Danse: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
-  Spectacle: [{ label: 'Générique', value: 'img/categorie/SPECTACLE/spec1.png' }],
-  'Feux d\u2019artifice': [{ label: 'Générique', value: 'img/categorie/FESTIVAL/fest1.png' }],
-  Exposition: [{ label: 'Générique', value: 'img/categorie/EXPOSITION/expo1.png' }],
-  Autre: [{ label: 'Générique', value: 'img/categorie/AUTRE/autre1.png' }],
-};
+const COTE_BLEUE_TERMS = [
+  'sausset les pins',
+  'sausset',
+  'carry le rouet',
+  'carry',
+  'la couronne',
+  'carro',
+  'ensues',
+];
+
+const COTE_BLEUE_LABEL = 'Côte Bleue';
+
+const IGNORED_FILTER_VALUES = new Set([
+  '',
+  '-',
+  'n/a',
+  'na',
+  'non renseigne',
+  'non renseignee',
+  'non indique',
+  'non mentionne',
+]);
+
+function normalizeFilterText(value: string): string {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[-‐‑‒–—―]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function isIgnoredFilterValue(value: string): boolean {
+  return IGNORED_FILTER_VALUES.has(normalizeFilterText(value));
+}
 
 @Component({
   selector: 'app-calendar-page',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, RouterLink, DatePipe, EventImgFallbackDirective],
   templateUrl: './calendar.page.html',
   styleUrl: './calendar.page.scss',
 })
@@ -72,6 +100,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly el = inject(ElementRef);
   private readonly photon = inject(PhotonService);
+  private readonly weather = inject(WeatherService);
 
   @ViewChild('schedScroll')
   private schedScroll?: ElementRef<HTMLElement>;
@@ -155,6 +184,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   readonly favoriteIds = signal<Set<string>>(new Set());
 
+  readonly weatherByDate = signal<Map<string, WeatherDay>>(new Map());
+  readonly weatherCityLbl = signal<string>('Sausset-les-Pins');
+  private lastWeatherCity = '';
+
   private readonly _viewMode = signal<'week' | 'day'>('week');
   private readonly _selectedDate = signal<string>(this.todayLocalKey());
 
@@ -178,6 +211,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   q = '';
   adresse = '';
+  adresseFilters: string[] = [];
   categorie: EventCategory | '' = '';
   favoris = false;
   includePending = false;
@@ -234,7 +268,14 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.dateFinFilter = dateFin && this.isDayKey(dateFin) ? dateFin : '';
 
     this.q = (pm.get('q') ?? '').trim();
-    this.adresse = (pm.get('adresse') ?? '').trim();
+    const legacyAdresse = (pm.get('adresse') ?? '').trim();
+    const adressesRaw = (pm.get('adresses') ?? '').trim();
+    this.adresse = '';
+    this.adresseFilters = this.normalizeAdresseTerms(
+      adressesRaw
+        ? adressesRaw.split(',').map((x) => x.trim())
+        : (legacyAdresse ? [legacyAdresse] : []),
+    );
 
     const cat = (pm.get('categorie') ?? '').trim();
     this.categorie = (cat as any) || '';
@@ -249,12 +290,19 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
     const tagsRaw = (pm.get('tags') ?? '').trim();
     if (tagsRaw) {
-      const allowed = new Set(this.availableTags);
+      const seen = new Set<string>();
       const tags = tagsRaw
         .split(',')
         .map((t) => t.trim())
         .filter((t) => !!t)
-        .filter((t) => allowed.has(t as EventTag))
+        .map((t) => this.canonicalTagValue(t))
+        .filter((t): t is EventTag => !!t)
+        .filter((t) => {
+          const key = this.normalizeFilterValue(t);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
         .slice(0, 3) as EventTag[];
       this.caracteristiquesFilter = tags;
     } else {
@@ -268,7 +316,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     qp['date'] = this.selectedDate;
     if (this.dateDebutFilter) qp['dateDebut'] = this.dateDebutFilter;
     if (this.dateFinFilter) qp['dateFin'] = this.dateFinFilter;
-    if (this.adresse) qp['adresse'] = this.adresse;
+    const adresses = this.selectedAdresseTerms();
+    if (adresses.length) qp['adresses'] = adresses.join(',');
     if (this.categorie) qp['categorie'] = this.categorie as string;
     if (this.q) qp['q'] = this.q;
     if (this.favoris) qp['favoris'] = '1';
@@ -407,7 +456,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       return {
         idx,
         minutesFromStart,
-        label: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`,
+        label: mm === 0 ? `${hh}h` : '30',
         isHour: mm === 0,
       };
     });
@@ -426,7 +475,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   newTitre = '';
   newDescription = '';
-  newCategorie: EventCategory = 'Concert';
+  newCategorie: EventCategory = 'Culture & spectacle';
   newVille = '';
   newAdresse = '';
   newLatitude: number | null = null;
@@ -435,10 +484,24 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   readonly newAdresseSuggestOpen = signal<boolean>(false);
   private newAdresseSuggestToken = 0;
   newCaracteristiques: EventTag[] = [];
+  newImageMode: 'auto' | 'external' = 'auto';
   newImageUrl = '';
+  newImagePreviewState: 'idle' | 'loading' | 'loaded' | 'error' = 'idle';
   newContact = '';
-  newDateDebut = '';
-  newDateFin = '';
+  newSlots: { date: string; heureDebut: string; heureFin: string }[] = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
+
+  newWeeklyForm: { dateDebut: string; dateFin: string; heureDebut: string; heureFin: string; days: Set<number> } | null = null;
+  newWeeklyFormError: string | null = null;
+
+  readonly slotWeekDays = [
+    { num: 1, label: 'Lundi' },
+    { num: 2, label: 'Mardi' },
+    { num: 3, label: 'Mercredi' },
+    { num: 4, label: 'Jeudi' },
+    { num: 5, label: 'Vendredi' },
+    { num: 6, label: 'Samedi' },
+    { num: 0, label: 'Dimanche' },
+  ] as const;
 
   newHoneypot = '';
 
@@ -450,55 +513,136 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   protected readonly tagIconUrl = tagIconUrl;
 
   eventImageUrl(e: EventDto) {
-    return resolveEventImageUrl(e.categorie, e.imageUrl);
+    return resolveEventImageUrl(e.categorie, e.imageUrl, e.id);
   }
 
   displayAdresse(e: EventDto) {
     return (e.adresse ?? e.lieu ?? '').trim();
   }
 
+  private tagKey(tag: EventTag | string) {
+    const map: Record<string, string> = {
+      CONCERT: 'concert',
+      SPORT: 'sport',
+      DANSE: 'danse',
+      CONCOURS: 'concours',
+      FEU_DARTIFICE: 'feuDartifice',
+      ENFANT: 'enfant',
+      FAMILLE: 'famille',
+      ADULTE: 'adulte',
+      TOUT_PUBLIC: 'toutPublic',
+      PLEIN_AIR: 'pleinAir',
+      INTERIEUR: 'interieur',
+      MUSIQUE: 'musique',
+      FESTIF: 'festif',
+      CALME: 'calme',
+      CULTUREL: 'culturel',
+      RENCONTRE: 'rencontre',
+      NETWORKING: 'networking',
+      FOOD: 'food',
+      BOISSON: 'boisson',
+      DJ: 'dj',
+      LIVE: 'live',
+      JOUR: 'jour',
+      NUIT: 'nuit',
+    };
+    return map[tag] ?? tag.toLowerCase();
+  }
+
+  tagLabel(tag: EventTag | string) {
+    return this.i18n.t(`eventDetail.tags.${this.tagKey(tag)}`);
+  }
+
+  private normalizeFilterValue(value: string) {
+    return normalizeFilterText(value);
+  }
+
+  private normalizeAdresseTerms(values: string[]) {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const raw of values) {
+      const v = (raw ?? '').trim();
+      if (!v || isIgnoredFilterValue(v)) continue;
+      const key = this.normalizeFilterValue(v);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(v);
+    }
+    return out;
+  }
+
+  private selectedAdresseTerms() {
+    return this.normalizeAdresseTerms([...this.adresseFilters, (this.adresse ?? '').trim()]);
+  }
+
+  private addAdresseFilter(value: string) {
+    this.adresseFilters = this.normalizeAdresseTerms([...this.adresseFilters, value]);
+  }
+
+  private canonicalTagValue(value: string): EventTag | null {
+    const key = this.normalizeFilterValue(value);
+    const found = this.availableTags.find((t) => this.normalizeFilterValue(t) === key);
+    return found ?? null;
+  }
+
   mergedBlockTags(eventIds: string[]): string[] {
     const evMap = new Map(this.events().map((e) => [e.id, e]));
-    const seen = new Set<string>();
-    const result: string[] = [];
+    const freq = new Map<string, number>();
     for (const id of eventIds) {
       const ev = evMap.get(id);
       if (!ev) continue;
       for (const tag of ev.caracteristiques ?? []) {
-        if (!seen.has(tag)) {
-          seen.add(tag);
-          result.push(tag);
-          if (result.length >= 5) return result;
-        }
+        freq.set(tag, (freq.get(tag) ?? 0) + 1);
       }
     }
-    return result;
-  }
-
-  newImageOptions(): ImageChoice[] {
-    return CATEGORY_IMAGE_CHOICES[this.newCategorie] ?? [];
+    return [...freq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([tag]) => tag);
   }
 
   newImagePreviewUrl() {
-    return resolveEventImageUrl(this.newCategorie, this.newImageUrl ? this.newImageUrl : null);
+    const externalUrl = (this.newImageUrl ?? '').trim();
+    const imageUrl = this.newImageMode === 'external' && externalUrl ? externalUrl : null;
+    return resolveEventImageUrl(this.newCategorie, imageUrl, 'new-event-preview');
   }
 
   onNewCategorieChange() {
-    this.newImageUrl = '';
+    if (this.newImageMode === 'auto') {
+      this.newImageUrl = '';
+    }
+  }
+
+  onNewImageModeChange() {
+    if (this.newImageMode === 'auto') {
+      this.newImageUrl = '';
+      this.newImagePreviewState = 'idle';
+      return;
+    }
+    this.newImagePreviewState = (this.newImageUrl ?? '').trim() ? 'loading' : 'idle';
+  }
+
+  onNewExternalImageUrlChange(value: string) {
+    this.newImageUrl = (value ?? '').trim();
+    this.newImagePreviewState = this.newImageUrl ? 'loading' : 'idle';
+  }
+
+  onNewImagePreviewLoad() {
+    if (this.newImageMode !== 'external' || !this.newImageUrl) return;
+    this.newImagePreviewState = 'loaded';
+  }
+
+  onNewImagePreviewError() {
+    if (this.newImageMode !== 'external' || !this.newImageUrl) return;
+    this.newImagePreviewState = 'error';
   }
 
   readonly availableTags: EventTag[] = [
-    'MUSIQUE',
-    'DANSE',
-    'PLEIN AIR',
-    'RENCONTRE',
-    'FEU D’ARTIFICE',
-    'SPORT',
-    'MARCHÉ',
-    'COMPÉTITION',
-    'HUMOUR',
-    'ART',
-    'VISITE',
+    'CONCERT', 'SPORT', 'DANSE', 'CONCOURS', 'FEU_DARTIFICE',
+    'ENFANT', 'FAMILLE', 'ADULTE', 'TOUT_PUBLIC',
+    'PLEIN_AIR', 'INTERIEUR', 'MUSIQUE', 'FESTIF', 'CALME',
+    'CULTUREL', 'RENCONTRE', 'NETWORKING',
+    'FOOD', 'BOISSON', 'DJ', 'LIVE',
   ];
 
   readonly selectedDateObj = computed(() => {
@@ -579,10 +723,32 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   readonly eventsByDay = computed(() => {
     const map = new Map<string, EventDto[]>();
     for (const e of this.events()) {
-      const key = this.localKeyFromIso(e.dateDebut);
-      const arr = map.get(key) ?? [];
-      arr.push(e);
-      map.set(key, arr);
+      if (e.slots && e.slots.length > 0) {
+        for (const slot of e.slots) {
+          const arr = map.get(slot.date) ?? [];
+          arr.push({
+            ...e,
+            dateDebut: `${slot.date}T${slot.heureDebut}:00`,
+            dateFin: `${slot.date}T${slot.heureFin}:00`,
+          } as EventDto);
+          map.set(slot.date, arr);
+        }
+      } else {
+        const startKey = this.localKeyFromIso(e.dateDebut);
+        const endKey = e.dateFin ? this.localKeyFromIso(e.dateFin) : startKey;
+        let cur = startKey;
+        const added = new Set<string>();
+        while (cur <= endKey) {
+          if (!added.has(cur)) {
+            const arr = map.get(cur) ?? [];
+            arr.push(e);
+            map.set(cur, arr);
+            added.add(cur);
+          }
+          cur = this.nextDayKey(cur);
+          if (cur > endKey) break;
+        }
+      }
     }
     for (const [k, arr] of map.entries()) {
       arr.sort((a, b) => a.dateDebut.localeCompare(b.dateDebut) || a.titre.localeCompare(b.titre));
@@ -757,6 +923,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Hook Angular: initialise listeners (resize/navigation) puis charge favoris + événements. */
   async ngOnInit() {
+    const shouldOpenPropose = typeof window !== 'undefined' && !!history.state?.openPropose;
+
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', this.onResize);
     }
@@ -815,6 +983,15 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
     void this.loadSuggestionPool();
     await this.reload();
+
+    if (shouldOpenPropose) {
+      await this.openPropose();
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        replaceUrl: true,
+        state: { ...history.state, openPropose: undefined },
+      });
+    }
   }
 
   cityButtons() {
@@ -822,7 +999,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   pickCity(city: string) {
-    this.adresse = city;
+    this.addAdresseFilter(city);
+    this.adresse = '';
     this.adresseSuggestions.set([]);
     this.adresseSuggestOpen.set(false);
   }
@@ -847,7 +1025,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   chooseAdresseSuggestion(f: PhotonFeature) {
-    this.adresse = this.photon.label(f);
+    this.addAdresseFilter(this.photon.label(f));
+    this.adresse = '';
     this.adresseSuggestions.set([]);
     this.adresseSuggestOpen.set(false);
   }
@@ -913,6 +1092,48 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** Recharge la liste des favoris du user (si connecté). */
+  private async refreshWeather() {
+    const resolved = this.weather.resolveCity(this.selectedAdresseTerms()[0] ?? this.adresse ?? '');
+    if (resolved.key === this.lastWeatherCity) return;
+    this.lastWeatherCity = resolved.key;
+    this.weatherCityLbl.set(resolved.label);
+    const days = await this.weather.getWeeklyWeather(resolved.lat, resolved.lon, resolved.key);
+    this.weatherByDate.set(new Map(days.map((d) => [d.date, d])));
+  }
+
+  private matchesAdresseFilters(e: EventDto) {
+    const terms = this.selectedAdresseTerms();
+    if (!terms.length) return true;
+    const city = this.normalizeFilterValue(e.ville ?? '');
+    const addr = this.normalizeFilterValue(e.adresse ?? '');
+    const lieu = this.normalizeFilterValue(e.lieu ?? '');
+    return terms.some((term) => {
+      const t = this.normalizeFilterValue(term);
+      if (!t) return false;
+      return city.includes(t) || addr.includes(t) || lieu.includes(t);
+    });
+  }
+
+  weatherEmoji(dateKey: string): string {
+    return weatherCodeToEmoji(this.weatherByDate().get(dateKey)?.code);
+  }
+
+  currentWeatherEmoji(): string {
+    return this.weatherEmoji(this.todayLocalKey());
+  }
+
+  moonPhase(dateKey: string): string {
+    return moonPhaseEmoji(dateKey);
+  }
+
+  isFullMoon(dateKey: string): boolean {
+    return isFullMoonPeak(dateKey);
+  }
+
+  moonPhaseUrl(dateKey: string): string {
+    return moonPhaseIconUrl(dateKey);
+  }
+
   private async reloadFavorites() {
     if (!this.auth.isLoggedIn()) {
       this.favoriteIds.set(new Set());
@@ -929,6 +1150,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
    * Sérialisé pour éviter les courses (refreshs rapides) et recalculer le layout à la fin.
    */
   async reload() {
+    void this.refreshWeather();
     if (this.reloadInFlight) {
       this.reloadQueued = true;
       this.dbg('reload queued');
@@ -946,7 +1168,6 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       if (fromTo.to) params['to'] = fromTo.to;
 
       if (this.q) params['q'] = this.q;
-      if (this.adresse) params['adresse'] = this.adresse;
       if (this.categorie) params['categorie'] = this.categorie as string;
       if (this.favoris) params['favoris'] = 'true';
       if (this.includePending && !!this.auth.user()?.isAdmin) params['includePending'] = '1';
@@ -962,7 +1183,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
       const res = await this.eventsService.list(params).toPromise();
       if (token === this.reloadToken) {
-        this.events.set(res ?? []);
+        this.events.set((res ?? []).filter((e) => this.matchesAdresseFilters(e)));
 
         /** Recharge aussi la liste "à venir" (démarre à la première page) en vue semaine et journée. */
         this.resetUpcoming();
@@ -1093,7 +1314,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       }
 
       const items = res ?? [];
-      const next = [...this.upcomingEvents(), ...items];
+      const filteredItems = items.filter((e) => this.matchesAdresseFilters(e));
+      const next = [...this.upcomingEvents(), ...filteredItems];
       this.upcomingEvents.set(next);
       this.upcomingOffset += items.length;
       this.upcomingHasMore.set(items.length === this.upcomingPageSize);
@@ -1114,6 +1336,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   reset() {
     this.q = '';
     this.adresse = '';
+    this.adresseFilters = [];
     this.categorie = '';
     this.favoris = false;
     this.includePending = false;
@@ -1178,10 +1401,17 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Construit la liste de chips (tags) affichés pour représenter les filtres actifs. */
   activeChips() {
     const chips: Array<{ key: string; label: string }> = [];
-    if (this.adresse) chips.push({ key: 'adresse', label: this.adresse });
+    for (const city of this.selectedAdresseTerms()) {
+      chips.push({ key: `adresse:${this.normalizeFilterValue(city)}`, label: city });
+    }
     if (this.categorie) chips.push({ key: 'categorie', label: this.categorie });
     if (this.q) chips.push({ key: 'q', label: this.q });
-    if (this.caracteristiquesFilter.length) chips.push({ key: 'caracteristiques', label: this.caracteristiquesFilter.join(', ') });
+    if (this.caracteristiquesFilter.length) {
+      chips.push({
+        key: 'caracteristiques',
+        label: this.caracteristiquesFilter.map((t) => this.tagLabel(t)).join(', '),
+      });
+    }
     if (this.dateDebutFilter) chips.push({ key: 'dateDebut', label: this.i18n.t('calendar.fromChip', { date: this.dateDebutFilter }) });
     if (this.dateFinFilter) chips.push({ key: 'dateFin', label: this.i18n.t('calendar.toChip', { date: this.dateFinFilter }) });
     if (this.favoris) chips.push({ key: 'favoris', label: this.i18n.t('calendar.favorites') });
@@ -1204,64 +1434,126 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** Retourne les suggestions de filtres (villes/catégories/tags) triées par fréquence, hors filtres déjà actifs. */
-  suggestionChips(): Array<{ type: 'city' | 'category' | 'tag'; value: string; label: string }> {
+  suggestionChips(): Array<{ type: 'city' | 'city_group' | 'category' | 'tag'; value: string; label: string }> {
     const pool = this.suggestionPool();
-    const cityCount = new Map<string, number>();
-    const catCount = new Map<string, number>();
-    const tagCount = new Map<string, number>();
+    const cityCount = new Map<string, { value: string; label: string; count: number; pinned: boolean }>();
+    const catCount = new Map<string, { value: string; label: string; count: number }>();
+    const tagCount = new Map<string, { value: string; label: string; count: number }>();
+
     for (const e of pool) {
       if (e.ville) {
-        const k = e.ville.trim().toLowerCase();
-        cityCount.set(k, (cityCount.get(k) ?? 0) + 1);
+        const city = e.ville.trim();
+        const cityKey = this.normalizeFilterValue(city);
+        if (cityKey && !isIgnoredFilterValue(city)) {
+          const current = cityCount.get(cityKey);
+          if (current) {
+            current.count += 1;
+          } else {
+            cityCount.set(cityKey, { value: city, label: city, count: 1, pinned: false });
+          }
+        }
       }
-      catCount.set(e.categorie, (catCount.get(e.categorie) ?? 0) + 1);
+
+      const cat = `${e.categorie ?? ''}`.trim();
+      const catKey = this.normalizeFilterValue(cat);
+      if (catKey && !isIgnoredFilterValue(cat)) {
+        const currentCat = catCount.get(catKey);
+        if (currentCat) {
+          currentCat.count += 1;
+        } else {
+          catCount.set(catKey, { value: cat, label: cat, count: 1 });
+        }
+      }
+
       for (const tag of e.caracteristiques ?? []) {
-        tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+        const canonicalTag = this.canonicalTagValue(String(tag));
+        if (!canonicalTag) continue;
+        const key = this.normalizeFilterValue(canonicalTag);
+        const label = this.tagLabel(canonicalTag);
+        if (!key || isIgnoredFilterValue(label)) continue;
+        const currentTag = tagCount.get(key);
+        if (currentTag) {
+          currentTag.count += 1;
+        } else {
+          tagCount.set(key, { value: canonicalTag, label, count: 1 });
+        }
       }
     }
+
     // Villes fixées toujours présentes (clé en minuscules)
     for (const p of PINNED_SUGGESTION_CITIES) {
-      const k = p.label.toLowerCase();
-      if (!cityCount.has(k)) cityCount.set(k, 0);
-    }
-    const activeCity = this.adresse.trim().toLowerCase();
-    const activeCat = (this.categorie ?? '').toLowerCase();
-    const activeTags = new Set(this.caracteristiquesFilter.map(t => t.toLowerCase()));
-    const canAddTag = this.caracteristiquesFilter.length < 3;
-    const all: Array<{ type: 'city' | 'category' | 'tag'; value: string; label: string; count: number; pinned: boolean }> = [];
-    for (const [cityKey, count] of cityCount.entries()) {
-      const pinnedEntry = PINNED_SUGGESTION_CITIES.find(p => p.label.toLowerCase() === cityKey);
-      const label = pinnedEntry ? pinnedEntry.label : cityKey;
-      const searchTerm = pinnedEntry ? pinnedEntry.searchTerm : cityKey;
-      if (searchTerm.toLowerCase() !== activeCity)
-        all.push({ type: 'city', value: searchTerm, label, count, pinned: !!pinnedEntry });
-    }
-    for (const [cat, count] of catCount.entries()) {
-      if (cat.toLowerCase() !== activeCat)
-        all.push({ type: 'category', value: cat, label: cat, count, pinned: false });
-    }
-    if (canAddTag) {
-      for (const [tag, count] of tagCount.entries()) {
-        if (!activeTags.has(tag.toLowerCase()))
-          all.push({ type: 'tag', value: tag, label: tag, count, pinned: false });
+      const key = this.normalizeFilterValue(p.label);
+      const current = cityCount.get(key);
+      if (current) {
+        current.pinned = true;
+        current.label = p.label;
+        current.value = p.searchTerm;
+      } else {
+        cityCount.set(key, { value: p.searchTerm, label: p.label, count: 0, pinned: true });
       }
     }
+
+    const activeCities = new Set(this.selectedAdresseTerms().map((x) => this.normalizeFilterValue(x)));
+    const activeCat = this.normalizeFilterValue(this.categorie ?? '');
+    const activeTags = new Set(this.caracteristiquesFilter.map((t) => this.normalizeFilterValue(t)));
+    const canAddTag = this.caracteristiquesFilter.length < 3;
+    const all: Array<{ type: 'city' | 'category' | 'tag'; value: string; label: string; count: number; pinned: boolean }> = [];
+
+    for (const [cityKey, city] of cityCount.entries()) {
+      if (!activeCities.has(cityKey))
+        all.push({ type: 'city', value: city.value, label: city.label, count: city.count, pinned: city.pinned });
+    }
+
+    for (const [catKey, cat] of catCount.entries()) {
+      if (catKey !== activeCat)
+        all.push({ type: 'category', value: cat.value, label: cat.label, count: cat.count, pinned: false });
+    }
+
+    if (canAddTag) {
+      for (const [tagKey, tag] of tagCount.entries()) {
+        if (!activeTags.has(tagKey))
+          all.push({ type: 'tag', value: tag.value, label: tag.label, count: tag.count, pinned: false });
+      }
+    }
+
     // Villes fixées en tête, puis tri par fréquence décroissante
-    return all
+    const suggestions: Array<{ type: 'city' | 'city_group' | 'category' | 'tag'; value: string; label: string }> = all
       .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.count - a.count)
-      .slice(0, 12);
+      .filter((item, idx, arr) => arr.findIndex((x) => this.normalizeFilterValue(x.label) === this.normalizeFilterValue(item.label)) === idx)
+      .slice(0, 10);
+
+    const allCoteBleueActive = COTE_BLEUE_TERMS.every((term) => activeCities.has(this.normalizeFilterValue(term)));
+    if (!allCoteBleueActive) {
+      suggestions.unshift({
+        type: 'city_group',
+        value: COTE_BLEUE_TERMS.join(','),
+        label: COTE_BLEUE_LABEL,
+      });
+    }
+
+    return suggestions.slice(0, 10);
   }
 
   /** Active un filtre suggéré et relance le chargement. */
   applySuggestion(type: string, value: string) {
     if (type === 'city') {
-      this.adresse = value;
+      this.addAdresseFilter(value);
+      this.adresse = '';
+    } else if (type === 'city_group') {
+      const parts = value
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
+      this.adresseFilters = this.normalizeAdresseTerms([...this.adresseFilters, ...parts]);
+      this.adresse = '';
     } else if (type === 'category') {
       this.categorie = value as EventCategory;
     } else if (type === 'tag') {
       const current = this.caracteristiquesFilter;
-      if (!current.includes(value as EventTag) && current.length < 3)
-        this.caracteristiquesFilter = [...current, value as EventTag];
+      const canonical = this.canonicalTagValue(value);
+      const currentKeys = new Set(current.map((t) => this.normalizeFilterValue(t)));
+      if (canonical && !currentKeys.has(this.normalizeFilterValue(canonical)) && current.length < 3)
+        this.caracteristiquesFilter = [...current, canonical];
     }
     this.syncUrl();
     void this.reload();
@@ -1270,7 +1562,12 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   /** Retire un filtre correspondant à une chip, puis relance un reload (sauf chip date). */
   clearChip(key: string) {
     if (key === 'date') return;
-    if (key === 'adresse') this.adresse = '';
+    if (key.startsWith('adresse:')) {
+      const normalized = key.slice('adresse:'.length);
+      const terms = this.selectedAdresseTerms().filter((t) => this.normalizeFilterValue(t) !== normalized);
+      this.adresseFilters = this.normalizeAdresseTerms(terms);
+      this.adresse = '';
+    }
     if (key === 'categorie') this.categorie = '';
     if (key === 'q') this.q = '';
     if (key === 'caracteristiques') this.caracteristiquesFilter = [];
@@ -1535,7 +1832,10 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
   /**
    * Calcule le layout (top/height/colonnes) des blocs d'événements pour un jour.
-   * Gère le clipping sur la fenêtre, le regroupement des overlaps, et le bloc "n événements".
+   * Algo en 2 passes :
+   *  1. Sweep-line → repère les plages horaires où > 3 événements se chevauchent simultanément.
+   *  2. Les événements touchant ces plages forment des blocs fusionnés ; les autres sont
+   *     affectés goulûment à 3 colonnes max, en réutilisant les colonnes libérées.
    */
   private computeLayoutForDay(dayKey: string, items: EventDto[]): Array<LayoutItem> {
     const total = this.windowMinutes();
@@ -1544,16 +1844,8 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
         const s = this.minutesFromWindowStart(dayKey, e.dateDebut);
         let end = e.dateFin ? this.minutesFromWindowStart(dayKey, e.dateFin) : total;
         if (end < s) end = s + 30;
-
-        // Display events that overlap the window (clipped), excluding pure nocturne events.
-        if (this.isNocturne(e)) {
-          return null;
-        }
-
-        if (end <= 0 || s >= total) {
-          return null;
-        }
-
+        if (this.isNocturne(e)) return null;
+        if (end <= 0 || s >= total) return null;
         const startClamped = Math.max(0, Math.min(total, s));
         const endClamped = Math.max(0, Math.min(total, end));
         return { e, s: startClamped, end: Math.max(startClamped + 10, endClamped) };
@@ -1561,65 +1853,126 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       .filter((x): x is NonNullable<typeof x> => x !== null)
       .sort((a, b) => a.s - b.s || a.end - b.end || a.e.titre.localeCompare(b.e.titre));
 
-    const groups: Array<Array<(typeof normalized)[number]>> = [];
-    let current: Array<(typeof normalized)[number]> = [];
-    let currentEnd = -1;
-    for (const it of normalized) {
-      if (current.length === 0) {
-        current = [it];
-        currentEnd = it.end;
-        continue;
-      }
-      if (it.s < currentEnd) {
-        current.push(it);
-        currentEnd = Math.max(currentEnd, it.end);
-      } else {
-        groups.push(current);
-        current = [it];
-        currentEnd = it.end;
-      }
-    }
-    if (current.length) groups.push(current);
-
     const pxPerMinute = this.slotPx() / this.minutesPerSlot;
     const out: LayoutItem[] = [];
+    if (normalized.length === 0) return out;
+
+    // ── Passe 1 : sweep-line → plages surchargées (> 3 événements en même temps) ──
+    const pts: Array<{ t: number; delta: number }> = [];
+    for (const n of normalized) {
+      pts.push({ t: n.s, delta: 1 });
+      pts.push({ t: n.end, delta: -1 });
+    }
+    pts.sort((a, b) => a.t - b.t || a.delta - b.delta); // fin avant début à t égal
+
+    const overloads: Array<{ from: number; to: number }> = [];
+    let cnt = 0, oStart = -1;
+    for (const p of pts) {
+      cnt += p.delta;
+      if (cnt > 3 && oStart === -1) { oStart = p.t; }
+      else if (cnt <= 3 && oStart !== -1) { overloads.push({ from: oStart, to: p.t }); oStart = -1; }
+    }
+    if (oStart !== -1) overloads.push({ from: oStart, to: total + 1 });
+
+    // ── Passe 2 : marquer les événements qui touchent une plage surchargée ──
+    const mergeSet = new Set<number>();
+    for (let i = 0; i < normalized.length; i++) {
+      for (const ol of overloads) {
+        if (normalized[i].s < ol.to && normalized[i].end > ol.from) { mergeSet.add(i); break; }
+      }
+    }
+
+    // ── Passe 3 : construire les composantes connexes des événements à fusionner ──
+    type MergeComp = { indices: number[]; top: number; bottom: number };
+    const mergeComps: MergeComp[] = [];
+    if (mergeSet.size > 0) {
+      const visited = new Set<number>();
+      for (const seed of mergeSet) {
+        if (visited.has(seed)) continue;
+        const comp: number[] = [];
+        const queue = [seed];
+        while (queue.length) {
+          const curr = queue.pop()!;
+          if (visited.has(curr)) continue;
+          visited.add(curr); comp.push(curr);
+          for (const other of mergeSet) {
+            if (!visited.has(other)) {
+              const a = normalized[curr], b = normalized[other];
+              if (a.s < b.end && a.end > b.s) queue.push(other);
+            }
+          }
+        }
+        const ci = comp.map((i) => normalized[i]);
+        mergeComps.push({
+          indices: comp,
+          top: Math.min(...ci.map((x) => x.s)),
+          bottom: Math.max(...ci.map((x) => x.end)),
+        });
+      }
+    }
+
+    // ── Passe 4 : affectation greedy en colonnes pour TOUS les candidats
+    //    (blocs fusionnés + événements individuels) afin d'éviter tout chevauchement visuel ──
+    type Candidate =
+      | { kind: 'merge'; comp: MergeComp }
+      | { kind: 'single'; item: (typeof normalized)[number] };
+
+    const candidates: Candidate[] = [
+      ...mergeComps.map((comp): Candidate => ({ kind: 'merge', comp })),
+      ...normalized.filter((_, i) => !mergeSet.has(i)).map((item): Candidate => ({ kind: 'single', item })),
+    ];
+    candidates.sort((a, b) => {
+      const as = a.kind === 'single' ? a.item.s : a.comp.top;
+      const bs = b.kind === 'single' ? b.item.s : b.comp.top;
+      const ae = a.kind === 'single' ? a.item.end : a.comp.bottom;
+      const be = b.kind === 'single' ? b.item.end : b.comp.bottom;
+      return as - bs || ae - be;
+    });
+
+    const groups: Array<Candidate[]> = [];
+    let cur: Candidate[] = [], curEnd = -1;
+    for (const c of candidates) {
+      const cs = c.kind === 'single' ? c.item.s : c.comp.top;
+      const ce = c.kind === 'single' ? c.item.end : c.comp.bottom;
+      if (!cur.length) { cur = [c]; curEnd = ce; }
+      else if (cs < curEnd) { cur.push(c); curEnd = Math.max(curEnd, ce); }
+      else { groups.push(cur); cur = [c]; curEnd = ce; }
+    }
+    if (cur.length) groups.push(cur);
 
     for (const g of groups) {
-      if (g.length >= 4) {
-        const top = Math.min(...g.map((x) => x.s));
-        const bottom = Math.max(...g.map((x) => x.end));
-        out.push({
-          kind: 'merged',
-          count: g.length,
-          eventIds: g.map((x) => x.e.id),
-          topPx: top * pxPerMinute,
-          heightPx: Math.max(18, (bottom - top) * pxPerMinute),
-        });
-        continue;
-      }
-
       const colEnds = [-1, -1, -1];
-      const placed: Array<{ it: (typeof g)[number]; col: number }> = [];
-      for (const it of g) {
+      const placed: Array<{ c: Candidate; col: number }> = [];
+      for (const c of g) {
+        const cs = c.kind === 'single' ? c.item.s : c.comp.top;
         let col = 0;
-        while (col < 3 && it.s < colEnds[col]) col++;
+        while (col < 3 && cs < colEnds[col]) col++;
         if (col >= 3) col = 2;
-        colEnds[col] = it.end;
-        placed.push({ it, col });
+        colEnds[col] = c.kind === 'single' ? c.item.end : c.comp.bottom;
+        placed.push({ c, col });
       }
       const usedCols = Math.max(...placed.map((p) => p.col)) + 1;
-
       for (const p of placed) {
-        const topPx = p.it.s * pxPerMinute;
-        const heightPx = Math.max(18, (p.it.end - p.it.s) * pxPerMinute);
-        out.push({
-          kind: 'event',
-          event: p.it.e,
-          topPx,
-          heightPx,
-          leftPct: (p.col / usedCols) * 100,
-          widthPct: (1 / usedCols) * 100,
-        });
+        if (p.c.kind === 'merge') {
+          out.push({
+            kind: 'merged',
+            count: p.c.comp.indices.length,
+            eventIds: p.c.comp.indices.map((i) => normalized[i].e.id),
+            topPx: p.c.comp.top * pxPerMinute,
+            heightPx: Math.max(18, (p.c.comp.bottom - p.c.comp.top) * pxPerMinute),
+            leftPct: (p.col / usedCols) * 100,
+            widthPct: (1 / usedCols) * 100,
+          });
+        } else {
+          out.push({
+            kind: 'event',
+            event: p.c.item.e,
+            topPx: p.c.item.s * pxPerMinute,
+            heightPx: Math.max(18, (p.c.item.end - p.c.item.s) * pxPerMinute),
+            leftPct: (p.col / usedCols) * 100,
+            widthPct: (1 / usedCols) * 100,
+          });
+        }
       }
     }
 
@@ -1664,6 +2017,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
     await this.auth.ensureLoaded();
 
+    const date = this.selectedDate ?? new Date().toISOString().slice(0, 10);
+    if (this.newSlots.length === 1 && !this.newSlots[0].date) {
+      this.newSlots = [{ date, heureDebut: '09:00', heureFin: '18:00' }];
+    }
+
     this.showPropose = true;
 
     if (!this.newContact.trim()) {
@@ -1685,9 +2043,91 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.proposeGateOpen = false;
   }
 
+  openNewWeeklyForm() {
+    const last = this.newSlots[this.newSlots.length - 1];
+    const today = new Date().toISOString().slice(0, 10);
+    this.newWeeklyFormError = null;
+    this.newWeeklyForm = {
+      dateDebut: last?.date || today,
+      dateFin: last?.date || today,
+      heureDebut: last?.heureDebut ?? '09:00',
+      heureFin: last?.heureFin ?? '18:00',
+      days: new Set<number>(),
+    };
+  }
+
+  closeNewWeeklyForm() {
+    this.newWeeklyForm = null;
+    this.newWeeklyFormError = null;
+  }
+
+  patchNewWeeklyForm(patch: Partial<{ dateDebut: string; dateFin: string; heureDebut: string; heureFin: string }>) {
+    if (!this.newWeeklyForm) return;
+    this.newWeeklyForm = { ...this.newWeeklyForm, ...patch };
+  }
+
+  toggleNewWeeklyDay(num: number) {
+    if (!this.newWeeklyForm) return;
+    const days = new Set(this.newWeeklyForm.days);
+    if (days.has(num)) days.delete(num); else days.add(num);
+    this.newWeeklyForm = { ...this.newWeeklyForm, days };
+  }
+
+  applyNewWeeklySlots() {
+    const f = this.newWeeklyForm;
+    if (!f) return;
+    if (!f.dateDebut || !f.dateFin) {
+      this.newWeeklyFormError = 'Veuillez renseigner les dates de début et de fin.';
+      return;
+    }
+    if (f.dateFin < f.dateDebut) {
+      this.newWeeklyFormError = 'La date de fin doit être après la date de début.';
+      return;
+    }
+    if (f.days.size === 0) {
+      this.newWeeklyFormError = 'Sélectionnez au moins un jour de la semaine.';
+      return;
+    }
+    const generated: { date: string; heureDebut: string; heureFin: string }[] = [];
+    const cur = new Date(f.dateDebut + 'T00:00:00');
+    const end = new Date(f.dateFin + 'T00:00:00');
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    while (cur <= end && generated.length < 730) {
+      if (f.days.has(cur.getDay())) {
+        const key = `${cur.getFullYear()}-${pad2(cur.getMonth() + 1)}-${pad2(cur.getDate())}`;
+        generated.push({ date: key, heureDebut: f.heureDebut, heureFin: f.heureFin });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    if (generated.length === 0) {
+      this.newWeeklyFormError = 'Aucun créneau généré pour les jours sélectionnés.';
+      return;
+    }
+    const existingDates = new Set(this.newSlots.filter((s) => s.date).map((s) => s.date));
+    const newOnes = generated.filter((s) => !existingDates.has(s.date));
+    const base = this.newSlots.filter((s) => s.date);
+    this.newSlots = [...base, ...newOnes].sort((a, b) => a.date.localeCompare(b.date));
+    if (this.newSlots.length === 0) this.newSlots = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
+    this.closeNewWeeklyForm();
+  }
+
+  addNewSlot() {
+    const last = this.newSlots[this.newSlots.length - 1];
+    const nextDate = last?.date ? this.nextDayKey(last.date) : '';
+    this.newSlots = [...this.newSlots, { date: nextDate, heureDebut: last?.heureDebut ?? '09:00', heureFin: last?.heureFin ?? '18:00' }];
+  }
+
+  removeNewSlot(idx: number) {
+    if (this.newSlots.length <= 1) return;
+    this.newSlots = this.newSlots.filter((_, i) => i !== idx);
+  }
+
+  updateNewSlot(idx: number, field: 'date' | 'heureDebut' | 'heureFin', value: string) {
+    this.newSlots = this.newSlots.map((s, i) => (i === idx ? { ...s, [field]: value } : s));
+  }
+
   /** Soumet un événement proposé via l'API puis réinitialise le formulaire et recharge. */
   async submitPropose() {
-    const rawEnd = (this.newDateFin ?? '').trim();
     const rawContact = (this.newContact ?? '').trim();
     const payload: any = {
       titre: this.newTitre,
@@ -1698,9 +2138,12 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
       latitude: this.newLatitude,
       longitude: this.newLongitude,
       caracteristiques: this.newCaracteristiques.slice(0, 3),
-      imageUrl: this.newImageUrl ? this.newImageUrl : undefined,
-      dateDebut: new Date(this.newDateDebut).toISOString(),
-      dateFin: rawEnd ? new Date(rawEnd).toISOString() : null,
+      imageUrl: this.newImageMode === 'external' && this.newImageUrl ? this.newImageUrl : undefined,
+      slots: this.newSlots.filter((s) => s.date).map((s) => ({
+        date: s.date,
+        heureDebut: s.heureDebut,
+        heureFin: s.heureFin,
+      })),
       honeypot: this.newHoneypot,
     };
 
@@ -1712,7 +2155,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
     this.newTitre = '';
     this.newDescription = '';
-    this.newCategorie = 'Concert';
+    this.newCategorie = 'Culture & spectacle';
     this.newVille = '';
     this.newAdresse = '';
     this.newLatitude = null;
@@ -1720,10 +2163,11 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.newAdresseSuggestions.set([]);
     this.newAdresseSuggestOpen.set(false);
     this.newCaracteristiques = [];
+    this.newImageMode = 'auto';
     this.newImageUrl = '';
+    this.newImagePreviewState = 'idle';
     this.newContact = '';
-    this.newDateDebut = '';
-    this.newDateFin = '';
+    this.newSlots = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
     this.newHoneypot = '';
 
     this.closePropose();
@@ -1752,4 +2196,4 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
 
 type LayoutItem =
   | { kind: 'event'; event: EventDto; topPx: number; heightPx: number; leftPct: number; widthPct: number }
-  | { kind: 'merged'; count: number; eventIds: string[]; topPx: number; heightPx: number };
+  | { kind: 'merged'; count: number; eventIds: string[]; topPx: number; heightPx: number; leftPct: number; widthPct: number };

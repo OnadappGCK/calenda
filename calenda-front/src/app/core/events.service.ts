@@ -3,13 +3,44 @@ import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from './api.config';
 
 /** Catégories disponibles pour un événement (doit matcher le backend). */
-export type EventCategory = 'Danse' | 'Concert' | 'Spectacle' | 'Feux d\u2019artifice' | 'Exposition' | 'Autre';
+export type EventCategory =
+  | 'Culture & spectacle'
+  | 'Arts & expos'
+  | 'Sortie'
+  | 'Activités'
+  | 'Vie locale'
+  | 'Famille'
+  | 'Spécial';
 
 /** Caractéristiques disponibles pour un événement (max 3, doit matcher le backend). */
-export type EventTag = 'MUSIQUE' | 'DANSE' | 'PLEIN AIR' | 'RENCONTRE' | 'FEU D’ARTIFICE' | 'SPORT' | 'MARCHÉ' | 'COMPÉTITION' | 'HUMOUR' | 'ART' | 'VISITE';
+export type EventTag =
+  | 'CONCERT' | 'SPORT' | 'DANSE' | 'CONCOURS' | 'FEU_DARTIFICE'
+  | 'ENFANT' | 'FAMILLE' | 'ADULTE' | 'TOUT_PUBLIC'
+  | 'PLEIN_AIR' | 'INTERIEUR' | 'MUSIQUE' | 'FESTIF' | 'CALME'
+  | 'CULTUREL' | 'RENCONTRE' | 'NETWORKING'
+  | 'JOUR' | 'NUIT' | 'FOOD' | 'BOISSON' | 'DJ' | 'LIVE';
 
 /** Origine d'un événement (création manuelle ou import externe). */
-export type EventOrigin = 'MANUAL' | 'MARTIGUES_SITE' | 'SALSA_OLIVIER';
+export type EventOrigin = 'MANUAL' | 'MARTIGUES_SITE' | 'SALSA_OLIVIER' | 'CARRY_LE_ROUET';
+
+/** DTO d'un créneau horaire. */
+export type EventSlotDto = {
+  id: string;
+  date: string;
+  heureDebut: string;
+  heureFin: string;
+  ordre: number;
+};
+
+/** DTO d'une mise en avant. */
+export type HighlightDto = {
+  id: string;
+  eventId: string;
+  startAt: string;
+  endAt: string;
+  priority: number;
+  createdAt: string;
+};
 
 /** DTO événement renvoyé par l'API. */
 export type EventDto = {
@@ -32,9 +63,10 @@ export type EventDto = {
   dateDebut: string;
   dateFin: string | null;
   public: boolean;
-  enAvant: boolean;
   couleur: string | null;
-  organisateur: { id: string; pseudo: string; email: string; isAdmin?: boolean } | null;
+  slots?: EventSlotDto[];
+  highlights?: HighlightDto[];
+  organisateur: { id: string; pseudo: string; email: string; isAdmin?: boolean; profileImage?: string | null } | null;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -81,9 +113,9 @@ export class EventsService {
     imageUrl?: string | null;
     tarif?: string | null;
     contact?: string | null;
-    dateDebut: string;
+    slots?: { date: string; heureDebut: string; heureFin: string }[];
+    dateDebut?: string;
     dateFin?: string | null;
-    enAvant?: boolean;
     honeypot?: string;
   }) {
     return this.http.post<EventDto>(`${this.apiBaseUrl}/events`, payload);
@@ -106,18 +138,43 @@ export class EventsService {
       tarif?: string | null;
       contact?: string | null;
       organisateurId?: string;
+      slots?: { date: string; heureDebut: string; heureFin: string }[];
       dateDebut?: string;
       dateFin?: string | null;
       public?: boolean;
-      enAvant?: boolean;
       couleur?: string | null;
     },
   ) {
     return this.http.patch<EventDto>(`${this.apiBaseUrl}/events/${id}`, payload);
   }
 
+  /** Liste les mises en avant d'un événement. */
+  listHighlights(eventId: string) {
+    return this.http.get<HighlightDto[]>(`${this.apiBaseUrl}/events/${eventId}/highlights`);
+  }
+
+  /** Crée une mise en avant (admin). */
+  createHighlight(eventId: string, payload: { startAt: string; endAt: string; priority: number }) {
+    return this.http.post<HighlightDto>(`${this.apiBaseUrl}/events/${eventId}/highlights`, payload);
+  }
+
+  /** Met à jour une mise en avant (admin). */
+  updateHighlight(id: string, payload: { startAt?: string; endAt?: string; priority?: number }) {
+    return this.http.patch<HighlightDto>(`${this.apiBaseUrl}/highlights/${id}`, payload);
+  }
+
+  /** Supprime une mise en avant (admin). */
+  deleteHighlight(id: string) {
+    return this.http.delete<{ ok: true }>(`${this.apiBaseUrl}/highlights/${id}`);
+  }
+
   /** Supprime un événement (admin ou owner, contrôlé côté backend). */
   remove(id: string) {
     return this.http.delete<{ ok: true }>(`${this.apiBaseUrl}/events/${id}`);
+  }
+
+  /** Envoie une demande de mise en avant à l'administrateur. */
+  boostRequest(eventId: string, phone: string, message: string) {
+    return this.http.post<{ ok: true }>(`${this.apiBaseUrl}/events/${eventId}/boost-request`, { phone, message });
   }
 }
