@@ -1,13 +1,15 @@
-import { DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe, isPlatformBrowser } from '@angular/common';
+import { Component, OnInit, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
+import { QuillModule } from 'ngx-quill';
 import { API_BASE_URL } from '../../core/api.config';
 import { AuthService } from '../../core/auth.service';
 import { NewsService, NewsDto } from '../../core/news.service';
 
 @Component({
   selector: 'app-news-page',
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, QuillModule],
   templateUrl: './news.page.html',
   styleUrl: './news.page.scss',
 })
@@ -19,6 +21,31 @@ export class NewsPage implements OnInit {
   private readonly newsService = inject(NewsService);
   private readonly auth = inject(AuthService);
   private readonly apiBaseUrl = inject(API_BASE_URL);
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly platformId = inject(PLATFORM_ID);
+
+  protected readonly isBrowser = isPlatformBrowser(this.platformId);
+
+  /** Contenu HTML brut de l'éditeur Quill — propriété simple pour éviter la boucle signal→writeValue. */
+  protected createQuillHtml = '';
+  protected editQuillHtml = '';
+  readonly createError = signal<string | null>(null);
+  readonly editError = signal<string | null>(null);
+
+  protected readonly quillModules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ color: [] }, { background: [] }],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      ['link', 'image'],
+      ['clean'],
+    ],
+  };
+
+  safeHtml(content: string): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(content ?? '');
+  }
 
   protected readonly isAdmin = computed(() => !!this.auth.user()?.isAdmin);
 
@@ -33,15 +60,14 @@ export class NewsPage implements OnInit {
   readonly showEdit = signal(false);
   readonly deleteId = signal<string | null>(null);
 
-  readonly create = signal<{ titre: string; datePublication: string; texte: string }>({
+  readonly create = signal<{ titre: string; datePublication: string }>({
     titre: '',
     datePublication: '',
-    texte: '',
   });
   readonly createFile = signal<File | null>(null);
   readonly createPreviewUrl = signal<string | null>(null);
 
-  readonly edit = signal<{ id: string; titre: string; datePublication: string; texte: string; image: string | null; removeImage: boolean } | null>(
+  readonly edit = signal<{ id: string; titre: string; datePublication: string; image: string | null; removeImage: boolean } | null>(
     null,
   );
   readonly editFile = signal<File | null>(null);
@@ -94,14 +120,16 @@ export class NewsPage implements OnInit {
     this.create.set({
       titre: '',
       datePublication: this.isoDate(new Date()),
-      texte: '',
     });
+    this.createQuillHtml = '';
+    this.createError.set(null);
     this.setCreateFile(null);
     this.showCreate.set(true);
   }
 
   closeCreate() {
     this.showCreate.set(false);
+    this.createQuillHtml = '';
     this.setCreateFile(null);
   }
 
@@ -121,12 +149,18 @@ export class NewsPage implements OnInit {
 
   async submitCreate() {
     const c = this.create();
-    await this.newsService
-      .create({ titre: c.titre.trim(), datePublication: c.datePublication, texte: c.texte.trim() }, this.createFile())
-      .toPromise();
-    this.showCreate.set(false);
-    this.setCreateFile(null);
-    await this.reload();
+    this.createError.set(null);
+    try {
+      await this.newsService
+        .create({ titre: c.titre.trim(), datePublication: c.datePublication, texte: this.createQuillHtml.trim() }, this.createFile())
+        .toPromise();
+      this.showCreate.set(false);
+      this.createQuillHtml = '';
+      this.setCreateFile(null);
+      await this.reload();
+    } catch (err: any) {
+      this.createError.set(err?.error?.message ?? 'Erreur lors de la création.');
+    }
   }
 
   openEdit(n: NewsDto) {
@@ -134,10 +168,11 @@ export class NewsPage implements OnInit {
       id: n.id,
       titre: n.titre,
       datePublication: n.datePublication,
-      texte: n.texte,
       image: n.image,
       removeImage: false,
     });
+    this.editQuillHtml = n.texte;
+    this.editError.set(null);
     this.setEditFile(null);
     this.showEdit.set(true);
   }
@@ -145,6 +180,7 @@ export class NewsPage implements OnInit {
   closeEdit() {
     this.showEdit.set(false);
     this.edit.set(null);
+    this.editQuillHtml = '';
     this.setEditFile(null);
   }
 
@@ -169,24 +205,28 @@ export class NewsPage implements OnInit {
   async submitEdit() {
     const e = this.edit();
     if (!e) return;
-
-    await this.newsService
-      .update(
-        e.id,
-        {
-          titre: e.titre.trim(),
-          datePublication: e.datePublication,
-          texte: e.texte.trim(),
-          removeImage: e.removeImage,
-        },
-        this.editFile(),
-      )
-      .toPromise();
-
-    this.showEdit.set(false);
-    this.edit.set(null);
-    this.setEditFile(null);
-    await this.reload();
+    this.editError.set(null);
+    try {
+      await this.newsService
+        .update(
+          e.id,
+          {
+            titre: e.titre.trim(),
+            datePublication: e.datePublication,
+            texte: this.editQuillHtml.trim(),
+            removeImage: e.removeImage,
+          },
+          this.editFile(),
+        )
+        .toPromise();
+      this.showEdit.set(false);
+      this.edit.set(null);
+      this.editQuillHtml = '';
+      this.setEditFile(null);
+      await this.reload();
+    } catch (err: any) {
+      this.editError.set(err?.error?.message ?? 'Erreur lors de la mise à jour.');
+    }
   }
 
   requestDelete(id: string) {

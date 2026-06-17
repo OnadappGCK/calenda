@@ -282,3 +282,38 @@ textarea {
   padding: 0.6rem 0.75rem;
   background: $surface-1;
 }
+
+/* ─── Rendu riche des actualités (Quill HTML via [innerHTML]) ─── */
+.newsContent h1,
+.newsContent h2,
+.newsContent h3 {
+  font-weight: 700;
+  margin: 0.6rem 0 0.3rem;
+}
+.newsContent h1 { font-size: 1.35rem; }
+.newsContent h2 { font-size: 1.15rem; }
+.newsContent h3 { font-size: 1rem; }
+
+.newsContent p { margin: 0.3rem 0; }
+
+.newsContent strong { font-weight: 700; }
+.newsContent em     { font-style: italic; }
+.newsContent u      { text-decoration: underline; }
+.newsContent s      { text-decoration: line-through; }
+
+.newsContent ul,
+.newsContent ol { padding-left: 1.4rem; margin: 0.3rem 0; }
+.newsContent li { margin: 0.15rem 0; }
+
+.newsContent a {
+  color: $brand-primary;
+  text-decoration: underline;
+}
+
+.newsContent img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.6rem;
+  margin: 0.5rem 0;
+}

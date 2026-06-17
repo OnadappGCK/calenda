@@ -17,6 +17,7 @@ import { RegisterPage } from './pages/register/register.page';
 import { VerifyEmailPage } from './pages/verify-email/verify-email.page';
 import { PlacesPage } from './pages/places/places.page';
 import { PlaceDetailPage } from './pages/place-detail/place-detail.page';
+import { QrRedirectPage } from './pages/qr-redirect/qr-redirect.page';
 
 export const routes: Routes = [
   { path: '', component: HomePage },
@@ -35,5 +36,6 @@ export const routes: Routes = [
   { path: 'profiles/:id/events', component: PublicProfileEventsPage },
   { path: 'admin/pending-events', component: AdminPendingPage, canActivate: [requireAdminGuard] },
   { path: 'admin/accounts', component: AdminAccountsPage, canActivate: [requireAdminGuard] },
+  { path: 'redirect-qr', component: QrRedirectPage },
   { path: '**', redirectTo: '' },
 ];
