@@ -399,40 +399,96 @@
 
         <div class="slotsSection">
           <div class="slotsHeader">
-            <span class="slotsLabel">{{ i18n.t('eventDetail.slots.title') }}</span>
+            <span class="slotsLabel">{{ i18n.t('eventDetail.slots.title') }} ({{ draft()!.slots.length }})</span>
             <div class="slotsHeaderActions">
               <button type="button" class="btnSmall" (click)="openWeeklySlotForm()">
-                📅 Créneaux hebdomadaires
+                📅 Hebdomadaire
               </button>
               <button type="button" class="btnSmall" (click)="addDraftSlot()">
                 + {{ i18n.t('eventDetail.slots.add') }}
               </button>
             </div>
           </div>
-          @for (slot of draft()!.slots; track $index) {
-            <div class="slotRow">
-              <label class="field slotField">
-                {{ i18n.t('eventDetail.slots.date') }}
-                <input type="date"
-                  [ngModel]="slot.date"
-                  (ngModelChange)="updateDraftSlot($index, 'date', $event)" />
-              </label>
-              <label class="field slotField">
-                {{ i18n.t('eventDetail.slots.from') }}
-                <input type="time"
-                  [ngModel]="slot.heureDebut"
-                  (ngModelChange)="updateDraftSlot($index, 'heureDebut', $event)" />
-              </label>
-              <label class="field slotField">
-                {{ i18n.t('eventDetail.slots.to') }}
-                <input type="time"
-                  [ngModel]="slot.heureFin"
-                  (ngModelChange)="updateDraftSlot($index, 'heureFin', $event)" />
-              </label>
-              @if (draft()!.slots.length > 1) {
-                <button type="button" class="btnSmall danger slotRemove" (click)="removeDraftSlot($index)">✕</button>
-              }
-            </div>
+
+          @for (group of slotGroups(); track group.key) {
+            @if (group.indices.length > 1) {
+              <!-- Groupe hebdomadaire (plusieurs créneaux même jour+heure) -->
+              <div class="slotGroup">
+                <div class="slotGroupHeader">
+                  <span class="slotGroupLabel">
+                    {{ dayLabel(group.dayOfWeek) }}
+                    <span class="slotGroupTime">{{ group.heureDebut }}–{{ group.heureFin }}</span>
+                    <span class="slotGroupCount">× {{ group.indices.length }}</span>
+                  </span>
+                  <div class="slotGroupActions">
+                    @if (editingGroupKey() !== group.key) {
+                      <button type="button" class="btnSmall"
+                        title="Modifier les horaires de tous les créneaux du groupe"
+                        (click)="openEditGroup(group.key, group.heureDebut, group.heureFin)">
+                        ✏️ Horaires
+                      </button>
+                      <button type="button" class="btnSmall danger"
+                        title="Supprimer tous les créneaux de ce groupe"
+                        (click)="removeGroup(group.key)">
+                        🗑 Tout supprimer
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                @if (editingGroupKey() === group.key) {
+                  <div class="slotGroupEdit">
+                    <label class="field slotField">
+                      De <input type="time" [(ngModel)]="editGroupHeureDebut" />
+                    </label>
+                    <label class="field slotField">
+                      À <input type="time" [(ngModel)]="editGroupHeureFin" />
+                    </label>
+                    <button type="button" class="btnSmall" (click)="applyGroupEdit(group.key)">✓ Appliquer</button>
+                    <button type="button" class="btnSmall" (click)="closeEditGroup()">Annuler</button>
+                  </div>
+                }
+
+                <div class="slotDateChips">
+                  @for (slotIdx of group.indices; track slotIdx) {
+                    <div class="slotDateChip">
+                      <input type="date" class="slotDateInput"
+                        [ngModel]="draft()!.slots[slotIdx].date"
+                        (ngModelChange)="updateDraftSlot(slotIdx, 'date', $event)" />
+                      @if (draft()!.slots.length > 1) {
+                        <button type="button" class="btnTiny danger" (click)="removeDraftSlot(slotIdx)">✕</button>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            } @else {
+              <!-- Créneau isolé : affichage complet date + heures -->
+              <div class="slotRow">
+                <label class="field slotField">
+                  {{ i18n.t('eventDetail.slots.date') }}
+                  <input type="date"
+                    [ngModel]="draft()!.slots[group.indices[0]].date"
+                    (ngModelChange)="updateDraftSlot(group.indices[0], 'date', $event)" />
+                </label>
+                <label class="field slotField">
+                  {{ i18n.t('eventDetail.slots.from') }}
+                  <input type="time"
+                    [ngModel]="draft()!.slots[group.indices[0]].heureDebut"
+                    (ngModelChange)="updateDraftSlot(group.indices[0], 'heureDebut', $event)" />
+                </label>
+                <label class="field slotField">
+                  {{ i18n.t('eventDetail.slots.to') }}
+                  <input type="time"
+                    [ngModel]="draft()!.slots[group.indices[0]].heureFin"
+                    (ngModelChange)="updateDraftSlot(group.indices[0], 'heureFin', $event)" />
+                </label>
+                @if (draft()!.slots.length > 1) {
+                  <button type="button" class="btnSmall danger slotRemove"
+                    (click)="removeDraftSlot(group.indices[0])">✕</button>
+                }
+              </div>
+            }
           }
         </div>
 

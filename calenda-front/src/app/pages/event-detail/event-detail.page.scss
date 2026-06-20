@@ -703,6 +703,97 @@
   font-size: 0.9rem;
 }
 
+.slotsHeaderActions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.slotGroup {
+  border: 1px solid $border-1;
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  background: $surface-2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.slotGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.slotGroupLabel {
+  font-weight: 600;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.slotGroupTime {
+  background: $overlay-2;
+  border: 1px solid $border-1;
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.slotGroupCount {
+  color: $text-muted-1;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.slotGroupActions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.slotGroupEdit {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.5rem;
+  background: $overlay-1;
+  border-radius: 0.45rem;
+  border: 1px solid $border-1;
+}
+
+.slotDateChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
+.slotDateChip {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: $overlay-1;
+  border: 1px solid $border-1;
+  border-radius: 0.45rem;
+  padding: 0.15rem 0.3rem 0.15rem 0.4rem;
+
+  .slotDateInput {
+    border: none;
+    background: transparent;
+    font-size: 0.8rem;
+    color: inherit;
+    padding: 0;
+    cursor: pointer;
+    width: 8rem;
+  }
+}
+
 .slotRow {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr auto;

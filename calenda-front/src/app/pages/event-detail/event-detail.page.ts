@@ -189,6 +189,25 @@ export class EventDetailPage implements OnInit, OnDestroy {
   } | null>(null);
   readonly weeklySlotFormError = signal<string | null>(null);
 
+  /** Groupes de créneaux détectés par pattern (jour, heure) pour édition groupée. */
+  readonly slotGroups = computed(() => {
+    const d = this.draft();
+    if (!d) return [];
+    type Group = { key: string; dayOfWeek: number; heureDebut: string; heureFin: string; indices: number[] };
+    const map = new Map<string, Group>();
+    d.slots.forEach((slot, idx) => {
+      const dow = new Date(slot.date + 'T00:00:00').getDay();
+      const key = `${dow}_${slot.heureDebut}_${slot.heureFin}`;
+      if (!map.has(key)) map.set(key, { key, dayOfWeek: dow, heureDebut: slot.heureDebut, heureFin: slot.heureFin, indices: [] });
+      map.get(key)!.indices.push(idx);
+    });
+    return Array.from(map.values());
+  });
+
+  readonly editingGroupKey = signal<string | null>(null);
+  editGroupHeureDebut = '';
+  editGroupHeureFin = '';
+
   readonly weekDays = [
     { num: 1, label: 'Lundi' },
     { num: 2, label: 'Mardi' },
@@ -769,9 +788,9 @@ export class EventDetailPage implements OnInit, OnDestroy {
       return;
     }
 
-    const existingDates = new Set(d.slots.map((s) => s.date));
-    const newSlots = generated.filter((s) => !existingDates.has(s.date));
-    const merged = [...d.slots, ...newSlots].sort((a, b) => a.date.localeCompare(b.date));
+    const generatedDatesSet = new Set(generated.map((s) => s.date));
+    const unaffected = d.slots.filter((s) => !generatedDatesSet.has(s.date));
+    const merged = [...unaffected, ...generated].sort((a, b) => a.date.localeCompare(b.date));
     this.setDraft({ slots: merged });
     this.closeWeeklySlotForm();
   }
@@ -798,6 +817,43 @@ export class EventDetailPage implements OnInit, OnDestroy {
     if (!d) return;
     const slots = d.slots.map((s, i) => (i === idx ? { ...s, [field]: value } : s));
     this.setDraft({ slots });
+  }
+
+  dayLabel(dow: number): string {
+    return this.weekDays.find((d) => d.num === dow)?.label ?? '';
+  }
+
+  openEditGroup(key: string, heureDebut: string, heureFin: string) {
+    this.editingGroupKey.set(key);
+    this.editGroupHeureDebut = heureDebut;
+    this.editGroupHeureFin = heureFin;
+  }
+
+  closeEditGroup() {
+    this.editingGroupKey.set(null);
+  }
+
+  applyGroupEdit(key: string) {
+    const d = this.draft();
+    if (!d) return;
+    const group = this.slotGroups().find((g) => g.key === key);
+    if (!group) return;
+    const toEdit = new Set(group.indices);
+    const slots = d.slots.map((s, i) =>
+      toEdit.has(i) ? { ...s, heureDebut: this.editGroupHeureDebut, heureFin: this.editGroupHeureFin } : s,
+    );
+    this.setDraft({ slots });
+    this.closeEditGroup();
+  }
+
+  removeGroup(key: string) {
+    const d = this.draft();
+    if (!d) return;
+    const group = this.slotGroups().find((g) => g.key === key);
+    if (!group) return;
+    const toRemove = new Set(group.indices);
+    const slots = d.slots.filter((_, i) => !toRemove.has(i));
+    this.setDraft({ slots: slots.length > 0 ? slots : [{ date: '', heureDebut: '09:00', heureFin: '18:00' }] });
   }
 
   private nextDayStr(dateStr: string): string {
