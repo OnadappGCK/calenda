@@ -13,7 +13,7 @@ type PlaceDraft = {
   description: string;
   adresse: string;
   ville: string;
-  type: PlaceType;
+  types: PlaceType[];
   contact: string;
   horaires: string;
   imageUrl: string;
@@ -27,18 +27,19 @@ type PlaceDraft = {
   proprietaireId: string;
 };
 
-const TYPE_LABELS: Record<string, string> = {
+const TYPE_LABELS: Record<PlaceType, string> = {
   RESTAURANT: 'Restaurant',
   SORTIE: 'Sortie',
   BAR: 'Bar',
   ACTIVITE: 'Activité',
 };
-const TYPE_ICONS: Record<string, string> = {
+const TYPE_ICONS: Record<PlaceType, string> = {
   RESTAURANT: '🍽️',
   SORTIE: '🎭',
   BAR: '🍸',
   ACTIVITE: '🏃',
 };
+const TYPES: PlaceType[] = ['RESTAURANT', 'SORTIE', 'BAR', 'ACTIVITE'];
 
 const JOURS_SEMAINE = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'] as const;
 type JourSemaine = typeof JOURS_SEMAINE[number];
@@ -69,6 +70,9 @@ export class PlaceDetailPage implements OnInit {
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
   readonly JOURS_SEMAINE = JOURS_SEMAINE;
+  readonly TYPES = TYPES;
+  readonly TYPE_LABELS = TYPE_LABELS;
+  readonly TYPE_ICONS = TYPE_ICONS;
   editHorairesMode: 'simple' | 'custom' = 'simple';
   editJourDebut = 'Lundi';
   editJourFin = 'Dimanche';
@@ -153,8 +157,10 @@ export class PlaceDetailPage implements OnInit {
     this.editUserResults.set([]);
   }
 
-  readonly typeLabel = computed(() => TYPE_LABELS[this.place()?.type ?? ''] ?? '');
-  readonly typeIcon = computed(() => TYPE_ICONS[this.place()?.type ?? ''] ?? '');
+  readonly typeLabels = computed(() => (this.place()?.types ?? []).map((t) => TYPE_LABELS[t] ?? t));
+  readonly typeIcons = computed(() => (this.place()?.types ?? []).map((t) => TYPE_ICONS[t] ?? t));
+  readonly typeLabel = computed(() => this.typeLabels().join(' · ') || 'Établissement');
+  readonly typeIcon = computed(() => this.typeIcons().join(' '));
 
   readonly mapUrl = computed((): SafeResourceUrl | null => {
     const p = this.place();
@@ -217,7 +223,7 @@ export class PlaceDetailPage implements OnInit {
       description: p.description ?? '',
       adresse: p.adresse ?? '',
       ville: p.ville ?? '',
-      type: p.type,
+      types: p.types ?? [],
       contact: p.contact ?? '',
       horaires: p.horaires ?? '',
       imageUrl: p.imageUrl ?? '',
@@ -256,6 +262,14 @@ export class PlaceDetailPage implements OnInit {
     this.draft.set({ ...d, [field]: value });
   }
 
+  toggleDraftType(t: PlaceType) {
+    const d = this.draft();
+    if (!d) return;
+    const current = d.types ?? [];
+    const types = current.includes(t) ? current.filter((x) => x !== t) : [...current, t];
+    this.draft.set({ ...d, types });
+  }
+
   async save() {
     const id = this.place()?.id;
     const d = this.draft();
@@ -268,7 +282,7 @@ export class PlaceDetailPage implements OnInit {
         description: d.description.trim() || null,
         adresse: d.adresse.trim() || null,
         ville: d.ville.trim() || null,
-        type: d.type,
+        types: d.types,
         contact: d.contact.trim() || null,
         horaires: this.buildEditHoraires(),
         imageUrl: d.imageUrl.trim() || null,
@@ -290,7 +304,7 @@ export class PlaceDetailPage implements OnInit {
           description: payload.description,
           adresse: payload.adresse,
           ville: payload.ville,
-          type: payload.type,
+          types: payload.types,
           contact: payload.contact,
           horaires: payload.horaires,
           imageUrl: payload.imageUrl,

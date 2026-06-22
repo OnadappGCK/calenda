@@ -17,8 +17,8 @@ export class CreateEtablissementDto {
   @IsOptional() @IsString()
   imageUrl?: string | null;
 
-  @IsEnum(EtablissementType)
-  type!: EtablissementType;
+  @IsArray() @IsEnum(EtablissementType, { each: true })
+  types!: EtablissementType[];
 
   @IsOptional() @IsArray() @IsString({ each: true })
   tags?: string[];
@@ -79,8 +79,8 @@ export class UpdateEtablissementDto {
   @IsOptional() @IsString()
   imageUrl?: string | null;
 
-  @IsOptional() @IsEnum(EtablissementType)
-  type?: EtablissementType;
+  @IsOptional() @IsArray() @IsEnum(EtablissementType, { each: true })
+  types?: EtablissementType[];
 
   @IsOptional() @IsArray() @IsString({ each: true })
   tags?: string[];

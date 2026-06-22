@@ -53,6 +53,7 @@ export class PlacesPage implements OnInit, OnDestroy {
   readonly TYPE_ICONS = TYPE_ICONS;
   readonly TYPES: PlaceType[] = ['RESTAURANT', 'SORTIE', 'BAR', 'ACTIVITE'];
   readonly JOURS_SEMAINE = JOURS_SEMAINE;
+  readonly selectedTypeClass = computed(() => 'type-' + this.selectedType().toLowerCase());
 
   readonly selectedType = signal<PlaceType>('RESTAURANT');
   readonly selectedTags = signal<Set<string>>(new Set());
@@ -64,7 +65,7 @@ export class PlacesPage implements OnInit, OnDestroy {
   readonly loading = signal(true);
 
   readonly topCities = computed(() => {
-    const places = this.allPlaces().filter((p) => p.type === this.selectedType());
+    const places = this.allPlaces().filter((p) => (p.types ?? []).includes(this.selectedType()));
     const counts = new Map<string, number>();
     for (const p of places) {
       if (p.ville) counts.set(p.ville, (counts.get(p.ville) ?? 0) + 1);
@@ -80,7 +81,7 @@ export class PlacesPage implements OnInit, OnDestroy {
     const name = this.searchName().toLowerCase().trim();
     const addr = this.searchAddress().toLowerCase().trim();
     const openAt = this.filterOpenAt().trim();
-    let places = this.allPlaces().filter((p) => p.type === this.selectedType());
+    let places = this.allPlaces().filter((p) => (p.types ?? []).includes(this.selectedType()));
     if (tags.size > 0) {
       places = places.filter((p) => [...tags].every((t) => (p.tags ?? []).includes(t)));
     }
@@ -191,7 +192,7 @@ export class PlacesPage implements OnInit, OnDestroy {
   newHeureDebut = '';
   newHeureFin = '';
   newHorairesSlots: HoraireSlot[] = this.defaultSlots();
-  newType: PlaceType = 'RESTAURANT';
+  newTypes: PlaceType[] = [];
   newTags: string[] = [];
   newTagInput = '';
   allTagsForForm = signal<{ tag: string; count: number }[]>([]);
@@ -280,7 +281,7 @@ export class PlacesPage implements OnInit, OnDestroy {
     const typeParam = this.route.snapshot.queryParamMap.get('type') as PlaceType | null;
     if (typeParam && this.TYPES.includes(typeParam)) {
       this.selectedType.set(typeParam);
-      this.newType = typeParam;
+      this.newTypes = [typeParam];
     }
 
     await this.loadPlaces();
@@ -350,9 +351,17 @@ export class PlacesPage implements OnInit, OnDestroy {
 
   async openCreateForm() {
     this.showCreateForm = true;
-    this.newType = this.selectedType();
+    this.newTypes = [this.selectedType()];
     const tags = await this.placesService.allTags().toPromise();
     this.allTagsForForm.set(tags ?? []);
+  }
+
+  toggleNewType(t: PlaceType) {
+    if (this.newTypes.includes(t)) {
+      this.newTypes = this.newTypes.filter((x) => x !== t);
+    } else {
+      this.newTypes = [...this.newTypes, t];
+    }
   }
 
   addTagFromInput() {
@@ -384,7 +393,7 @@ export class PlacesPage implements OnInit, OnDestroy {
         horaires: this.buildHoraires(),
         latitude: this.newLatitude,
         longitude: this.newLongitude,
-        type: this.newType,
+        types: this.newTypes,
         tags: this.newTags,
         proprietaireId: this.newProprietaireId || null,
       };
@@ -423,6 +432,7 @@ export class PlacesPage implements OnInit, OnDestroy {
     this.newHeureDebut = '';
     this.newHeureFin = '';
     this.newHorairesSlots = this.defaultSlots();
+    this.newTypes = [];
     this.newTags = [];
     this.newTagInput = '';
     this.newProprietaireId = '';

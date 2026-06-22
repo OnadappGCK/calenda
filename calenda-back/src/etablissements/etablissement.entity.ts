@@ -22,8 +22,8 @@ export class Etablissement {
   @Column({ type: 'text', nullable: true })
   imageUrl!: string | null;
 
-  @Column({ type: 'text' })
-  type!: EtablissementType;
+  @Column({ type: 'simple-array', nullable: true, default: '' })
+  types!: EtablissementType[];
 
   @Column({ type: 'simple-json', nullable: true, default: '[]' })
   tags!: string[];

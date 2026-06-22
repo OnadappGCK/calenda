@@ -433,7 +433,7 @@ export class CarryLeRouetMergeService {
             horaires: detail.horaires,
             heureOuverture: detail.heureOuverture,
             heureFermeture: detail.heureFermeture,
-            type: EtablissementType.ACTIVITE,
+            types: [EtablissementType.ACTIVITE],
             tags: [],
             latitude: detail.latitude,
             longitude: detail.longitude,

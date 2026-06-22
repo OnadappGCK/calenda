@@ -1,7 +1,7 @@
 <div class="placesPage">
 
   <!-- Hero band: type title full-width -->
-  <div class="typeHeroBand">
+  <div [class]="'typeHeroBand ' + selectedTypeClass()">
     <span class="typeHeroIcon">{{ TYPE_ICONS[selectedType()] }}</span>
     <h1 class="typeHeroTitle">{{ TYPE_LABELS_HERO[selectedType()] }}</h1>
   </div>
@@ -10,8 +10,7 @@
   <div class="typeTabs">
     @for (t of TYPES; track t) {
       <button
-        class="typeTab"
-        [class.active]="selectedType() === t"
+        [class]="'typeTab ' + (selectedType() === t ? selectedTypeClass() + ' active' : '')"
         type="button"
         (click)="selectType(t)"
       >
@@ -43,14 +42,17 @@
             Nom *
             <input type="text" [(ngModel)]="newNom" placeholder="Nom de l'établissement" />
           </label>
-          <label class="field">
-            Type
-            <select [(ngModel)]="newType">
+          <div class="field">
+            <div class="typesLabel">Types</div>
+            <div class="typesCheckboxes">
               @for (t of TYPES; track t) {
-                <option [value]="t">{{ TYPE_ICONS[t] }} {{ TYPE_LABELS[t] }}</option>
+                <label class="checkLabel">
+                  <input type="checkbox" [checked]="newTypes.includes(t)" (change)="toggleNewType(t)" />
+                  {{ TYPE_ICONS[t] }} {{ TYPE_LABELS[t] }}
+                </label>
               }
-            </select>
-          </label>
+            </div>
+          </div>
           <label class="field fieldFull">
             Description
             <textarea [(ngModel)]="newDescription" rows="3" placeholder="Décrivez l'établissement…"></textarea>
@@ -249,7 +251,7 @@
                     @if (placeImageUrl(p)) {
                       <div class="csBg" [style.background-image]="'url(' + placeImageUrl(p) + ')'"></div>
                     } @else {
-                      <div class="csBgPlaceholder">{{ TYPE_ICONS[p.type] }}</div>
+                      <div class="csBgPlaceholder">{{ TYPE_ICONS[selectedType()] }}</div>
                     }
                     <div class="csContent">
                       <span class="csBadge" [class.csBadgePremium2]="p.featuredTier >= 3" [class.csBadgePremium1]="p.featuredTier === 2">
@@ -341,7 +343,7 @@
                 @if (placeImageUrl(place)) {
                   <div class="placeCardImg" [style.background-image]="'url(' + placeImageUrl(place) + ')'"></div>
                 } @else {
-                  <div class="placeCardImgPlaceholder">{{ TYPE_ICONS[place.type] }}</div>
+                  <div class="placeCardImgPlaceholder">{{ TYPE_ICONS[selectedType()] }}</div>
                 }
                 <div class="placeCardBody">
                   <div class="placeCardNom">{{ place.nom }}</div>

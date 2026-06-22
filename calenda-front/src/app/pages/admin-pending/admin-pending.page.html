@@ -174,16 +174,17 @@
                   <input type="text" [value]="etabDraft()!.nom"
                          (input)="setEtabDraft('nom', $any($event.target).value)" />
                 </label>
-                <label class="field">
-                  Type
-                  <select [value]="etabDraft()!.type"
-                          (change)="setEtabDraft('type', $any($event.target).value)">
-                    <option value="RESTAURANT">Restaurant</option>
-                    <option value="BAR">Bar</option>
-                    <option value="SORTIE">Sortie</option>
-                    <option value="ACTIVITE">Activité</option>
-                  </select>
-                </label>
+                <div class="field">
+                  <div class="typesLabel">Types</div>
+                  <div class="typesCheckboxes">
+                    @for (t of TYPES; track t) {
+                      <label class="checkLabel">
+                        <input type="checkbox" [checked]="etabDraft()!.types.includes(t)" (change)="toggleEtabType(t)" />
+                        {{ TYPE_ICONS[t] }} {{ TYPE_LABELS[t] }}
+                      </label>
+                    }
+                  </div>
+                </div>
                 <label class="field">
                   Ville
                   <input type="text" [value]="etabDraft()!.ville"
@@ -288,7 +289,9 @@
             <!-- ── Vue résumé ─────────────────────────────────── -->
             <div class="rowTop">
               <div class="rowLeft">
-                <span class="etabTypeBadge">{{ et.type }}</span>
+                @for (t of et.types; track t) {
+                  <span class="etabTypeBadge">{{ t }}</span>
+                }
                 <div class="title">{{ et.nom }}</div>
                 @if (!et.public) { <span class="draftBadge">brouillon</span> }
               </div>

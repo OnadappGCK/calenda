@@ -389,6 +389,8 @@
 }
 
 .field { position: relative; }
+.typesLabel { font-size: 0.88rem; color: $text-muted-2; }
+.typesCheckboxes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 .userDropdown {
   position: absolute;

@@ -194,6 +194,11 @@
 }
 
 .editFullRow { grid-column: 1 / -1; }
+.typesLabel { font-size: 0.88rem; color: $text-muted-2; }
+.typesCheckboxes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.checkLabel { display: flex; align-items: center; gap: 0.35rem; color: $text-1; cursor: pointer;
+  input { accent-color: $brand-primary; }
+}
 
 .btnSmall {
   padding: 0.25rem 0.7rem;

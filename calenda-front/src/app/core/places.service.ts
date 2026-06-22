@@ -11,7 +11,7 @@ export interface PlaceDto {
   adresse: string | null;
   ville: string | null;
   imageUrl: string | null;
-  type: PlaceType;
+  types: PlaceType[];
   tags: string[];
   latitude: number | null;
   longitude: number | null;
@@ -36,7 +36,7 @@ export interface CreatePlaceDto {
   adresse?: string | null;
   ville?: string | null;
   imageUrl?: string | null;
-  type: PlaceType;
+  types: PlaceType[];
   tags?: string[];
   latitude?: number | null;
   longitude?: number | null;

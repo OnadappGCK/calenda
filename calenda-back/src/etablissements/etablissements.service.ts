@@ -26,14 +26,16 @@ export class EtablissementsService {
   }
 
   async list(type?: EtablissementType, tag?: string) {
-    const qb = this.repo
-      .createQueryBuilder('e')
-      .leftJoinAndSelect('e.proprietaire', 'p')
-      .where('e.public = :pub', { pub: true });
-    if (type) qb.andWhere('e.type = :type', { type });
-    qb.orderBy('e.featuredTier', 'DESC').addOrderBy('e.featured', 'DESC').addOrderBy('e.createdAt', 'DESC');
-    const items = await qb.getMany();
-    const filtered = tag ? items.filter((e) => (e.tags ?? []).includes(tag)) : items;
+    const items = await this.repo.find({
+      relations: { proprietaire: true },
+      order: { featuredTier: 'DESC', featured: 'DESC', createdAt: 'DESC' },
+    });
+    const filtered = items.filter((e) => {
+      if (!e.public) return false;
+      if (type && !(e.types ?? []).includes(type)) return false;
+      if (tag && !(e.tags ?? []).includes(tag)) return false;
+      return true;
+    });
     return filtered.map((e) => this.etabDto(e));
   }
 
@@ -52,6 +54,7 @@ export class EtablissementsService {
   async create(dto: CreateEtablissementDto) {
     const e = this.repo.create({
       ...dto,
+      types: dto.types ?? [],
       tags: dto.tags ?? [],
       public: dto.public ?? true,
       featured: dto.featured ?? false,
@@ -93,7 +96,7 @@ export class EtablissementsService {
     if (!isAdmin && !isOwner) throw new ForbiddenException('forbidden');
 
     const allowed: (keyof UpdateEtablissementDto)[] = [
-      'nom', 'description', 'adresse', 'ville', 'imageUrl', 'type',
+      'nom', 'description', 'adresse', 'ville', 'imageUrl', 'types',
       'tags', 'contact', 'horaires', 'sourceUrl', 'latitude', 'longitude',
       'heureOuverture', 'heureFermeture',
     ];
@@ -143,11 +146,10 @@ export class EtablissementsService {
   }
 
   async topTags(type?: EtablissementType, limit = 5): Promise<{ tag: string; count: number }[]> {
-    const qb = this.repo.createQueryBuilder('e').where('e.public = :pub', { pub: true });
-    if (type) qb.andWhere('e.type = :type', { type });
-    const items = await qb.getMany();
+    const items = await this.repo.find({ where: { public: true } });
+    const filtered = type ? items.filter((e) => (e.types ?? []).includes(type)) : items;
     const counts = new Map<string, number>();
-    for (const item of items) {
+    for (const item of filtered) {
       for (const tag of item.tags ?? []) {
         counts.set(tag, (counts.get(tag) ?? 0) + 1);
       }

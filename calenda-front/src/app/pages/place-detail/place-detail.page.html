@@ -53,15 +53,17 @@
               Nom *
               <input type="text" [value]="draft()!.nom" (input)="setDraft('nom', $any($event.target).value)" />
             </label>
-            <label class="editField">
-              Type
-              <select [value]="draft()!.type" (change)="setDraft('type', $any($event.target).value)">
-                <option value="RESTAURANT">Restaurant</option>
-                <option value="BAR">Bar</option>
-                <option value="SORTIE">Sortie</option>
-                <option value="ACTIVITE">Activité</option>
-              </select>
-            </label>
+            <div class="editField">
+              <div class="typesLabel">Types</div>
+              <div class="typesCheckboxes">
+                @for (t of TYPES; track t) {
+                  <label class="checkLabel">
+                    <input type="checkbox" [checked]="draft()!.types.includes(t)" (change)="toggleDraftType(t)" />
+                    {{ TYPE_ICONS[t] }} {{ TYPE_LABELS[t] }}
+                  </label>
+                }
+              </div>
+            </div>
             <label class="editField">
               Ville
               <input type="text" [value]="draft()!.ville" (input)="setDraft('ville', $any($event.target).value)" />

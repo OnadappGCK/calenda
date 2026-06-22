@@ -24,6 +24,12 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+.typeHeroBand {
+  &.type-restaurant { background: #3b82f6; }
+  &.type-sortie { background: #f97316; }
+  &.type-bar { background: #22c55e; }
+  &.type-activite { background: #a855f7; }
+}
 
 /* ─── Type tabs ─────────────────────────────────── */
 .typeTabs {
@@ -54,7 +60,13 @@
   font-size: 0.8rem;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
-  &.active { color: $brand-primary; border-bottom-color: $brand-primary; }
+  &.active {
+    font-weight: 700;
+    &.type-restaurant { color: #3b82f6; border-bottom-color: #3b82f6; }
+    &.type-sortie { color: #f97316; border-bottom-color: #f97316; }
+    &.type-bar { color: #22c55e; border-bottom-color: #22c55e; }
+    &.type-activite { color: #a855f7; border-bottom-color: #a855f7; }
+  }
   &:hover:not(.active) { color: $text-muted-1; }
 }
 .typeTabIcon { font-size: 1.4rem; }
@@ -176,6 +188,11 @@
   input, select, textarea { padding: 0.4rem 0.6rem; border: 1px solid $border-1; border-radius: 0.5rem; background: $bg-app; color: $text-1; font-size: 0.9rem; }
 }
 .fieldFull { grid-column: 1 / -1; }
+.typesLabel { font-size: 0.85rem; color: $text-muted-1; margin-bottom: 0.2rem; }
+.typesCheckboxes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.checkLabel { display: flex; align-items: center; gap: 0.35rem; font-size: 0.9rem; color: $text-1; cursor: pointer;
+  input { accent-color: $brand-primary; }
+}
 .tagsSection { margin-bottom: 1rem; }
 .tagsLabel, .existingTagsLabel { font-size: 0.82rem; color: $text-muted-2; margin-bottom: 0.4rem; }
 .tagsSelected { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; min-height: 1.5rem; }

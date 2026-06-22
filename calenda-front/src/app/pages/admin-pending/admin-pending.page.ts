@@ -7,12 +7,26 @@ import { EventDto, EventOrigin } from '../../core/events.service';
 
 type PlaceType = 'RESTAURANT' | 'SORTIE' | 'BAR' | 'ACTIVITE';
 
+const TYPE_LABELS: Record<PlaceType, string> = {
+  RESTAURANT: 'Restaurant',
+  SORTIE: 'Sortie',
+  BAR: 'Bar',
+  ACTIVITE: 'Activité',
+};
+const TYPE_ICONS: Record<PlaceType, string> = {
+  RESTAURANT: '🍽️',
+  SORTIE: '🎭',
+  BAR: '🍸',
+  ACTIVITE: '🏃',
+};
+const TYPES: PlaceType[] = ['RESTAURANT', 'SORTIE', 'BAR', 'ACTIVITE'];
+
 type EtabDraft = {
   nom: string;
   description: string;
   adresse: string;
   ville: string;
-  type: PlaceType;
+  types: PlaceType[];
   contact: string;
   horaires: string;
   imageUrl: string;
@@ -80,6 +94,9 @@ export class AdminPendingPage implements OnInit {
   readonly etabUserResults = signal<{ id: string; pseudo: string; email: string }[]>([]);
   readonly etabUserSearching = signal(false);
   readonly etabSearchQ = signal<string>('');
+  readonly TYPES = TYPES;
+  readonly TYPE_LABELS = TYPE_LABELS;
+  readonly TYPE_ICONS = TYPE_ICONS;
 
   async searchEtabUsers(q: string) {
     this.etabUserSearch.set(q);
@@ -106,7 +123,7 @@ export class AdminPendingPage implements OnInit {
       (e) =>
         e.nom?.toLowerCase().includes(q) ||
         e.ville?.toLowerCase().includes(q) ||
-        e.type?.toLowerCase().includes(q),
+        (e.types as string[] | undefined)?.some((t) => t.toLowerCase().includes(q)),
     );
   });
 
@@ -238,7 +255,7 @@ export class AdminPendingPage implements OnInit {
       description: et.description ?? '',
       adresse: et.adresse ?? '',
       ville: et.ville ?? '',
-      type: et.type ?? 'SORTIE',
+      types: et.types ?? [et.type ?? 'SORTIE'],
       contact: et.contact ?? '',
       horaires: et.horaires ?? '',
       imageUrl: et.imageUrl ?? '',
@@ -265,6 +282,14 @@ export class AdminPendingPage implements OnInit {
     this.etabDraft.set({ ...d, [field]: value });
   }
 
+  toggleEtabType(t: PlaceType) {
+    const d = this.etabDraft();
+    if (!d) return;
+    const current = d.types ?? [];
+    const types = current.includes(t) ? current.filter((x) => x !== t) : [...current, t];
+    this.etabDraft.set({ ...d, types });
+  }
+
   async saveEtab() {
     const id = this.editingEtabId();
     const d = this.etabDraft();
@@ -277,7 +302,7 @@ export class AdminPendingPage implements OnInit {
         description: d.description.trim() || null,
         adresse: d.adresse.trim() || null,
         ville: d.ville.trim() || null,
-        type: d.type,
+        types: d.types,
         contact: d.contact.trim() || null,
         horaires: d.horaires.trim() || null,
         imageUrl: d.imageUrl.trim() || null,

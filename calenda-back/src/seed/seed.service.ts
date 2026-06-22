@@ -550,7 +550,7 @@ export class SeedService {
     const demo: Partial<Etablissement>[] = [
       {
         nom: 'La Table de la Mer',
-        type: EtablissementType.RESTAURANT,
+        types: [EtablissementType.RESTAURANT],
         description: 'Restaurant de poissons et fruits de mer frais, face au port de Carry-le-Rouet. Terrasse ensoleillée avec vue sur la mer.',
         adresse: '3 Quai du Port, Carry-le-Rouet',
         ville: 'Carry-le-Rouet',
@@ -563,7 +563,7 @@ export class SeedService {
       },
       {
         nom: 'Chez Mémé Michèle',
-        type: EtablissementType.RESTAURANT,
+        types: [EtablissementType.RESTAURANT],
         description: 'Cuisine provençale authentique dans un cadre chaleureux. Daube, tian, pieds paquets… tout est fait maison.',
         adresse: '12 Rue de la République, Martigues',
         ville: 'Martigues',
@@ -575,7 +575,7 @@ export class SeedService {
       },
       {
         nom: 'Le Bouchon d\'Istres',
-        type: EtablissementType.RESTAURANT,
+        types: [EtablissementType.RESTAURANT],
         description: 'Bistrot convivial proposant tapas, planches et spécialités du marché. Brunch le dimanche.',
         adresse: '7 Place Voltaire, Istres',
         ville: 'Istres',
@@ -585,7 +585,7 @@ export class SeedService {
       },
       {
         nom: 'Le Caveau du Frioul',
-        type: EtablissementType.BAR,
+        types: [EtablissementType.BAR],
         description: 'Bar à vins et cocktails dans une cave voûtée. Sélection de vins naturels, bières artisanales et spiritueux locaux.',
         adresse: '5 Rue des Pêcheurs, Sausset-les-Pins',
         ville: 'Sausset-les-Pins',
@@ -598,7 +598,7 @@ export class SeedService {
       },
       {
         nom: 'Le Mojito Bleu',
-        type: EtablissementType.BAR,
+        types: [EtablissementType.BAR, EtablissementType.SORTIE],
         description: 'Bar de plage avec terrasse face à la mer. Cocktails tropicaux, tapas et soirées DJ en été.',
         adresse: 'Plage de la Couronne, Martigues',
         ville: 'Martigues',
@@ -608,7 +608,7 @@ export class SeedService {
       },
       {
         nom: 'La Brasserie du Port',
-        type: EtablissementType.BAR,
+        types: [EtablissementType.BAR],
         description: 'Brasserie traditionnelle au cœur du port. Pression locale, planches charcuterie, matchs diffusés.',
         adresse: '1 Quai du Vieux Port, Carry-le-Rouet',
         ville: 'Carry-le-Rouet',
@@ -618,7 +618,7 @@ export class SeedService {
       },
       {
         nom: 'Cinéma L\'Étoile',
-        type: EtablissementType.SORTIE,
+        types: [EtablissementType.SORTIE],
         description: 'Cinéma indépendant proposant des films d\'art et essai, des avant-premières et des ciné-débats chaque mois.',
         adresse: '22 Avenue Général de Gaulle, Martigues',
         ville: 'Martigues',
@@ -629,7 +629,7 @@ export class SeedService {
       },
       {
         nom: 'Escape Game Azur',
-        type: EtablissementType.SORTIE,
+        types: [EtablissementType.SORTIE],
         description: 'Escape game thématique avec 4 salles disponibles. Idéal pour les groupes, familles et team-building.',
         adresse: '14 Rue de la Jetée, Carry-le-Rouet',
         ville: 'Carry-le-Rouet',
@@ -639,7 +639,7 @@ export class SeedService {
       },
       {
         nom: 'Club de Voile Mistral',
-        type: EtablissementType.ACTIVITE,
+        types: [EtablissementType.ACTIVITE],
         description: 'École de voile proposant cours débutants et perfectionnement, location de catamarans et sorties en mer.',
         adresse: 'Port de Plaisance, Sausset-les-Pins',
         ville: 'Sausset-les-Pins',
@@ -652,7 +652,7 @@ export class SeedService {
       },
       {
         nom: 'Yoga sur la Plage',
-        type: EtablissementType.ACTIVITE,
+        types: [EtablissementType.ACTIVITE],
         description: 'Séances de yoga et méditation sur la plage tous les matins en saison. Tous niveaux bienvenus.',
         adresse: 'Plage des Tamaris, Carry-le-Rouet',
         ville: 'Carry-le-Rouet',
@@ -662,7 +662,7 @@ export class SeedService {
       },
       {
         nom: 'VTT Calanques Tour',
-        type: EtablissementType.ACTIVITE,
+        types: [EtablissementType.ACTIVITE, EtablissementType.SORTIE],
         description: 'Randonnées VTT guidées dans les calanques et massifs environnants. Location de VTT électriques disponible.',
         adresse: 'Place du Marché, Carry-le-Rouet',
         ville: 'Carry-le-Rouet',
