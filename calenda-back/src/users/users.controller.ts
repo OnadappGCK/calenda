@@ -2,6 +2,8 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuard
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { ReportProfileDto } from './dto/report-profile.dto';
+import { RequestEmailChangeVerificationDto } from './dto/request-email-change-verification.dto';
 
 @Controller('users')
 /**
@@ -34,6 +36,49 @@ export class UsersController {
   @Get('verify-email')
   async verifyEmail(@Query('token') token: string) {
     return this.usersService.verifyEmail(token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/request-email-change-verification')
+  async requestEmailChangeVerification(@Req() req: any, @Body() dto: RequestEmailChangeVerificationDto) {
+    return this.usersService.requestEmailChangeVerification(req.user.id, dto.email);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/request-password-change-verification')
+  async requestPasswordChangeVerification(@Req() req: any) {
+    return this.usersService.requestPasswordChangeVerification(req.user.id);
+  }
+
+  @Get(':id/profile')
+  async publicProfile(@Param('id') id: string) {
+    return this.usersService.getPublicProfile(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/report')
+  async reportProfile(@Req() req: any, @Param('id') id: string, @Body() dto: ReportProfileDto) {
+    return this.usersService.reportProfile(req.user.id, id, dto);
+  }
+
+  @Get(':id/events')
+  async publicOrganizedEvents(
+    @Param('id') id: string,
+    @Query('upcoming') upcoming?: string,
+    @Query('q') q?: string,
+    @Query('categorie') categorie?: string,
+    @Query('ville') ville?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.usersService.listPublicOrganizedEvents(id, {
+      upcoming: upcoming === 'true' || upcoming === '1',
+      q,
+      categorie,
+      ville,
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+    });
   }
 
   @UseGuards(JwtAuthGuard)

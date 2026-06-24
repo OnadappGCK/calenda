@@ -19,7 +19,12 @@ export class LoginPage {
 
   email = '';
   password = '';
+  readonly showPassword = signal(false);
   readonly error = signal<string | null>(null);
+
+  togglePasswordVisibility() {
+    this.showPassword.update((value) => !value);
+  }
 
   /** Soumet le formulaire: tente un login puis navigation, sinon affiche une erreur. */
   async submit() {
@@ -28,7 +33,17 @@ export class LoginPage {
     try {
       await this.auth.login(this.email, this.password);
       await this.router.navigateByUrl('/calendar');
-    } catch {
+    } catch (e: any) {
+      const code =
+        typeof e?.error?.message === 'string'
+          ? e.error.message
+          : Array.isArray(e?.error?.message)
+            ? e.error.message[0]
+            : null;
+      if (code === 'email_not_verified') {
+        this.error.set('Votre compte n\'est pas encore vérifié. Vérifiez votre e-mail puis cliquez sur le lien reçu.');
+        return;
+      }
       this.error.set('Connexion échouée');
     }
   }

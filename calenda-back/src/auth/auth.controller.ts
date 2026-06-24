@@ -3,6 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RequestRegisterVerificationDto } from './dto/request-register-verification.dto';
 
 @Controller('auth')
 /**
@@ -11,6 +12,12 @@ import { RegisterDto } from './dto/register.dto';
  */
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post('request-register-verification')
+  async requestRegisterVerification(@Body() dto: RequestRegisterVerificationDto) {
+    return this.authService.requestRegisterVerification(dto.email, dto.captchaToken);
+  }
 
   @Post('register')
   /** Inscription: crée un utilisateur et retourne le profil minimal. */

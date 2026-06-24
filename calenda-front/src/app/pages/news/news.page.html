@@ -18,7 +18,7 @@
           }
           <h2>{{ n.titre }}</h2>
           <div class="meta">{{ n.datePublication | date }}</div>
-          <p>{{ n.texte }}</p>
+          <div class="newsContent" [innerHTML]="safeHtml(n.texte)"></div>
 
           @if (isAdmin()) {
             <div class="itemActions">
@@ -56,10 +56,19 @@
         />
       </label>
 
-      <label class="field">
-        Texte
-        <textarea rows="6" [ngModel]="create().texte" (ngModelChange)="create.set({ ...create(), texte: $event })"></textarea>
-      </label>
+      <div class="field">
+        <span>Texte</span>
+        @if (isBrowser) {
+          <quill-editor
+            [modules]="quillModules"
+            [(ngModel)]="createQuillHtml"
+            [format]="'html'"
+            [sanitize]="false"
+            [styles]="{ minHeight: '180px' }"
+            placeholder="Rédigez l'actualité..."
+          ></quill-editor>
+        }
+      </div>
 
       <label class="field">
         Photo
@@ -70,6 +79,9 @@
         <img class="imgPreview" [src]="createPreviewUrl()" alt="" />
       }
 
+      @if (createError()) {
+        <p class="formError">{{ createError() }}</p>
+      }
       <div class="actions">
         <button class="btn btnPrimary" type="button" (click)="submitCreate()">Créer</button>
         <button class="btn" type="button" (click)="closeCreate()">Annuler</button>
@@ -96,10 +108,19 @@
         />
       </label>
 
-      <label class="field">
-        Texte
-        <textarea rows="6" [ngModel]="edit()!.texte" (ngModelChange)="edit.set({ ...edit()!, texte: $event })"></textarea>
-      </label>
+      <div class="field">
+        <span>Texte</span>
+        @if (isBrowser) {
+          <quill-editor
+            [modules]="quillModules"
+            [(ngModel)]="editQuillHtml"
+            [format]="'html'"
+            [sanitize]="false"
+            [styles]="{ minHeight: '180px' }"
+            placeholder="Rédigez l'actualité..."
+          ></quill-editor>
+        }
+      </div>
 
       @if (edit()!.image && !edit()!.removeImage && !editPreviewUrl()) {
         <img class="imgPreview" [src]="newsImageUrl(edit()!.image)" alt="" />
@@ -123,6 +144,9 @@
         Supprimer la photo
       </label>
 
+      @if (editError()) {
+        <p class="formError">{{ editError() }}</p>
+      }
       <div class="actions">
         <button class="btn btnPrimary" type="button" (click)="submitEdit()">Enregistrer</button>
         <button class="btn" type="button" (click)="closeEdit()">Annuler</button>

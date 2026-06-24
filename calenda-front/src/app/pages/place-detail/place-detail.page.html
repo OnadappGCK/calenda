@@ -1,0 +1,290 @@
+@if (loading()) {
+  <div class="loadingPage">Chargement…</div>
+} @else if (error() || !place()) {
+  <div class="errorPage">{{ error() ?? 'Établissement introuvable' }}</div>
+} @else {
+  <div class="detailPage">
+
+    <!-- Hero image -->
+    @if (placeImageUrl(place()!)) {
+      <div class="heroImg" [style.background-image]="'url(' + placeImageUrl(place()!) + ')'">
+        <div class="heroOverlay"></div>
+        <div class="heroContent">
+          <div class="heroBadge">{{ typeIcon() }} {{ typeLabel() }}</div>
+          <h1 class="heroTitle">{{ place()!.nom }}</h1>
+          @if (place()!.ville) {
+            <div class="heroVille">📍 {{ place()!.ville }}</div>
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="heroPlaceholder">
+        <div class="heroPlaceholderIcon">{{ typeIcon() }}</div>
+        <div class="heroBadge">{{ typeLabel() }}</div>
+        <h1 class="heroTitle">{{ place()!.nom }}</h1>
+        @if (place()!.ville) {
+          <div class="heroVille">📍 {{ place()!.ville }}</div>
+        }
+      </div>
+    }
+
+    <!-- Barre admin -->
+    @if (canEdit) {
+      <div class="adminBar">
+        @if (!editing()) {
+          <button class="adminBtn" type="button" (click)="startEdit()">✏️ Modifier l'établissement</button>
+        } @else {
+          <button class="adminBtn adminBtnSave" type="button" (click)="save()" [disabled]="saving()">
+            {{ saving() ? 'Sauvegarde…' : '💾 Sauvegarder' }}
+          </button>
+          <button class="adminBtn" type="button" (click)="cancelEdit()">Annuler</button>
+          @if (saveError()) { <span class="adminError">{{ saveError() }}</span> }
+        }
+      </div>
+    }
+
+    <div class="container pageContent">
+
+      <!-- Formulaire d'édition inline (admin uniquement) -->
+      @if (editing() && draft()) {
+        <div class="editForm">
+          <div class="editGrid">
+            <label class="editField">
+              Nom *
+              <input type="text" [value]="draft()!.nom" (input)="setDraft('nom', $any($event.target).value)" />
+            </label>
+            <div class="editField">
+              <div class="typesLabel">Types</div>
+              <div class="typesCheckboxes">
+                @for (t of TYPES; track t) {
+                  <label class="checkLabel">
+                    <input type="checkbox" [checked]="draft()!.types.includes(t)" (change)="toggleDraftType(t)" />
+                    {{ TYPE_ICONS[t] }} {{ TYPE_LABELS[t] }}
+                  </label>
+                }
+              </div>
+            </div>
+            <label class="editField">
+              Ville
+              <input type="text" [value]="draft()!.ville" (input)="setDraft('ville', $any($event.target).value)" />
+            </label>
+            <label class="editField">
+              Adresse
+              <input type="text" [value]="draft()!.adresse" (input)="setDraft('adresse', $any($event.target).value)" />
+            </label>
+            <label class="editField">
+              Contact
+              <input type="text" [value]="draft()!.contact" (input)="setDraft('contact', $any($event.target).value)" />
+            </label>
+            <div class="editField editFullRow editHorairesField">
+              <div class="editHorairesHeader">
+                <span>Horaires d'ouverture</span>
+                @if (editHorairesMode === 'simple') {
+                  <button type="button" class="btnSmall" (click)="switchEditHorairesMode('custom')">Personnaliser par jour</button>
+                } @else {
+                  <button type="button" class="btnSmall" (click)="switchEditHorairesMode('simple')">Mode simple</button>
+                }
+              </div>
+              @if (editHorairesMode === 'simple') {
+                <div class="editHorairesSimple">
+                  <label>Du
+                    <select [(ngModel)]="editJourDebut">
+                      @for (j of JOURS_SEMAINE; track j) { <option [value]="j">{{ j }}</option> }
+                    </select>
+                  </label>
+                  <label>au
+                    <select [(ngModel)]="editJourFin">
+                      @for (j of JOURS_SEMAINE; track j) { <option [value]="j">{{ j }}</option> }
+                    </select>
+                  </label>
+                  <label>de <input type="time" [(ngModel)]="editHeureDebut" /></label>
+                  <label>à  <input type="time" [(ngModel)]="editHeureFin" /></label>
+                </div>
+              } @else {
+                <div class="editHorairesCustom">
+                  @for (slot of editHorairesSlots; track slot.jour; let i = $index) {
+                    <div class="editJourSlot">
+                      <label class="editCheckLabel">
+                        <input type="checkbox" [(ngModel)]="editHorairesSlots[i].actif" />
+                        <span class="editJourName">{{ slot.jour }}</span>
+                      </label>
+                      @if (slot.actif) {
+                        <input type="time" [(ngModel)]="editHorairesSlots[i].heureDebut" class="editTimeInput" />
+                        <span class="editTimeSep">→</span>
+                        <input type="time" [(ngModel)]="editHorairesSlots[i].heureFin" class="editTimeInput" />
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+            <label class="editField editFullRow">
+              Image URL
+              <input type="url" [value]="draft()!.imageUrl" (input)="setDraft('imageUrl', $any($event.target).value)" />
+            </label>
+            <label class="editField editFullRow">
+              Source URL
+              <input type="url" [value]="draft()!.sourceUrl" (input)="setDraft('sourceUrl', $any($event.target).value)" />
+            </label>
+            <label class="editField editFullRow">
+              Tags <small>(virgule-séparés)</small>
+              <input type="text" [value]="draft()!.tags" (input)="setDraft('tags', $any($event.target).value)" />
+            </label>
+            @if (isAdmin) {
+              <label class="editField">
+                Tier featured
+                <input type="number" min="0" max="10" [value]="draft()!.featuredTier"
+                       (input)="setDraft('featuredTier', +$any($event.target).value)" />
+              </label>
+              <label class="editField">
+                Mise en avant — début
+                <input type="date" [value]="draft()!.featuredStart"
+                       (input)="setDraft('featuredStart', $any($event.target).value)" />
+              </label>
+              <label class="editField">
+                Mise en avant — fin
+                <input type="date" [value]="draft()!.featuredEnd"
+                       (input)="setDraft('featuredEnd', $any($event.target).value)" />
+              </label>
+              <label class="editField editFullRow" style="position:relative">
+                Propriétaire
+                <input type="text" [value]="editUserSearch()"
+                       (input)="searchEditUser($any($event.target).value)"
+                       placeholder="Rechercher un utilisateur par pseudo…" />
+                @if (editUserSearching()) { <small style="font-size:.78rem;color:var(--text-muted-2)">Recherche…</small> }
+                @if (draft()!.proprietaireId) {
+                  <small style="font-size:.78rem;color:var(--brand-primary)">
+                    ✓ {{ editUserSearch() }}
+                    <button type="button" style="background:none;border:none;cursor:pointer;color:inherit;padding:0 0.3rem" (click)="clearEditUser()">✕</button>
+                  </small>
+                }
+                @if (editUserResults().length > 0) {
+                  <div class="editUserDropdown">
+                    @for (u of editUserResults(); track u.id) {
+                      <button type="button" class="editUserDropdownItem" (click)="selectEditUser(u)">
+                        {{ u.pseudo }} <small>{{ u.email }}</small>
+                      </button>
+                    }
+                  </div>
+                }
+              </label>
+            }
+          </div>
+          <label class="editField editFullRow">
+            Description
+            <textarea rows="5" [value]="draft()!.description"
+                      (input)="setDraft('description', $any($event.target).value)"></textarea>
+          </label>
+          @if (isAdmin) {
+            <div class="editBools">
+              <label class="checkLabel">
+                <input type="checkbox" [checked]="draft()!.featured"
+                       (change)="setDraft('featured', $any($event.target).checked)" />
+                Featured
+              </label>
+              <label class="checkLabel">
+                <input type="checkbox" [checked]="draft()!.public"
+                       (change)="setDraft('public', $any($event.target).checked)" />
+                Public (visible)
+              </label>
+            </div>
+          }
+          @if (!isAdmin && place()!.featuredTier > 0) {
+            <div class="featuredBadgeReadOnly">
+              @if (place()!.featuredTier >= 3) { ⭐⭐ Premium }
+              @else if (place()!.featuredTier === 2) { ⭐ À la une }
+              @else { ✨ Sélection }
+              @if (place()!.featuredStart || place()!.featuredEnd) {
+                <span class="featuredDates">
+                  {{ place()!.featuredStart ?? '…' }} → {{ place()!.featuredEnd ?? '…' }}
+                </span>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <div class="detailGrid">
+
+        <!-- Left: infos -->
+        <div class="detailMain">
+          @if (place()!.description) {
+            <section class="detailSection">
+              <h2 class="sectionTitle">Description</h2>
+              <p class="detailDesc">{{ place()!.description }}</p>
+            </section>
+          }
+
+          @if ((place()!.tags ?? []).length > 0) {
+            <section class="detailSection">
+              <h2 class="sectionTitle">Tags</h2>
+              <div class="detailTags">
+                @for (tag of place()!.tags; track tag) {
+                  <span class="tagChip">{{ tag }}</span>
+                }
+              </div>
+            </section>
+          }
+
+          @if (place()!.horaires) {
+            <section class="detailSection">
+              <h2 class="sectionTitle">🕐 Horaires</h2>
+              <p class="detailInfo">{{ displayHoraires(place()!.horaires) }}</p>
+            </section>
+          }
+
+          @if (place()!.contact) {
+            <section class="detailSection">
+              <h2 class="sectionTitle">📞 Contact</h2>
+              <p class="detailInfo">{{ place()!.contact }}</p>
+            </section>
+          }
+
+          @if (place()!.adresse) {
+            <section class="detailSection">
+              <h2 class="sectionTitle">📍 Adresse</h2>
+              <p class="detailInfo">{{ place()!.adresse }}@if (place()!.ville) { — {{ place()!.ville }}}</p>
+            </section>
+          }
+        </div>
+
+        <!-- Right: map + CTA -->
+        <aside class="detailSide">
+          @if (googleMapsUrl()) {
+            <a class="btnMaps" [href]="googleMapsUrl()!" target="_blank" rel="noopener">
+              🗺️ Ouvrir dans Google Maps
+            </a>
+          }
+
+          @if (mapUrl()) {
+            <div class="mapWrapper">
+              <iframe
+                [src]="mapUrl()!"
+                class="mapFrame"
+                loading="lazy"
+                title="Carte"
+                referrerpolicy="no-referrer"
+              ></iframe>
+            </div>
+          }
+
+          @if (!mapUrl() && place()!.adresse) {
+            <div class="mapFallback">
+              <div class="mapFallbackIcon">🗺️</div>
+              <div>{{ place()!.adresse }}</div>
+              @if (place()!.ville) { <div>{{ place()!.ville }}</div> }
+            </div>
+          }
+
+          @if (place()!.sourceUrl) {
+            <a class="btnSource" [href]="place()!.sourceUrl!" target="_blank" rel="noopener">
+              Voir la source
+            </a>
+          }
+        </aside>
+
+      </div><!-- /detailGrid -->
+    </div><!-- /container pageContent -->
+
+  </div><!-- /detailPage -->
+}

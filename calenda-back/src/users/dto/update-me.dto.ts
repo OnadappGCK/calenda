@@ -2,6 +2,10 @@ import { IsOptional, IsString, MinLength } from 'class-validator';
 
 /** DTO de mise à jour du profil courant (`PATCH /api/users/me`). */
 export class UpdateMeDto {
+  @IsOptional()
+  @IsString()
+  email?: string;
+
   /** Nouveau pseudo (optionnel). */
   @IsOptional()
   @IsString()
@@ -25,6 +29,10 @@ export class UpdateMeDto {
   @IsString()
   numero?: string;
 
+  @IsOptional()
+  @IsString()
+  bio?: string;
+
   /** Nouveau mot de passe (min 8). */
   @IsOptional()
   @IsString()
@@ -35,4 +43,8 @@ export class UpdateMeDto {
   @IsOptional()
   @IsString()
   passwordConfirmation?: string;
+
+  @IsOptional()
+  @IsString()
+  emailVerificationCode?: string;
 }

@@ -23,22 +23,14 @@
         @if (verifyError()) {
           <div class="error">{{ verifyError() }}</div>
         }
+        @if (verifyToken()) {
+          <div class="ok" style="margin-top: 8px;">Lien de vérification envoyé, vérifiez votre boîte mail.</div>
+        }
         <div class="actions" style="margin-top: 8px;">
           <button class="btn" type="button" (click)="requestEmailVerification()" [disabled]="verifyLoading()">
-            Obtenir un lien de vérification
+            Renvoyer le lien de vérification
           </button>
         </div>
-        @if (verifyToken()) {
-          <label class="field" style="margin-top: 10px;">
-            Token
-            <input type="text" [ngModel]="verifyToken()" (ngModelChange)="verifyToken.set($event)" />
-          </label>
-          <div class="actions">
-            <button class="btn btnPrimary" type="button" (click)="confirmEmailVerification()" [disabled]="verifyLoading()">
-              Vérifier
-            </button>
-          </div>
-        }
       }
 
       @if (!editing()) {
@@ -52,6 +44,11 @@
         }
 
         <div class="form">
+          <label class="field">
+            Email
+            <input type="email" name="email" [(ngModel)]="email" />
+          </label>
+
           <label class="field">
             Pseudo
             <input type="text" name="pseudo" [(ngModel)]="pseudo" />
@@ -73,7 +70,12 @@
           </label>
 
           <label class="field">
-            Mot de passe
+            Bio
+            <textarea rows="4" name="bio" [(ngModel)]="bio" placeholder="Parlez de vous, de votre activité, de vos événements..."></textarea>
+          </label>
+
+          <label class="field">
+            Nouveau mot de passe
             <input type="password" name="password" [(ngModel)]="password" />
           </label>
 
@@ -105,6 +107,43 @@
     </div>
     <div class="actions">
       <button class="btn" type="button" (click)="closeAvatarPicker()">Fermer</button>
+    </div>
+  </div>
+}
+
+@if (showVerifyModal()) {
+  <div class="modalBackdrop"></div>
+  <div class="modal verifyModal" (click)="$event.stopPropagation()">
+    <h2>Vérification requise</h2>
+
+    @if (verifyModalLoading()) {
+      <p class="verifyInfo">Envoi du code en cours…</p>
+    } @else {
+      <p class="verifyInfo">Un code de vérification a été envoyé à votre adresse e-mail. Saisissez-le ci-dessous pour confirmer les modifications.</p>
+    }
+
+    @if (verifyModalError()) {
+      <div class="error">{{ verifyModalError() }}</div>
+    }
+
+    <label class="field" style="margin-top: 0.75rem;">
+      Code reçu par e-mail
+      <input
+        type="text"
+        [(ngModel)]="verifyModalCode"
+        placeholder="Ex : 123456"
+        [disabled]="verifyModalLoading()"
+        (keyup.enter)="confirmVerifyModal()"
+      />
+    </label>
+
+    <div class="actions" style="margin-top: 1rem;">
+      <button class="btn btnPrimary" type="button" (click)="confirmVerifyModal()" [disabled]="verifyModalLoading()">
+        Confirmer
+      </button>
+      <button class="btn" type="button" (click)="closeVerifyModal()" [disabled]="verifyModalLoading()">
+        Annuler
+      </button>
     </div>
   </div>
 }

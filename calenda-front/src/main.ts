@@ -8,6 +8,12 @@ import localeIt from '@angular/common/locales/it';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
 
+if ('scrollRestoration' in history) {
+  history.scrollRestoration = 'manual';
+}
+
+window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+
 registerLocaleData(localeFr);
 registerLocaleData(localeEn);
 registerLocaleData(localeEs);

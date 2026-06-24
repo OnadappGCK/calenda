@@ -159,6 +159,9 @@ export class RegisterPage {
         profileImage: this.profileImage,
       });
       this.ok.set(true);
+      window.alert(
+        'Un mail de vérification vous a été envoyé. Veuillez valider votre e-mail pour pouvoir vous connecter.',
+      );
       await this.router.navigateByUrl('/login');
     } catch (e) {
       this.error.set(this.parseErrorMessage(e));
