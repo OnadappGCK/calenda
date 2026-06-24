@@ -4,6 +4,10 @@ import { User } from '../users/user.entity';
 import { ConversationMessage } from './conversation-message.entity';
 import { ConversationParticipant } from './conversation-participant.entity';
 
+const dbType = (process.env.DB_TYPE ?? '').toLowerCase();
+const usePostgres = dbType === 'postgres' || !!process.env.DB_HOST;
+const dateColumnType = usePostgres ? 'timestamptz' : 'datetime';
+
 @Entity('conversation_groups')
 export class ConversationGroup {
   @PrimaryGeneratedColumn('uuid')
@@ -30,7 +34,7 @@ export class ConversationGroup {
   @Column({ type: 'text', default: 'OPEN' })
   status!: 'OPEN' | 'LOCKED' | 'DELETED';
 
-  @Column({ type: 'datetime' })
+  @Column({ type: dateColumnType })
   expiresAt!: Date;
 
   @OneToMany(() => ConversationMessage, (message) => message.group, { cascade: false })

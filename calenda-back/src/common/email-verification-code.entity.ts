@@ -1,5 +1,9 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
+const dbType = (process.env.DB_TYPE ?? '').toLowerCase();
+const usePostgres = dbType === 'postgres' || !!process.env.DB_HOST;
+const dateColumnType = usePostgres ? 'timestamptz' : 'datetime';
+
 @Entity('email_verification_codes')
 export class EmailVerificationCode {
   @PrimaryGeneratedColumn('uuid')
@@ -17,10 +21,10 @@ export class EmailVerificationCode {
   @Column({ type: 'text', nullable: true })
   userId!: string | null;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: dateColumnType })
   expiresAt!: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: dateColumnType, nullable: true })
   consumedAt!: Date | null;
 
   @CreateDateColumn()
