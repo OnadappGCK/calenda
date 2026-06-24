@@ -1,9 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { Between, MoreThanOrEqual, Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
+import { EventTag } from '../common/enums/event-tag.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
 import { Event } from '../events/event.entity';
+import { EventSlot } from '../events/event-slot.entity';
+import { User } from '../users/user.entity';
 
 type MergeOptions = {
   pages?: number;
@@ -16,6 +20,7 @@ type MergeResult = {
   dedupedUrls: number;
   created: number;
   skippedExisting: number;
+  deleted: number;
   failed: number;
 };
 
@@ -31,6 +36,7 @@ type PreviewResult = {
   skippedPast: number;
   failed: number;
   urls: string[];
+  toDelete: { id: string; titre: string; dateDebut: string; dateFin: string | null }[];
   failures: { url: string; reason: string }[];
   debugSamples: {
     status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
@@ -49,6 +55,7 @@ type ApplyResult = {
   created: number;
   skippedExisting: number;
   skippedPast: number;
+  deleted: number;
   failed: number;
   debugSamples: {
     status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
@@ -63,10 +70,69 @@ type ApplyResult = {
 @Injectable()
 export class SalsaOlivierMergeService {
   private readonly logger = new Logger(SalsaOlivierMergeService.name);
+  private static readonly MERGE_USER = {
+    email: 'merge.salsa-olivier@calendago.fr',
+    pseudo: 'salsa olivier',
+    ville: 'Sausset-les-Pins',
+    lieu: 'merge',
+  };
+  private mergeOrganizerId: string | null = null;
 
-  constructor(@InjectRepository(Event) private readonly eventsRepo: Repository<Event>) {}
+  constructor(
+    @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
+    @InjectRepository(EventSlot) private readonly slotsRepo: Repository<EventSlot>,
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
+  ) {}
 
-  private async updateExistingIfBetter(existing: Event, detail: { description: string; contact: string | null; tarif: string | null; adresse: string | null }) {
+  private async getMergeOrganizer(): Promise<User> {
+    if (this.mergeOrganizerId) {
+      const cached = await this.usersRepo.findOne({ where: { id: this.mergeOrganizerId } });
+      if (cached) return cached;
+    }
+
+    const cfg = SalsaOlivierMergeService.MERGE_USER;
+    let user = await this.usersRepo.findOne({ where: [{ email: cfg.email }, { pseudo: cfg.pseudo }] });
+    if (!user) {
+      const passwordHash = await bcrypt.hash(`merge-salsa-olivier-${Date.now()}`, 10);
+      user = this.usersRepo.create({
+        email: cfg.email,
+        pseudo: cfg.pseudo,
+        ville: cfg.ville,
+        lieu: cfg.lieu,
+        profileImage: null,
+        numero: null,
+        passwordHash,
+        isAdmin: false,
+        emailVerified: true,
+        emailVerificationToken: null,
+      });
+      user = await this.usersRepo.save(user);
+      this.logger.log(`salsa_merge_user_created id=${user.id} email=${user.email}`);
+    }
+
+    this.mergeOrganizerId = user.id;
+    return user;
+  }
+
+  async backfillOrganizer(): Promise<number> {
+    const organizer = await this.getMergeOrganizer();
+    const events = await this.eventsRepo.find({ where: { origin: EventOrigin.SALSA_OLIVIER } });
+    const toUpdate = events.filter((ev) => !ev.organisateur || ev.organisateur.id !== organizer.id);
+    if (toUpdate.length === 0) return 0;
+
+    for (const ev of toUpdate) {
+      ev.organisateur = organizer;
+    }
+    await this.eventsRepo.save(toUpdate);
+    this.logger.log(`salsa_backfill_organizer updated=${toUpdate.length} organizerId=${organizer.id}`);
+    return toUpdate.length;
+  }
+
+  private async updateExistingIfBetter(
+    existing: Event,
+    detail: { description: string; contact: string | null; tarif: string | null; adresse: string | null },
+    organizer: User,
+  ) {
     let changed = false;
 
     const curDesc = (existing.description ?? '').trim();
@@ -91,12 +157,18 @@ export class SalsaOlivierMergeService {
       changed = true;
     }
 
+    if (!existing.organisateur || existing.organisateur.id !== organizer.id) {
+      existing.organisateur = organizer;
+      changed = true;
+    }
+
     if (changed) {
       await this.eventsRepo.save(existing);
     }
   }
 
   async merge(options?: MergeOptions): Promise<MergeResult> {
+    await this.backfillOrganizer();
     const pages = Math.max(1, Math.min(20, options?.pages ?? 2));
     const dryRun = options?.dryRun ?? false;
 
@@ -108,17 +180,20 @@ export class SalsaOlivierMergeService {
         dedupedUrls: preview.dedupedUrls,
         created: preview.wouldCreate,
         skippedExisting: preview.skippedExisting,
+        deleted: 0,
         failed: preview.failed,
       };
     }
 
-    const apply = await this.apply({ urls: preview.urls });
+    const toDeleteIds = preview.toDelete.map((e) => e.id);
+    const apply = await this.apply({ urls: preview.urls, toDeleteIds });
     return {
       scannedPages: preview.scannedPages,
       foundUrls: preview.foundUrls,
       dedupedUrls: preview.dedupedUrls,
       created: apply.created,
       skippedExisting: apply.skippedExisting,
+      deleted: apply.deleted,
       failed: preview.failed + apply.failed,
     };
   }
@@ -136,8 +211,10 @@ export class SalsaOlivierMergeService {
     let skippedPast = 0;
     const failures: { url: string; reason: string }[] = [];
     const debugSamples: PreviewResult['debugSamples'] = [];
+    const titresVus = new Set<string>();
 
     const now = new Date();
+    const mergeOrganizer = await this.getMergeOrganizer();
 
     const allUrls = await this.listEventUrls(maxItems);
     const uniqueUrls = [...new Set(allUrls)];
@@ -163,6 +240,7 @@ export class SalsaOlivierMergeService {
         }
 
         parsed++;
+        titresVus.add(detail.titre);
 
         const endForPast = this.effectiveEndForPastCheck(detail.dateDebut, detail.dateFin);
         if (endForPast < now) {
@@ -205,7 +283,7 @@ export class SalsaOlivierMergeService {
             contact: detail.contact,
             tarif: detail.tarif,
             adresse: detail.adresse,
-          });
+          }, mergeOrganizer);
           skippedExisting++;
           if (debugSamples.length < 20) {
             debugSamples.push({
@@ -253,6 +331,21 @@ export class SalsaOlivierMergeService {
       `salsa_preview_done pages=${pages} parsed=${parsed} addable=${wouldCreate} skippedPast=${skippedPast} skippedExisting=${skippedExisting} failed=${failed}`,
     );
 
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const futureDbEvents = await this.eventsRepo.find({
+      where: { origin: EventOrigin.SALSA_OLIVIER, dateDebut: MoreThanOrEqual(yesterday) },
+    });
+    const toDelete = futureDbEvents
+      .filter((ev) => !titresVus.has(ev.titre))
+      .map((ev) => ({
+        id: ev.id,
+        titre: ev.titre,
+        dateDebut: ev.dateDebut.toISOString(),
+        dateFin: ev.dateFin ? ev.dateFin.toISOString() : null,
+      }));
+    this.logger.log(`salsa_preview_toDelete count=${toDelete.length}`);
+
     return {
       scannedPages: pages,
       foundUrls: allUrls.length,
@@ -264,22 +357,26 @@ export class SalsaOlivierMergeService {
       skippedExisting,
       skippedPast,
       failed,
+      toDelete,
       urls,
       failures,
       debugSamples,
     };
   }
 
-  async apply(payload: { urls: string[] }): Promise<ApplyResult> {
+  async apply(payload: { urls: string[]; toDeleteIds?: string[] }): Promise<ApplyResult> {
     const uniqueUrls = [...new Set(payload.urls ?? [])];
+    const toDeleteIds = [...new Set(payload.toDeleteIds ?? [])];
 
     let created = 0;
     let skippedExisting = 0;
     let skippedPast = 0;
+    let deleted = 0;
     let failed = 0;
     const debugSamples: ApplyResult['debugSamples'] = [];
 
     const now = new Date();
+    const mergeOrganizer = await this.getMergeOrganizer();
 
     this.logger.log(`salsa_apply_start urls=${uniqueUrls.length}`);
 
@@ -330,7 +427,7 @@ export class SalsaOlivierMergeService {
             contact: detail.contact,
             tarif: detail.tarif,
             adresse: detail.adresse,
-          });
+          }, mergeOrganizer);
           skippedExisting++;
           if (debugSamples.length < 20) {
             debugSamples.push({
@@ -355,7 +452,7 @@ export class SalsaOlivierMergeService {
           latitude: detail.latitude,
           longitude: detail.longitude,
           theme: null,
-          caracteristiques: null,
+          caracteristiques: detail.caracteristiques?.length ? detail.caracteristiques : null,
           imageUrl: detail.imageUrl,
           tarif: detail.tarif ?? 'Non renseigné',
           contact: detail.contact,
@@ -364,7 +461,7 @@ export class SalsaOlivierMergeService {
           couleur: null,
           enAvant: false,
           public: false,
-          organisateur: null,
+          organisateur: mergeOrganizer,
         });
 
         await this.eventsRepo.save(ev);
@@ -386,8 +483,20 @@ export class SalsaOlivierMergeService {
       }
     }
 
+    for (const id of toDeleteIds) {
+      try {
+        await this.slotsRepo.delete({ eventId: id });
+        await this.eventsRepo.delete(id);
+        deleted++;
+        this.logger.log(`salsa_apply_deleted id=${id}`);
+      } catch {
+        this.logger.warn(`salsa_apply_delete_failed id=${id}`);
+        failed++;
+      }
+    }
+
     this.logger.log(
-      `salsa_apply_done processed=${uniqueUrls.length} created=${created} skippedPast=${skippedPast} skippedExisting=${skippedExisting} failed=${failed}`,
+      `salsa_apply_done processed=${uniqueUrls.length} created=${created} deleted=${deleted} skippedPast=${skippedPast} skippedExisting=${skippedExisting} failed=${failed}`,
     );
 
     return {
@@ -395,6 +504,7 @@ export class SalsaOlivierMergeService {
       created,
       skippedExisting,
       skippedPast,
+      deleted,
       failed,
       debugSamples,
     };
@@ -465,6 +575,7 @@ export class SalsaOlivierMergeService {
       latitude: number | null;
       longitude: number | null;
       categorie: EventCategory;
+      caracteristiques: EventTag[];
     };
     reason: string;
   } {
@@ -523,7 +634,8 @@ export class SalsaOlivierMergeService {
         adresse,
         latitude: null,
         longitude: null,
-        categorie: EventCategory.DANSE,
+        categorie: EventCategory.SORTIE,
+        caracteristiques: [EventTag.DANSE, EventTag.MUSIQUE],
       },
       reason: 'ok',
     };
@@ -554,18 +666,67 @@ export class SalsaOlivierMergeService {
     return new Date(y, mo - 1, d);
   }
 
+  private normalizeFrenchTimeWords(s: string): string {
+    return s
+      .replace(/\bminuit\b/gi, '00h00')
+      .replace(/\bmidi\b/gi, '12h00');
+  }
+
+  private parseHourToken(token: string): { hh: number; mm: number } | null {
+    const raw = this.normalizeFrenchTimeWords((token ?? '').trim().toLowerCase());
+    if (!raw) return null;
+
+    let hh: number;
+    let mm: number;
+
+    if (raw.includes(':')) {
+      const parts = raw.split(':');
+      hh = Number(parts[0]);
+      mm = parts[1] ? Number(parts[1]) : 0;
+    } else if (raw.includes('h')) {
+      const parts = raw.split('h');
+      hh = Number(parts[0]);
+      mm = parts[1] ? Number(parts[1]) : 0;
+    } else {
+      hh = Number(raw);
+      mm = 0;
+    }
+
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return { hh, mm };
+  }
+
   private extractTimeRange(text: string): { start: { hh: number; mm: number }; end: { hh: number; mm: number } } | null {
-    const s = (text ?? '').replace(/\s+/g, ' ');
-    const re = /(\d{1,2})(?:h|:)(\d{2})\s*[→\-–]\s*(\d{1,2})(?:h|:)(\d{2})/;
-    const m = s.match(re);
-    if (!m) return null;
-    const hh1 = Number(m[1]);
-    const mm1 = Number(m[2]);
-    const hh2 = Number(m[3]);
-    const mm2 = Number(m[4]);
-    if ([hh1, mm1, hh2, mm2].some((n) => !Number.isFinite(n))) return null;
-    if (hh1 < 0 || hh1 > 23 || hh2 < 0 || hh2 > 23 || mm1 < 0 || mm1 > 59 || mm2 < 0 || mm2 > 59) return null;
-    return { start: { hh: hh1, mm: mm1 }, end: { hh: hh2, mm: mm2 } };
+    const s = this.normalizeFrenchTimeWords((text ?? '').replace(/\s+/g, ' '));
+    const re = /(\d{1,2}(?:h\d{0,2}|:\d{2})?)\s*[→\-–]\s*(\d{1,2}(?:h\d{0,2}|:\d{2})?)/gi;
+
+    let minStart: number | null = null;
+    let maxEnd: number | null = null;
+    let m: RegExpExecArray | null;
+
+    while ((m = re.exec(s))) {
+      const start = this.parseHourToken(m[1] ?? '');
+      const end = this.parseHourToken(m[2] ?? '');
+      if (!start || !end) continue;
+
+      const startMin = start.hh * 60 + start.mm;
+      let endMin = end.hh * 60 + end.mm;
+      if (endMin <= startMin) endMin += 24 * 60;
+
+      if (minStart === null || startMin < minStart) minStart = startMin;
+      if (maxEnd === null || endMin > maxEnd) maxEnd = endMin;
+    }
+
+    if (minStart === null || maxEnd === null) return null;
+
+    const startTotal = minStart;
+    const endTotal = maxEnd % (24 * 60);
+
+    return {
+      start: { hh: Math.floor(startTotal / 60), mm: startTotal % 60 },
+      end: { hh: Math.floor(endTotal / 60), mm: endTotal % 60 },
+    };
   }
 
   private extractTarif(text: string): string | null {

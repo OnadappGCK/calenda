@@ -13,7 +13,23 @@
 
     <label>
       Mot de passe
-      <input name="password" type="password" [(ngModel)]="password" required />
+      <div class="password-field">
+        <input
+          name="password"
+          [type]="showPassword() ? 'text' : 'password'"
+          [(ngModel)]="password"
+          required
+        />
+        <button
+          class="toggle-password"
+          type="button"
+          (click)="togglePasswordVisibility()"
+          [attr.aria-label]="showPassword() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+          [attr.aria-pressed]="showPassword()"
+        >
+          {{ showPassword() ? '🙈' : '👁️' }}
+        </button>
+      </div>
     </label>
 
     <button class="btn" type="submit">Se connecter</button>

@@ -39,6 +39,9 @@ export class User {
   @Column({ type: 'text', nullable: true })
   numero!: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  bio!: string | null;
+
   @Column()
   /** Hash bcrypt du mot de passe (jamais exposé au front). */
   passwordHash!: string;
@@ -49,6 +52,9 @@ export class User {
   @Column({ default: false })
   /** Indique si l'email est vérifié. */
   emailVerified!: boolean;
+
+  @Column({ default: false })
+  isBanned!: boolean;
 
   @Column({ type: 'text', nullable: true })
   /** Token de vérification email (null si non utilisé). */

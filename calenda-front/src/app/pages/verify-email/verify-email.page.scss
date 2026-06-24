@@ -1,0 +1,39 @@
+@use 'palette' as *;
+
+.wrap {
+  max-width: 680px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+.info,
+.message {
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid $border-1;
+  background: $surface-1;
+  color: $text-1;
+}
+
+.message.success {
+  border-color: $status-success-border;
+  background: $status-success-surface;
+}
+
+.message.error {
+  border-color: $status-danger-border;
+  background: $status-danger-surface;
+}
+
+.actions {
+  margin-top: 1rem;
+}
+
+.btn {
+  border: 1px solid $border-1;
+  background: $surface-1;
+  color: $text-1;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+}

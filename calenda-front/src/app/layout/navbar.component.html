@@ -17,6 +17,36 @@
     } @else {
       <a class="iconBtn" routerLink="/favorites" [attr.aria-label]="i18n.t('nav.favorites')">♥</a>
 
+      <div class="notifWrapper" (click)="$event.stopPropagation()">
+        <button class="iconBtn notifBtn" type="button" (click)="toggleNotifMenu($event)" aria-label="Notifications">
+          🔔
+          @if (notifCount() > 0) {
+            <span class="notifBadge">{{ notifCount() > 9 ? '9+' : notifCount() }}</span>
+          }
+        </button>
+
+        @if (notifMenuOpen()) {
+          <div class="notifMenu">
+            <div class="notifMenuHeader">Notifications</div>
+            @if (notifications().length === 0) {
+              <div class="notifEmpty">Aucune notification</div>
+            } @else {
+              @for (n of notifications(); track n.id) {
+                <button
+                  class="notifItem"
+                  [class.notifUnread]="n.active"
+                  type="button"
+                  (click)="onNotifClick(n, $event)"
+                >
+                  <span class="notifIcon">{{ n.type === 'FAVORITE_EVENT' ? '📅' : '💬' }}</span>
+                  <span class="notifText">{{ n.text }}</span>
+                </button>
+              }
+            }
+          </div>
+        }
+      </div>
+
       @if (isAdmin()) {
         <a
           class="iconBtn"

@@ -71,7 +71,7 @@ export class NewsController {
           cb(null, `${Date.now()}-${rnd}${safeExt}`);
         },
       }),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: 5 * 1024 * 1024, fieldSize: 20 * 1024 * 1024 },
       fileFilter: (req, file, cb) => {
         const ok = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype);
         if (!ok) {
@@ -120,7 +120,7 @@ export class NewsController {
           cb(null, `${Date.now()}-${rnd}${safeExt}`);
         },
       }),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: 5 * 1024 * 1024, fieldSize: 20 * 1024 * 1024 },
       fileFilter: (req, file, cb) => {
         const ok = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype);
         if (!ok) {

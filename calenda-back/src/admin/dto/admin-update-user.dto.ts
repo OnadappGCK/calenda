@@ -22,6 +22,10 @@ export class AdminUpdateUserDto {
   isAdmin?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  emailVerified?: boolean;
+
+  @IsOptional()
   @IsString()
   profileImage?: string | null;
 

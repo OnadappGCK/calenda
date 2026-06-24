@@ -16,6 +16,8 @@
   border: 1px solid $border-1;
   border-radius: 1rem;
   padding: 1rem;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .itemImg {
@@ -105,9 +107,54 @@
   margin: 0.5rem 0;
 }
 
+.formError {
+  color: #e53e3e;
+  font-size: 0.85rem;
+  margin: 0.4rem 0;
+}
+
 .actions {
   margin-top: 0.9rem;
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+
+/* ─── Contenu riche affiché dans la liste (base uniquement) ─── */
+/* Les règles enfant sont dans styles.scss pour échapper au ViewEncapsulation */
+.newsContent {
+  margin-top: 0.5rem;
+  line-height: 1.65;
+  font-size: 0.95rem;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
+}
+
+/* ─── Éditeur Quill dans la modale ─── */
+quill-editor {
+  display: block;
+  border-radius: 0.85rem;
+  overflow: hidden;
+  border: 1px solid $border-1;
+
+  .ql-toolbar {
+    background: $surface-1;
+    border: none;
+    border-bottom: 1px solid $border-1;
+    border-radius: 0.85rem 0.85rem 0 0;
+  }
+
+  .ql-container {
+    background: $surface-1;
+    border: none;
+    border-radius: 0 0 0.85rem 0.85rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: $text-1;
+  }
+
+  .ql-editor {
+    min-height: 180px;
+  }
 }

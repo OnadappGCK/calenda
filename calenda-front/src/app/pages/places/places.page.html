@@ -1,0 +1,368 @@
+<div class="placesPage">
+
+  <!-- Hero band: type title full-width -->
+  <div [class]="'typeHeroBand ' + selectedTypeClass()">
+    <span class="typeHeroIcon">{{ TYPE_ICONS[selectedType()] }}</span>
+    <h1 class="typeHeroTitle">{{ TYPE_LABELS_HERO[selectedType()] }}</h1>
+  </div>
+
+  <!-- Type tabs: full-width -->
+  <div class="typeTabs">
+    @for (t of TYPES; track t) {
+      <button
+        [class]="'typeTab ' + (selectedType() === t ? selectedTypeClass() + ' active' : '')"
+        type="button"
+        (click)="selectType(t)"
+      >
+        <span class="typeTabIcon">{{ TYPE_ICONS[t] }}</span>
+        <span class="typeTabLabel">{{ TYPE_LABELS[t] }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="container pageContent">
+
+    <!-- Admin: bouton créer -->
+    @if (isAdmin()) {
+      <div class="adminBar">
+        @if (!showCreateForm) {
+          <button class="btn btnPrimary" type="button" (click)="openCreateForm()">
+            + Ajouter un établissement
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Formulaire création admin -->
+    @if (showCreateForm) {
+      <div class="createForm">
+        <h3>Nouvel établissement</h3>
+        <div class="formGrid">
+          <label class="field">
+            Nom *
+            <input type="text" [(ngModel)]="newNom" placeholder="Nom de l'établissement" />
+          </label>
+          <div class="field">
+            <div class="typesLabel">Types</div>
+            <div class="typesCheckboxes">
+              @for (t of TYPES; track t) {
+                <label class="checkLabel">
+                  <input type="checkbox" [checked]="newTypes.includes(t)" (change)="toggleNewType(t)" />
+                  {{ TYPE_ICONS[t] }} {{ TYPE_LABELS[t] }}
+                </label>
+              }
+            </div>
+          </div>
+          <label class="field fieldFull">
+            Description
+            <textarea [(ngModel)]="newDescription" rows="3" placeholder="Décrivez l'établissement…"></textarea>
+          </label>
+          <label class="field fieldFull" style="position:relative">
+            Adresse
+            <input type="text" [value]="newAdresse"
+                   (input)="searchNewAdresse($any($event.target).value)"
+                   placeholder="Rechercher une adresse…" />
+            @if (newAdresseSearching()) { <small class="searchHint">Recherche…</small> }
+            @if (newLatitude) { <small class="searchHint">&#10003; {{ newAdresse }}</small> }
+            @if (newAdresseResults().length > 0) {
+              <div class="userDropdown">
+                @for (r of newAdresseResults(); track r.place_id) {
+                  <button type="button" class="userDropdownItem" (click)="selectNewAdresse(r)">
+                    {{ r.display_name }}
+                  </button>
+                }
+              </div>
+            }
+          </label>
+          <label class="field">
+            Ville
+            <input type="text" [(ngModel)]="newVille" placeholder="Ex: Carry-le-Rouet" />
+          </label>
+          <label class="field">
+            Contact
+            <input type="text" [(ngModel)]="newContact" placeholder="Email ou téléphone" />
+          </label>
+          <div class="field fieldFull horairesField">
+            <div class="horairesHeader">
+              <span>Horaires d’ouverture</span>
+              @if (newHorairesMode === 'simple') {
+                <button type="button" class="btn btnSmall" (click)="switchHorairesMode('custom')">Personnaliser par jour</button>
+              } @else {
+                <button type="button" class="btn btnSmall" (click)="switchHorairesMode('simple')">Mode simple</button>
+              }
+            </div>
+            @if (newHorairesMode === 'simple') {
+              <div class="horairesSimple">
+                <label>Du
+                  <select [(ngModel)]="newJourDebut">
+                    @for (j of JOURS_SEMAINE; track j) { <option [value]="j">{{ j }}</option> }
+                  </select>
+                </label>
+                <label>au
+                  <select [(ngModel)]="newJourFin">
+                    @for (j of JOURS_SEMAINE; track j) { <option [value]="j">{{ j }}</option> }
+                  </select>
+                </label>
+                <label>de <input type="time" [(ngModel)]="newHeureDebut" /></label>
+                <label>à  <input type="time" [(ngModel)]="newHeureFin" /></label>
+              </div>
+            } @else {
+              <div class="horairesCustom">
+                @for (slot of newHorairesSlots; track slot.jour; let i = $index) {
+                  <div class="jourSlot">
+                    <label class="checkLabel">
+                      <input type="checkbox" [(ngModel)]="newHorairesSlots[i].actif" />
+                      <span class="jourName">{{ slot.jour }}</span>
+                    </label>
+                    @if (slot.actif) {
+                      <input type="time" [(ngModel)]="newHorairesSlots[i].heureDebut" class="timeInput" />
+                      <span class="timeSep">→</span>
+                      <input type="time" [(ngModel)]="newHorairesSlots[i].heureFin" class="timeInput" />
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          <label class="field fieldFull">
+            URL image
+            <input type="text" [(ngModel)]="newImageUrl" placeholder="https://…" />
+          </label>
+          @if (isAdmin()) {
+            <label class="field fieldFull" style="position:relative">
+              Propriétaire (facultatif)
+              <input type="text" [value]="newUserSearch"
+                     (input)="searchNewUser($any($event.target).value)"
+                     placeholder="Rechercher un utilisateur par pseudo…" />
+              @if (newProprietaireId) {
+                <small style="color:var(--brand-primary)">
+                  ✓ {{ newUserSearch }}
+                  <button type="button" style="background:none;border:none;cursor:pointer;color:inherit" (click)="clearNewUser()">✕</button>
+                </small>
+              }
+              @if (newUserResults().length > 0) {
+                <div class="userDropdown">
+                  @for (u of newUserResults(); track u.id) {
+                    <button type="button" class="userDropdownItem" (click)="selectNewUser(u)">
+                      {{ u.pseudo }} <small>{{ u.email }}</small>
+                    </button>
+                  }
+                </div>
+              }
+            </label>
+          }
+        </div>
+        <div class="tagsSection">
+          <div class="tagsLabel">Tags (emoji + mot)</div>
+          <div class="tagsSelected">
+            @for (tag of newTags; track tag) {
+              <span class="tagChip tagChipSelected">
+                {{ tag }}
+                <button type="button" class="tagRemove" (click)="removeNewTag(tag)">✕</button>
+              </span>
+            }
+          </div>
+          <div class="tagInputRow">
+            <input type="text" [(ngModel)]="newTagInput" placeholder="🍕 Pizza" (keydown.enter)="addTagFromInput()" />
+            <button type="button" class="btn btnSmall" (click)="addTagFromInput()">Ajouter</button>
+          </div>
+          @if (allTagsForForm().length > 0) {
+            <div class="existingTagsLabel">Tags existants :</div>
+            <div class="existingTags">
+              @for (item of allTagsForForm(); track item.tag) {
+                <button type="button" class="tagChip" [class.tagChipSelected]="newTags.includes(item.tag)" (click)="addExistingTag(item.tag)">
+                  {{ item.tag }} <span class="tagCount">×{{ item.count }}</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+        @if (createError()) {
+          <div class="createErrorMsg">⚠️ {{ createError() }}</div>
+        }
+        <div class="formActions">
+          <button class="btn btnPrimary" type="button" [disabled]="saving || !newNom.trim()" (click)="submitCreate()">
+            {{ saving ? 'Enregistrement…' : 'Créer' }}
+          </button>
+          <button class="btn" type="button" (click)="cancelCreate()">Annuler</button>
+        </div>
+      </div>
+    }
+
+    <!-- Layout principal -->
+    <div class="contentLayout">
+
+      <!-- Sidebar gauche (desktop) / cachée mobile -->
+      <aside class="sidebar">
+        <div class="filterPanel">
+          <div class="filterSearch">
+            <input type="text" class="searchInput" [value]="searchName()" (input)="searchName.set($any($event.target).value)" placeholder="🔍 Nom…" />
+            <input type="text" class="searchInput searchInputAddr" [value]="searchAddress()" (input)="searchAddress.set($any($event.target).value)" placeholder="📍 Adresse, ville…" />
+            @if (topCities().length > 0) {
+              <div class="cityChips">
+                @for (v of topCities(); track v) {
+                  <button type="button" class="cityChip" [class.active]="searchAddress() === v" (click)="selectCity(v)">
+                    {{ v }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+          @if (topTags().length > 0) {
+            <div class="filterTagsSection">
+              <div class="filterTagsTitle">Filtrer par tag</div>
+              <div class="filterTagsRow">
+                @for (item of topTags(); track item.tag) {
+                  <button type="button" class="filterTag" [class.active]="isTagSelected(item.tag)" (click)="toggleTag(item.tag)">
+                    {{ item.tag }}
+                  </button>
+                }
+                @if (selectedTags().size > 0) {
+                  <button type="button" class="filterTag filterClear" (click)="clearTags()">✕ Effacer</button>
+                }
+              </div>
+            </div>
+          }
+          <div class="filterTimeSection">
+            <div class="filterTagsTitle">Ouvert à</div>
+            <input
+              type="time"
+              class="timeInput"
+              [value]="filterOpenAt()"
+              (input)="filterOpenAt.set($any($event.target).value)"
+            />
+            @if (filterOpenAt()) {
+              <button type="button" class="filterTag filterClear" (click)="filterOpenAt.set('')">✕ Effacer</button>
+            }
+          </div>
+        </div>
+      </aside>
+
+      <!-- Zone principale -->
+      <div class="mainArea">
+
+        <!-- ═══ Carousel mise en avant ════════════════ -->
+        @if (carouselPlaces().length > 0) {
+          <div class="carousel" (mouseenter)="pauseCarousel()" (mouseleave)="resumeCarousel()">
+            <div class="carouselViewport">
+              <div class="carouselTrack" [style.transform]="'translateX(-' + carouselIdx() * 100 + '%)'">
+                @for (p of carouselPlaces(); track p.id) {
+                  <a class="carouselSlide" [routerLink]="['/places', p.id]">
+                    @if (placeImageUrl(p)) {
+                      <div class="csBg" [style.background-image]="'url(' + placeImageUrl(p) + ')'"></div>
+                    } @else {
+                      <div class="csBgPlaceholder">{{ TYPE_ICONS[selectedType()] }}</div>
+                    }
+                    <div class="csContent">
+                      <span class="csBadge" [class.csBadgePremium2]="p.featuredTier >= 3" [class.csBadgePremium1]="p.featuredTier === 2">
+                        {{ carouselTierBadge(p.featuredTier) }}
+                      </span>
+                      <div class="csNom">{{ p.nom }}</div>
+                      @if (p.ville) { <div class="csVille">📍 {{ p.ville }}</div> }
+                      @if (p.description) { <div class="csDesc">{{ p.description }}</div> }
+                      @if ((p.tags ?? []).length > 0) {
+                        <div class="csTags">
+                          @for (tag of (p.tags ?? []).slice(0, 5); track tag) {
+                            <span class="tagChip">{{ tag }}</span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </a>
+                }
+              </div>
+            </div>
+
+            @if (carouselPlaces().length > 1) {
+              <button class="csArrow csArrowPrev" type="button" (click)="prevSlide()">‹</button>
+              <button class="csArrow csArrowNext" type="button" (click)="nextSlide()">›</button>
+              <div class="csDots">
+                @for (p of carouselPlaces(); track p.id; let i = $index) {
+                  <button class="csDot" [class.active]="carouselIdx() === i" type="button" (click)="goToSlide(i)"></button>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Sidebar inline (mobile uniquement, après à-la-une) -->
+        <div class="inlineSidebar">
+          <div class="filterPanel">
+            <div class="filterSearch">
+              <input type="text" class="searchInput" [value]="searchName()" (input)="searchName.set($any($event.target).value)" placeholder="🔍 Nom…" />
+              <input type="text" class="searchInput searchInputAddr" [value]="searchAddress()" (input)="searchAddress.set($any($event.target).value)" placeholder="📍 Adresse, ville…" />
+              @if (topCities().length > 0) {
+                <div class="cityChips">
+                  @for (v of topCities(); track v) {
+                    <button type="button" class="cityChip" [class.active]="searchAddress() === v" (click)="selectCity(v)">
+                      {{ v }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+            @if (topTags().length > 0) {
+              <div class="filterTagsSection">
+                <div class="filterTagsTitle">Filtrer par tag</div>
+                <div class="filterTagsRow">
+                  @for (item of topTags(); track item.tag) {
+                    <button type="button" class="filterTag" [class.active]="isTagSelected(item.tag)" (click)="toggleTag(item.tag)">
+                      {{ item.tag }}
+                    </button>
+                  }
+                  @if (selectedTags().size > 0) {
+                    <button type="button" class="filterTag filterClear" (click)="clearTags()">✕ Effacer</button>
+                  }
+                </div>
+              </div>
+            }
+            <div class="filterTimeSection">
+              <div class="filterTagsTitle">Ouvert à</div>
+              <input
+                type="time"
+                class="timeInput"
+                [value]="filterOpenAt()"
+                (input)="filterOpenAt.set($any($event.target).value)"
+              />
+              @if (filterOpenAt()) {
+                <button type="button" class="filterTag filterClear" (click)="filterOpenAt.set('')">✕ Effacer</button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid -->
+        @if (loading()) {
+          <div class="loading">Chargement…</div>
+        } @else if (gridPlaces().length === 0 && carouselPlaces().length === 0) {
+          <div class="empty">Aucun établissement dans cette catégorie pour l'instant.</div>
+        } @else {
+          <div class="placesGrid">
+            @for (place of gridPlaces(); track place.id) {
+              <a class="placeCard" [routerLink]="['/places', place.id]">
+                @if (placeImageUrl(place)) {
+                  <div class="placeCardImg" [style.background-image]="'url(' + placeImageUrl(place) + ')'"></div>
+                } @else {
+                  <div class="placeCardImgPlaceholder">{{ TYPE_ICONS[selectedType()] }}</div>
+                }
+                <div class="placeCardBody">
+                  <div class="placeCardNom">{{ place.nom }}</div>
+                  @if (place.ville) { <div class="placeCardVille">📍 {{ place.ville }}</div> }
+                  @if (place.description) { <div class="placeCardDesc">{{ place.description }}</div> }
+                  <div class="placeCardTags">
+                    @for (tag of (place.tags ?? []).slice(0, 3); track tag) {
+                      <span class="tagChip">{{ tag }}</span>
+                    }
+                  </div>
+                </div>
+                <div class="placeCardAction">Voir plus →</div>
+              </a>
+            }
+          </div>
+        }
+
+      </div><!-- /mainArea -->
+    </div><!-- /contentLayout -->
+
+  </div>
+</div>

@@ -6,4 +6,6 @@ export enum EventOrigin {
   MARTIGUES_SITE = 'MARTIGUES_SITE',
   /** Événement importé depuis la source externe "salsa_olivier" (future méthode de merge). */
   SALSA_OLIVIER = 'SALSA_OLIVIER',
+  /** Événement importé depuis l'OT de Carry-le-Rouet (otcarrylerouet.fr). */
+  CARRY_LE_ROUET = 'CARRY_LE_ROUET',
 }

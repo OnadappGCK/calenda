@@ -1,0 +1,53 @@
+<section class="wrap">
+  @if (loading()) {
+    <p>Chargement…</p>
+  } @else if (loadError()) {
+    <div class="error">{{ loadError() }}</div>
+  } @else if (profile(); as p) {
+    <div class="card">
+      <img class="avatar" [src]="avatarUrl()" alt="" loading="lazy" />
+      <h1 class="pseudo">{{ p.pseudo }}</h1>
+      <div class="meta">
+        {{ p.ville }}@if (displayLieu()) { · {{ displayLieu() }} }
+      </div>
+
+      @if (hasBio()) {
+        <p class="bio">{{ p.bio }}</p>
+      } @else {
+        <p class="bio muted">Aucune bio renseignée.</p>
+      }
+
+      <div class="counts">
+        <span class="pill">À venir : {{ p.upcomingCount }}</span>
+        <span class="pill">Total : {{ p.totalCount }}</span>
+      </div>
+
+      <div class="actions">
+        <button class="btn" type="button" (click)="toggleAssociatedEvents()">
+          {{ associatedExpanded() ? 'Masquer événements associés' : 'Événements associés' }}
+        </button>
+        <a class="btn btnPrimary" [routerLink]="['/profiles', p.id, 'events']">Voir tout</a>
+      </div>
+
+      @if (associatedExpanded()) {
+        <div class="assocBox">
+          @if (associatedLoading()) {
+            <div class="empty">Chargement…</div>
+          } @else if (upcomingEvents().length === 0) {
+            <div class="empty">Aucun événement à venir.</div>
+          } @else {
+            @for (e of upcomingEvents(); track e.id) {
+              <div class="listRow" [style.background]="categoryGradient(e.categorie)" [style.color]="categoryForegroundColor(e.categorie)">
+                <div class="main">
+                  <div class="title">{{ e.titre }}</div>
+                  <div class="line">{{ e.dateDebut | date: 'EEE d MMM · HH:mm' }} · {{ e.ville }}</div>
+                </div>
+                <a class="btn" [routerLink]="['/events', e.id]">Voir plus</a>
+              </div>
+            }
+          }
+        </div>
+      }
+    </div>
+  }
+</section>

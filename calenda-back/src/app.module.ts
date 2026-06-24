@@ -9,13 +9,27 @@ import { AppService } from './app.service';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
+import { EmailVerificationCode } from './common/email-verification-code.entity';
 import { Event } from './events/event.entity';
+import { EventSlot } from './events/event-slot.entity';
+import { Highlight } from './events/highlight.entity';
 import { EventsModule } from './events/events.module';
+import { ConversationGroup } from './conversations/conversation-group.entity';
+import { ConversationMessage } from './conversations/conversation-message.entity';
+import { ConversationParticipant } from './conversations/conversation-participant.entity';
+import { ConversationBlock } from './conversations/conversation-block.entity';
+import { ConversationMessageLike } from './conversations/conversation-message-like.entity';
+import { ConversationsModule } from './conversations/conversations.module';
 import { News } from './news/news.entity';
 import { NewsModule } from './news/news.module';
+import { Etablissement } from './etablissements/etablissement.entity';
+import { EtablissementsModule } from './etablissements/etablissements.module';
 import { SeedModule } from './seed/seed.module';
 import { User } from './users/user.entity';
+import { UserProfileReport } from './users/user-profile-report.entity';
 import { UsersModule } from './users/users.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { UserNotification } from './notifications/user-notification.entity';
 
 @Module({
   imports: [
@@ -44,7 +58,22 @@ import { UsersModule } from './users/users.module';
             password: config.get<string>('DB_PASS') ?? '',
             database: config.get<string>('DB_NAME') ?? 'calenda',
             schema: config.get<string>('DB_SCHEMA') ?? 'public',
-            entities: [User, Event, News],
+            entities: [
+              User,
+              Event,
+              EventSlot,
+              News,
+              Highlight,
+              Etablissement,
+              ConversationGroup,
+              ConversationMessage,
+              ConversationParticipant,
+              ConversationBlock,
+              ConversationMessageLike,
+              UserProfileReport,
+              EmailVerificationCode,
+              UserNotification,
+            ],
             synchronize,
             uuidExtension: 'pgcrypto' as const,
             installExtensions: true,
@@ -54,7 +83,22 @@ import { UsersModule } from './users/users.module';
         return {
           type: 'sqlite' as const,
           database: config.get<string>('SQLITE_PATH') ?? 'calenda.sqlite',
-          entities: [User, Event, News],
+          entities: [
+            User,
+            Event,
+            EventSlot,
+            News,
+            Highlight,
+            Etablissement,
+            ConversationGroup,
+            ConversationMessage,
+            ConversationParticipant,
+            ConversationBlock,
+            ConversationMessageLike,
+            UserProfileReport,
+            EmailVerificationCode,
+            UserNotification,
+          ],
           synchronize,
         };
       },
@@ -64,7 +108,10 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     EventsModule,
     NewsModule,
+    ConversationsModule,
+    NotificationsModule,
     AdminModule,
+    EtablissementsModule,
     SeedModule,
   ],
   controllers: [AppController],
