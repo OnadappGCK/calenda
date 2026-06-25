@@ -105,6 +105,7 @@ export class AuthService {
     password: string;
     passwordConfirmation: string;
     profileImage?: string | null;
+    captchaToken?: string;
   }) {
     await this.http.post(`${this.apiBaseUrl}/auth/register`, payload).toPromise();
   }

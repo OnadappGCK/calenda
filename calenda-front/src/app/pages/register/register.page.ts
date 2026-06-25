@@ -1,10 +1,26 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, AfterViewInit, ElementRef, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
 import { allowedProfileImagesForRole, profileImageUrl } from '../../core/profile-images';
 import { PhotonFeature, PhotonService } from '../../core/photon.service';
+import { environment } from '../../../environments/environment';
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: string | HTMLElement, options: {
+        sitekey: string;
+        callback?: (token: string) => void;
+        'error-callback'?: () => void;
+        'expired-callback'?: () => void;
+        theme?: 'light' | 'dark' | 'auto';
+      }) => string;
+      reset?: (widgetId: string) => void;
+    };
+  }
+}
 
 @Component({
   selector: 'app-register-page',
@@ -16,10 +32,12 @@ import { PhotonFeature, PhotonService } from '../../core/photon.service';
  * Page d'inscription.
  * Envoie les infos à l'API via `AuthService.register`, puis redirige vers la connexion.
  */
-export class RegisterPage {
+export class RegisterPage implements AfterViewInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly photon = inject(PhotonService);
+
+  @ViewChild('captchaContainer', { static: true }) captchaContainer!: ElementRef<HTMLDivElement>;
 
   pseudo = '';
   email = '';
@@ -29,6 +47,10 @@ export class RegisterPage {
   password = '';
   passwordConfirmation = '';
   profileImage: string | null = null;
+  captchaToken: string | null = null;
+  turnstileWidgetId: string | null = null;
+  turnstileLoaded = false;
+  readonly turnstileError = signal<string | null>(null);
 
   readonly adresseSuggestions = signal<PhotonFeature[]>([]);
   readonly adresseSuggestOpen = signal<boolean>(false);
@@ -37,6 +59,60 @@ export class RegisterPage {
   readonly showAvatarPicker = signal<boolean>(false);
   readonly allowedAvatars = allowedProfileImagesForRole(false);
   readonly profileImageUrl = profileImageUrl;
+
+  ngAfterViewInit() {
+    if (!environment.turnstileSiteKey) {
+      return;
+    }
+    void this.loadTurnstile().then(() => this.renderTurnstile()).catch(() => {
+      this.turnstileError.set('Impossible de charger le captcha.');
+    });
+  }
+
+  private loadTurnstile(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (typeof window !== 'undefined' && window.turnstile) {
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject();
+      document.head.appendChild(script);
+    });
+  }
+
+  private renderTurnstile() {
+    if (!window.turnstile || !this.captchaContainer?.nativeElement) {
+      return;
+    }
+    this.turnstileWidgetId = window.turnstile.render(this.captchaContainer.nativeElement, {
+      sitekey: environment.turnstileSiteKey,
+      callback: (token) => {
+        this.captchaToken = token;
+        this.turnstileError.set(null);
+      },
+      'error-callback': () => {
+        this.captchaToken = null;
+        this.turnstileError.set('Erreur captcha. Veuillez réessayer.');
+      },
+      'expired-callback': () => {
+        this.captchaToken = null;
+      },
+      theme: 'auto',
+    });
+    this.turnstileLoaded = true;
+  }
+
+  resetCaptcha() {
+    this.captchaToken = null;
+    if (this.turnstileWidgetId && window.turnstile?.reset) {
+      window.turnstile.reset(this.turnstileWidgetId);
+    }
+  }
 
   openAvatarPicker() {
     this.showAvatarPicker.set(true);
@@ -103,6 +179,10 @@ export class RegisterPage {
         return 'La confirmation du mot de passe est obligatoire.';
       case 'captcha_required':
         return 'Captcha requis.';
+      case 'captcha_invalid':
+        return 'Captcha invalide. Veuillez réessayer.';
+      case 'captcha_not_configured':
+        return 'Captcha non configuré.';
       case 'profile_image_forbidden':
         return 'Photo de profil invalide.';
     }
@@ -157,6 +237,7 @@ export class RegisterPage {
         password: this.password,
         passwordConfirmation: this.passwordConfirmation,
         profileImage: this.profileImage,
+        captchaToken: this.captchaToken ?? undefined,
       });
       this.ok.set(true);
       window.alert(
@@ -165,6 +246,7 @@ export class RegisterPage {
       await this.router.navigateByUrl('/login');
     } catch (e) {
       this.error.set(this.parseErrorMessage(e));
+      this.resetCaptcha();
     }
   }
 }
