@@ -27,6 +27,14 @@ export class VerifyEmailPage implements OnInit {
       return;
     }
 
+    // Ne pas consommer le token côté serveur (SSR) : le client réhydrate
+    // et refait l'appel, ce qui rendrait le lien invalide dès le premier clic.
+    if (typeof window === 'undefined') {
+      this.loading.set(true);
+      this.success.set(false);
+      return;
+    }
+
     this.loading.set(true);
     this.success.set(false);
 
