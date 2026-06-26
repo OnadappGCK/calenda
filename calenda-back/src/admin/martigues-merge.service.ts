@@ -135,7 +135,7 @@ export class MartiguesMergeService {
 
   async merge(options?: MergeOptions): Promise<MergeResult> {
     await this.backfillOrganizer();
-    const pages = Math.max(1, Math.min(20, options?.pages ?? 2));
+    const pages = Math.max(1, Math.min(20, options?.pages ?? 5));
     const dryRun = options?.dryRun ?? false;
 
     const preview = await this.preview({ pages });
@@ -165,7 +165,7 @@ export class MartiguesMergeService {
   }
 
   async preview(options?: { pages?: number }): Promise<PreviewResult> {
-    const pages = Math.max(1, Math.min(20, options?.pages ?? 2));
+    const pages = Math.max(1, Math.min(20, options?.pages ?? 5));
 
     let skippedExisting = 0;
     let failed = 0;
@@ -598,7 +598,20 @@ export class MartiguesMergeService {
 
         const pathname = u.pathname || '';
         if (!pathname.toLowerCase().endsWith('.html')) return;
-        if (!(pathname.startsWith('/evenements/') || pathname.startsWith('/activites-'))) return;
+        const genericPages = new Set([
+          '/agenda-manifestations.html',
+          '/accueil.html',
+          '/plan-site.html',
+          '/mentions-legales.html',
+          '/contact.html',
+        ]);
+        if (genericPages.has(pathname.toLowerCase())) return;
+        if (
+          !pathname.startsWith('/evenements/') &&
+          !pathname.startsWith('/activites-') &&
+          !pathname.startsWith('/manifestations/') &&
+          !pathname.startsWith('/agenda/')
+        ) return;
 
         const normalized = new URL(base);
         normalized.pathname = pathname;
@@ -1011,11 +1024,11 @@ export class MartiguesMergeService {
 
   private extractOpeningHoursFromFullText(pageText: string): string | null {
     const dayRe = /\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|tous les jours|chaque jour)\b/i;
-    const hourRe = /\bde\s+\d{1,2}\s*h/i;
+    const hourRe = /(?:\bde\s+\d{1,2}\s*h|\bà\s*partir\s*de\s*\d{1,2})/i;
     const lines = pageText.split('\n');
     for (const line of lines) {
       const t = line.trim();
-      if (dayRe.test(t) && hourRe.test(t) && t.length >= 20 && t.length <= 300) return t;
+      if (dayRe.test(t) && hourRe.test(t) && t.length >= 10 && t.length <= 300) return t;
     }
     return null;
   }
@@ -1048,23 +1061,33 @@ export class MartiguesMergeService {
       hFinStr = hoursOverride.hFin;
     } else {
       const h = dateDebut.getHours();
-      hDebutStr = (h === 12 || h === 0 || h === 1) ? '09:00' : toHM(dateDebut);
-      const endKey = dateFin ? toKey(dateFin) : toKey(dateDebut);
+      const m = dateDebut.getMinutes();
+      const hasExplicitHour = h !== 0 && h !== 12;
+      hDebutStr = hasExplicitHour ? toHM(dateDebut) : '09:00';
       const sameDay = dateFin && toKey(dateFin) === toKey(dateDebut);
       if (dateFin && sameDay) {
         const ef = dateFin.getHours();
         const em = dateFin.getMinutes();
         hFinStr = (ef === 23 && em === 59) ? '23:59' : toHM(dateFin);
+      } else if (hasExplicitHour) {
+        const endH = (h + 3) % 24;
+        hFinStr = `${pad2(endH)}:${pad2(m)}`;
       } else {
         hFinStr = '23:59';
       }
-      void endKey;
     }
 
     const endKey = dateFin ? toKey(dateFin) : toKey(dateDebut);
+    const startKey = toKey(dateDebut);
+    const isMultiDay = endKey !== startKey;
     const allowedDays = openingText
       ? this.extractDaysOfWeek(openingText)
       : daysOverride ?? (dayFallbackText ? this.extractDaysOfWeek(dayFallbackText) : null);
+
+    if (isMultiDay && !openingText && !allowedDays) {
+      return [{ date: startKey, heureDebut: hDebutStr, heureFin: hFinStr }];
+    }
+
     const slots: { date: string; heureDebut: string; heureFin: string }[] = [];
     const cur = new Date(dateDebut.getFullYear(), dateDebut.getMonth(), dateDebut.getDate());
 
@@ -1075,7 +1098,7 @@ export class MartiguesMergeService {
       cur.setDate(cur.getDate() + 1);
     }
 
-    return slots.length > 0 ? slots : [{ date: toKey(dateDebut), heureDebut: hDebutStr, heureFin: hFinStr }];
+    return slots.length > 0 ? slots : [{ date: startKey, heureDebut: hDebutStr, heureFin: hFinStr }];
   }
 
   /**
@@ -1284,27 +1307,44 @@ export class MartiguesMergeService {
 
     const opening = this.extractOpeningHoursText(html) ?? this.extractOpeningHoursFromFullText(pageText);
 
-    if (!range && dateDebut) {
+    const jsonLdHours = this.extractHoursFromJsonLd(html);
+    const jsonLdDays = this.extractDaysFromJsonLd(html);
+
+    const existingHour = dateDebut ? dateDebut.getHours() : 12;
+    const hasExplicitTime = existingHour !== 0 && existingHour !== 12;
+
+    if (dateDebut && !hasExplicitTime) {
       const hr = opening ? this.extractHoursRange(opening) : null;
       if (hr) {
         dateDebut.setHours(hr.start.hh, hr.start.mm, 0, 0);
-        const end = new Date(dateDebut);
-        end.setHours(hr.end.hh, hr.end.mm, 0, 0);
-        if (end <= dateDebut) end.setDate(end.getDate() + 1);
-        dateFin = end;
-      } else if (opening) {
-        const startOnly = this.extractTime(opening, /à\s*partir\s*de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)\s*/i);
+        if (!range) {
+          const end = new Date(dateDebut);
+          end.setHours(hr.end.hh, hr.end.mm, 0, 0);
+          if (end <= dateDebut) end.setDate(end.getDate() + 1);
+          dateFin = end;
+        }
+      } else {
+        const startOnly = opening
+          ? this.extractTime(opening, /à\s*partir\s*de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)\s*/i)
+          : this.extractTime(pageText, /à\s*partir\s*de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)\s*/i);
         if (startOnly) {
           dateDebut.setHours(startOnly.hh, startOnly.mm, 0, 0);
-          dateFin = null;
+          if (!range) dateFin = null;
+        } else if (jsonLdHours) {
+          dateDebut.setHours(
+            Number(jsonLdHours.hDebut.split(':')[0]),
+            Number(jsonLdHours.hDebut.split(':')[1] ?? '0'),
+            0, 0,
+          );
         }
       }
     }
 
-    const jsonLdHours = this.extractHoursFromJsonLd(html);
-    const jsonLdDays = this.extractDaysFromJsonLd(html);
     const slots = this.generateSlots(dateDebut, dateFin, opening, presDesc ?? description ?? null, jsonLdHours, jsonLdDays);
     const isEverydayActivity = this.isEverydayPattern(opening, dateDebut, dateFin);
+    if (sourceUrl.includes('cine') || sourceUrl.includes('cinema')) {
+      this.logger.log(`[CINE_DEBUG] titre=${JSON.stringify(titre)} debut=${dateDebut.toISOString()} fin=${dateFin?.toISOString() ?? 'null'} opening=${JSON.stringify(opening)} isEveryday=${isEverydayActivity} slots=${slots.length} range=${range ? 'yes' : 'no'} jsonLdStart=${jsonLd?.startDate ?? 'none'}`);
+    }
     const hr = opening ? this.extractHoursRange(opening) : null;
     const pad2 = (n: number) => String(n).padStart(2, '0');
     const heureOuverture = hr ? `${pad2(hr.start.hh)}:${pad2(hr.start.mm)}` : null;
@@ -1341,7 +1381,7 @@ export class MartiguesMergeService {
     if (!/tous les jours|chaque jour|ouvert tous/i.test(openingText)) return false;
     if (!dateFin) return false;
     const diffDays = (dateFin.getTime() - dateDebut.getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays > 14;
+    return diffDays > 90;
   }
 
   private effectiveEndForPastCheck(dateDebut: Date, dateFin: Date | null) {
