@@ -37,10 +37,10 @@ function assetUrl(path: string) {
 const CATEGORY_IMAGE_FOLDER: Record<EventCategory, string[]> = {
   'Culture & spectacle': ['CULTURE_SPECTACLE'],
   'Arts & expos': ['ARTS_EXPOS'],
-  'Sortie': ['VIE_LOCALE'],
+  'Sortie': ['SORTIE'],
   'Activités': ['ACTIVITES'],
   'Vie locale': ['VIE_LOCALE'],
-  'Famille': ['ACTIVITES'],
+  'Famille': ['FAMILLE'],
   'Spécial': ['SPECIAL'],
 };
 

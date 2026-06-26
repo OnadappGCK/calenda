@@ -610,9 +610,14 @@ export class SalsaOlivierMergeService {
 
     const tarif = this.extractTarif(pageText);
     const contact = this.extractPhone(pageText);
-    const adresse = this.extractAddress(pageText);
+    const { adresse, urlFound } = this.extractAddress(pageText);
 
-    const description = this.extractFullDescription(html) || titre;
+    const baseDescription = this.extractFullDescription(html) || titre;
+    // Append URL to description if found in address text and not already present
+    const description =
+      urlFound && !baseDescription.includes(urlFound)
+        ? `${baseDescription}\n${urlFound}`
+        : baseDescription;
 
     // Salsa site doesn't provide consistent images.
     const imageUrl = null;
@@ -699,34 +704,42 @@ export class SalsaOlivierMergeService {
 
   private extractTimeRange(text: string): { start: { hh: number; mm: number }; end: { hh: number; mm: number } } | null {
     const s = this.normalizeFrenchTimeWords((text ?? '').replace(/\s+/g, ' '));
-    const re = /(\d{1,2}(?:h\d{0,2}|:\d{2})?)\s*[→\-–]\s*(\d{1,2}(?:h\d{0,2}|:\d{2})?)/gi;
 
-    let minStart: number | null = null;
-    let maxEnd: number | null = null;
-    let m: RegExpExecArray | null;
-
-    while ((m = re.exec(s))) {
-      const start = this.parseHourToken(m[1] ?? '');
-      const end = this.parseHourToken(m[2] ?? '');
-      if (!start || !end) continue;
-
-      const startMin = start.hh * 60 + start.mm;
-      let endMin = end.hh * 60 + end.mm;
-      if (endMin <= startMin) endMin += 24 * 60;
-
-      if (minStart === null || startMin < minStart) minStart = startMin;
-      if (maxEnd === null || endMin > maxEnd) maxEnd = endMin;
+    // Priority 1: explicit "de Xh à Yh" pattern (event header on salsa.faurax.fr)
+    const deRe = /\bde\s+(\d{1,2}(?:h\d{0,2}|:\d{2})?)\s+[àa]\s+(\d{1,2}(?:h\d{0,2}|:\d{2})?)/i;
+    const deM = deRe.exec(s);
+    if (deM) {
+      const start = this.parseHourToken(deM[1] ?? '');
+      const end = this.parseHourToken(deM[2] ?? '');
+      if (start && end) {
+        let endMin = end.hh * 60 + end.mm;
+        const startMin = start.hh * 60 + start.mm;
+        if (endMin <= startMin) endMin += 24 * 60;
+        return {
+          start,
+          end: { hh: Math.floor(endMin / 60) % 24, mm: endMin % 60 },
+        };
+      }
     }
 
-    if (minStart === null || maxEnd === null) return null;
+    // Priority 2: first "X→Y" / "X-Y" / "X–Y" arrow pattern in text
+    const re = /(\d{1,2}(?:h\d{0,2}|:\d{2})?)\s*[→\-–]\s*(\d{1,2}(?:h\d{0,2}|:\d{2})?)/i;
+    const m = re.exec(s);
+    if (m) {
+      const start = this.parseHourToken(m[1] ?? '');
+      const end = this.parseHourToken(m[2] ?? '');
+      if (start && end) {
+        const startMin = start.hh * 60 + start.mm;
+        let endMin = end.hh * 60 + end.mm;
+        if (endMin <= startMin) endMin += 24 * 60;
+        return {
+          start,
+          end: { hh: Math.floor(endMin / 60) % 24, mm: endMin % 60 },
+        };
+      }
+    }
 
-    const startTotal = minStart;
-    const endTotal = maxEnd % (24 * 60);
-
-    return {
-      start: { hh: Math.floor(startTotal / 60), mm: startTotal % 60 },
-      end: { hh: Math.floor(endTotal / 60), mm: endTotal % 60 },
-    };
+    return null;
   }
 
   private extractTarif(text: string): string | null {
@@ -749,14 +762,19 @@ export class SalsaOlivierMergeService {
     return digits;
   }
 
-  private extractAddress(text: string): string | null {
+  private extractAddress(text: string): { adresse: string | null; urlFound: string | null } {
     const s = (text ?? '').replace(/\s+/g, ' ');
     const telIndex = s.toLowerCase().indexOf('tél');
     const beforeTel = telIndex >= 0 ? s.slice(0, telIndex) : s;
     const euroIndex = beforeTel.lastIndexOf('€');
-    if (euroIndex < 0) return null;
-    const addr = beforeTel.slice(euroIndex + 1).trim();
-    return addr ? addr : null;
+    if (euroIndex < 0) return { adresse: null, urlFound: null };
+    const raw = beforeTel.slice(euroIndex + 1).trim();
+    // Extract and strip any URLs from the address
+    const urlRe = /https?:\/\/[^\s,]+/gi;
+    const urls = raw.match(urlRe);
+    const urlFound = urls?.[0] ?? null;
+    const adresse = raw.replace(urlRe, '').replace(/\s{2,}/g, ' ').trim() || null;
+    return { adresse, urlFound };
   }
 
   private extractCityFromAddress(adresse: string | null): string | null {

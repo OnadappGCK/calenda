@@ -562,7 +562,8 @@ export class CarryLeRouetMergeService {
         const u = new URL(href, BASE_URL);
         if (!u.host.endsWith('otcarrylerouet.fr')) return;
         if (!u.pathname.toLowerCase().endsWith('.html')) return;
-        if (u.search) return;
+        // Do NOT reject URLs with query strings — agenda links have ?origine_affinage=true
+        // The normalized URL below strips the query string anyway.
 
         const slug = u.pathname.replace(/^\//, '').replace(/\.html$/i, '').toLowerCase();
         if (EXCLUDED_SLUGS.has(slug)) return;
@@ -581,7 +582,7 @@ export class CarryLeRouetMergeService {
       if (m?.[2]) add(m[2]);
     }
 
-    const reAbs = /https?:\/\/(?:www\.)?otcarrylerouet\.fr\/[^\s"'<>?#]+\.html/gi;
+    const reAbs = /https?:\/\/(?:www\.)?otcarrylerouet\.fr\/[^\s"'<>#]+\.html(?:[?][^\s"'<>]*)?/gi;
     const absMatches = src.match(reAbs) ?? [];
     for (const u of absMatches) add(u);
 
@@ -663,10 +664,20 @@ export class CarryLeRouetMergeService {
 
     const bestStart = this.pickBestDate(this.collectCandidateDates(html));
 
+    // Strip time from JSON-LD/microdata dates: this site encodes hours in UTC which gives
+    // wrong local times (e.g. 00:30 UTC = 02:30 Paris instead of 20:30). We keep only the
+    // calendar date and always apply the time from the page text below.
+    const stripTime = (d: Date | null): Date | null => {
+      if (!d) return null;
+      const out = new Date(d);
+      out.setHours(12, 0, 0, 0);
+      return out;
+    };
+
     const dateDebut =
-      plausible(this.parseAnyDateTime(jsonLd?.startDate)) ??
-      plausible(this.parseAnyDateTime(startMicro)) ??
-      plausible(this.parseAnyDateTime(timeStart)) ??
+      plausible(stripTime(this.parseAnyDateTime(jsonLd?.startDate))) ??
+      plausible(stripTime(this.parseAnyDateTime(startMicro))) ??
+      plausible(stripTime(this.parseAnyDateTime(timeStart))) ??
       plausible(range?.start ?? null) ??
       plausible(this.extractIsoDateTime(html)) ??
       plausible(this.extractYmdDate(html)) ??
@@ -676,8 +687,8 @@ export class CarryLeRouetMergeService {
       plausible(bestStart);
 
     let dateFin: Date | null =
-      plausible(this.parseAnyDateTime(jsonLd?.endDate)) ??
-      plausible(this.parseAnyDateTime(endMicro)) ??
+      plausible(stripTime(this.parseAnyDateTime(jsonLd?.endDate))) ??
+      plausible(stripTime(this.parseAnyDateTime(endMicro))) ??
       plausible(range?.end ?? null) ??
       plausible(this.extractEndDateTime(html, dateDebut)) ??
       null;
@@ -742,27 +753,41 @@ export class CarryLeRouetMergeService {
 
     const opening = this.extractOpeningHoursText(html) ?? this.extractOpeningHoursFromText(pageText);
 
-    if (!range && dateDebut) {
-      const existingHour = dateDebut.getHours();
-      const hasExplicitTime = existingHour !== 0 && existingHour !== 12;
-      const hr = opening ? this.extractHoursRange(opening) : null;
-      if (hr && !hasExplicitTime) {
+    // Extract hours from JSON-LD and page text regardless of whether a date range was found
+    const jsonLdHours = this.extractHoursFromJsonLd(html);
+    const jsonLdDays = this.extractDaysFromJsonLd(html);
+
+    if (dateDebut) {
+      // Always resolve hours from page text — JSON-LD encodes UTC times which are wrong in local tz.
+      // Priority: opening section range > near-date range > opening "à partir de" > pageText "à partir de" > jsonLdHours
+      const hr = opening
+        ? this.extractHoursRange(opening)
+        : (this.extractHoursNearDate(pageText) ?? null);
+      if (hr) {
         dateDebut.setHours(hr.start.hh, hr.start.mm, 0, 0);
-        const endD = new Date(dateDebut);
-        endD.setHours(hr.end.hh, hr.end.mm, 0, 0);
-        if (endD <= dateDebut) endD.setDate(endD.getDate() + 1);
-        dateFin = endD;
-      } else if (opening && !hasExplicitTime) {
-        const startOnly = this.extractTime(opening, /à\s*partir\s*de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)\s*/i);
+        if (!range) {
+          const endD = new Date(dateDebut);
+          endD.setHours(hr.end.hh, hr.end.mm, 0, 0);
+          if (endD <= dateDebut) endD.setDate(endD.getDate() + 1);
+          dateFin = endD;
+        }
+      } else {
+        const startOnly = opening
+          ? this.extractTime(opening, /à\s*partir\s*de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)\s*/i)
+          : this.extractTime(pageText, /à\s*partir\s*de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)\s*/i);
         if (startOnly) {
           dateDebut.setHours(startOnly.hh, startOnly.mm, 0, 0);
-          dateFin = null;
+          if (!range) dateFin = null;
+        } else if (jsonLdHours) {
+          dateDebut.setHours(
+            Number(jsonLdHours.hDebut.split(':')[0]),
+            Number(jsonLdHours.hDebut.split(':')[1] ?? '0'),
+            0, 0,
+          );
         }
       }
     }
 
-    const jsonLdHours = this.extractHoursFromJsonLd(html);
-    const jsonLdDays = this.extractDaysFromJsonLd(html);
     const slots = this.generateSlots(dateDebut, dateFin, opening, presDesc ?? description ?? null, jsonLdHours, jsonLdDays);
     const isEverydayActivity = this.isEverydayPattern(opening, dateDebut, dateFin);
     const hr = opening ? this.extractHoursRange(opening) : null;
@@ -822,21 +847,38 @@ export class CarryLeRouetMergeService {
       hFinStr = hoursOverride.hFin;
     } else {
       const h = dateDebut.getHours();
-      hDebutStr = h === 12 || h === 0 || h === 1 ? '09:00' : toHM(dateDebut);
+      const m = dateDebut.getMinutes();
+      const hasExplicitHour = h !== 0 && h !== 12;
+      hDebutStr = hasExplicitHour ? toHM(dateDebut) : '09:00';
       const sameDay = dateFin && toKey(dateFin) === toKey(dateDebut);
       if (dateFin && sameDay) {
         const ef = dateFin.getHours();
         const em = dateFin.getMinutes();
         hFinStr = ef === 23 && em === 59 ? '23:59' : toHM(dateFin);
+      } else if (hasExplicitHour) {
+        // Multi-day event with a known start time: end = start + 3h by default
+        const endH = (h + 3) % 24;
+        hFinStr = `${pad2(endH)}:${pad2(m)}`;
       } else {
         hFinStr = '23:59';
       }
     }
 
     const endKey = dateFin ? toKey(dateFin) : toKey(dateDebut);
+    const startKey = toKey(dateDebut);
+    const isMultiDay = endKey !== startKey;
+
+    // For multi-day events without explicit opening text or day-of-week constraints,
+    // do NOT expand into one slot per day. A festival/concert spanning several days
+    // should be a single slot, not daily 09:00-23:59 slots.
     const allowedDays = openingText
       ? this.extractDaysOfWeek(openingText)
       : daysOverride ?? (dayFallbackText ? this.extractDaysOfWeek(dayFallbackText) : null);
+
+    if (isMultiDay && !openingText && !allowedDays) {
+      return [{ date: startKey, heureDebut: hDebutStr, heureFin: hFinStr }];
+    }
+
     const slots: { date: string; heureDebut: string; heureFin: string }[] = [];
     const cur = new Date(dateDebut.getFullYear(), dateDebut.getMonth(), dateDebut.getDate());
 
@@ -847,7 +889,7 @@ export class CarryLeRouetMergeService {
       cur.setDate(cur.getDate() + 1);
     }
 
-    return slots.length > 0 ? slots : [{ date: toKey(dateDebut), heureDebut: hDebutStr, heureFin: hFinStr }];
+    return slots.length > 0 ? slots : [{ date: startKey, heureDebut: hDebutStr, heureFin: hFinStr }];
   }
 
   private isEverydayPattern(openingText: string | null, dateDebut: Date, dateFin: Date | null): boolean {
@@ -855,7 +897,7 @@ export class CarryLeRouetMergeService {
     if (!/tous les jours|chaque jour|ouvert tous/i.test(openingText)) return false;
     if (!dateFin) return false;
     const diffDays = (dateFin.getTime() - dateDebut.getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays > 14;
+    return diffDays > 90;
   }
 
   private extractDaysOfWeek(text: string): Set<number> | null {
@@ -1260,6 +1302,25 @@ export class CarryLeRouetMergeService {
     const mm = parts[1] ? Number(parts[1]) : 0;
     if (!Number.isFinite(hh)) return null;
     return { hh, mm: Number.isFinite(mm) ? mm : 0 };
+  }
+
+  /**
+   * Searches for an hours range in the ~5 lines following the first date mention
+   * (e.g. "Mardi 07 juillet 2026") in the page text. More reliable than scanning
+   * the full page text which may hit footer opening hours first.
+   */
+  private extractHoursNearDate(pageText: string): { start: { hh: number; mm: number }; end: { hh: number; mm: number } } | null {
+    const lines = (pageText ?? '').split('\n');
+    const dateLine = /\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+\d{1,2}\s+\w+\s+\d{4}/i;
+    for (let i = 0; i < lines.length; i++) {
+      if (!dateLine.test(lines[i])) continue;
+      const window = lines.slice(i, i + 6).join('\n');
+      const hr = this.extractHoursRange(window);
+      if (hr) return hr;
+      const t = this.extractTime(window, /à\s*partir\s*de\s*(\d{1,2}(?::\d{2}|h\d{0,2})?)/i);
+      if (t) return { start: t, end: { hh: (t.hh + 3) % 24, mm: t.mm } };
+    }
+    return null;
   }
 
   // ─── Section text extraction ────────────────────────────────────────────────
