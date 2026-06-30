@@ -8,4 +8,6 @@ export enum EventOrigin {
   SALSA_OLIVIER = 'SALSA_OLIVIER',
   /** Événement importé depuis l'OT de Carry-le-Rouet (otcarrylerouet.fr). */
   CARRY_LE_ROUET = 'CARRY_LE_ROUET',
+  /** Événement importé depuis le site de la ville de Sausset-les-Pins. */
+  SAUSSET_LES_PINS = 'SAUSSET_LES_PINS',
 }

@@ -26,7 +26,7 @@
 
           <div class="panel">
             <div class="panelHeader">
-              <span class="cat">{{ currentFeatured()!.categorie }}</span>
+              <span class="cat">{{ translateCategory(currentFeatured()!.categorie) }}</span>
               <span class="catIcon">
                 @for (t of (currentFeatured()!.caracteristiques ?? []).slice(0, 3); track t) {
                   <span style="margin-left: 4px;">{{ tagIcon(t) }}</span>
@@ -73,23 +73,23 @@
 <section class="homeBand homeBandTaupe waveTopOnly">
   <div class="container pageContent">
     <div class="sortieSectionWrap">
-      <h2 class="sectionTitle">💡 Idée de sortie ?</h2>
+      <h2 class="sectionTitle">💡 {{ i18n.t('home.sortieTitle') }}</h2>
       <div class="sortieButtons">
         <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'RESTAURANT' }">
           <span class="sortieBtnIcon">🍽️</span>
-          <span>Pour manger</span>
+          <span>{{ i18n.t('home.sortieEat') }}</span>
         </a>
         <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'SORTIE' }">
           <span class="sortieBtnIcon">🎭</span>
-          <span>Pour sortir</span>
+          <span>{{ i18n.t('home.sortieOut') }}</span>
         </a>
         <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'BAR' }">
           <span class="sortieBtnIcon">🍸</span>
-          <span>Pour boire un coup</span>
+          <span>{{ i18n.t('home.sortieDrink') }}</span>
         </a>
         <a class="sortieBtn" routerLink="/places" [queryParams]="{ type: 'ACTIVITE' }">
           <span class="sortieBtnIcon">🏃</span>
-          <span>Pour s'activer</span>
+          <span>{{ i18n.t('home.sortieActive') }}</span>
         </a>
       </div>
     </div>
@@ -104,7 +104,7 @@
           <div class="categoryRow">
             <div class="categoryRowHeader">
               <span class="categoryRowBar" [style.background]="categoryColor($any(entry[0]))"></span>
-              <h3 class="categoryRowTitle">{{ entry[0] }}</h3>
+              <h3 class="categoryRowTitle">{{ translateCategory(entry[0]) }}</h3>
             </div>
             <div class="categoryRowNav">
               <button class="rowNavBtn" type="button" (click)="rowScroll.scrollLeft -= rowScroll.offsetWidth * 0.8" aria-label="Précédent">‹</button>
@@ -113,7 +113,7 @@
                   <a class="eventCard" [routerLink]="['/events', ev.id]">
                     <img class="eventCardImg" [src]="resolveEventImageUrl(ev.categorie, ev.imageUrl, ev.id)" [appEventImgFallback]="ev.categorie" [eventSeed]="ev.id" alt="" loading="lazy" />
                     <div class="eventCardOverlay">
-                      <span class="eventCardCat" [style.background]="categoryColor($any(ev.categorie))">{{ ev.categorie }}</span>
+                      <span class="eventCardCat" [style.background]="categoryColor($any(ev.categorie))">{{ translateCategory(ev.categorie) }}</span>
                       <div class="eventCardTitle">{{ ev.titre }}</div>
                       <div class="eventCardMeta">{{ ev.ville }} · {{ ev.dateDebut | date: 'dd/MM/yy' }}</div>
                     </div>
@@ -128,6 +128,13 @@
     </div>
   </section>
 }
+
+<section class="homeBand homeBandTaupe waveTopOnly aboutSection">
+  <div class="container pageContent">
+    <h2 class="sectionTitle aboutTitle">{{ i18n.t('home.aboutTitle') }}</h2>
+    <p class="aboutText">{{ i18n.t('home.aboutText') }}</p>
+  </div>
+</section>
 
 <section class="homeBand homeBandBase homeBandLast">
   <div class="container pageContent">

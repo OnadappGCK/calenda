@@ -95,7 +95,7 @@ export class Event {
   /** Couleur custom (optionnel). */
   couleur!: string | null;
 
-  @ManyToOne(() => User, (user) => user.organizedEvents, { eager: true, nullable: true })
+  @ManyToOne(() => User, (user) => user.organizedEvents, { eager: true, nullable: true, onDelete: 'CASCADE' })
   /** Organisateur (relation n-1). */
   organisateur!: User | null;
 

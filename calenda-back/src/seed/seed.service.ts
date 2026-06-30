@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
@@ -675,5 +676,48 @@ export class SeedService {
     await this.etablissementsRepo.save(
       demo.map((d) => this.etablissementsRepo.create(d)),
     );
+  }
+
+  /** Crée ou met à jour le compte système "Profil supprimé" utilisé pour récupérer les contenus des comptes supprimés. */
+  async ensureDeletedUser() {
+    const email = 'deleted@calendago.fr';
+    const pseudo = 'Profil supprimé';
+    let user = await this.usersRepo.findOne({ where: { email } });
+
+    if (!user) {
+      const passwordHash = await bcrypt.hash(randomUUID(), 10);
+      user = this.usersRepo.create({
+        email,
+        pseudo,
+        ville: '-',
+        lieu: '-',
+        passwordHash,
+        isAdmin: false,
+        profileImage: null,
+        emailVerified: true,
+        emailVerificationToken: null,
+      });
+      await this.usersRepo.save(user);
+    } else {
+      let changed = false;
+      if (user.isAdmin) {
+        user.isAdmin = false;
+        changed = true;
+      }
+      if (!user.emailVerified) {
+        user.emailVerified = true;
+        user.emailVerificationToken = null;
+        changed = true;
+      }
+      if (user.pseudo !== pseudo) {
+        user.pseudo = pseudo;
+        changed = true;
+      }
+      if (changed) {
+        await this.usersRepo.save(user);
+      }
+    }
+
+    return user;
   }
 }

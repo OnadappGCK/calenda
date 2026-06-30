@@ -40,7 +40,7 @@ type EtabDraft = {
   public: boolean;
 };
 
-type MergeSourceId = 'MARTIGUES_TOURISME' | 'SALSA_OLIVIER_13' | 'CARRY_LE_ROUET';
+type MergeSourceId = 'MARTIGUES_TOURISME' | 'SALSA_OLIVIER_13' | 'CARRY_LE_ROUET' | 'SAUSSET_LES_PINS';
 type MergeSource = { id: MergeSourceId; label: string; description: string };
 
 const MERGE_SOURCES: MergeSource[] = [
@@ -58,6 +58,11 @@ const MERGE_SOURCES: MergeSource[] = [
     id: 'CARRY_LE_ROUET',
     label: 'OT Carry-le-Rouet',
     description: 'Import depuis otcarrylerouet.fr (agenda événements, og:image, en attente).',
+  },
+  {
+    id: 'SAUSSET_LES_PINS',
+    label: 'Ville de Sausset-les-Pins',
+    description: 'Import depuis sausset-tourisme.com/nos-festivites/ (festivités, og:image, en attente).',
   },
 ];
 
@@ -80,6 +85,7 @@ export class AdminPendingPage implements OnInit {
     MARTIGUES_SITE: 'Import: Martigues site',
     SALSA_OLIVIER: 'Import: Salsa Olivier',
     CARRY_LE_ROUET: 'Import: OT Carry-le-Rouet',
+    SAUSSET_LES_PINS: 'Import: Sausset-les-Pins',
   };
 
   readonly items = signal<EventDto[]>([]);
@@ -456,7 +462,9 @@ export class AdminPendingPage implements OnInit {
             ? await this.adminService.previewMergeSalsaOlivier({ pages: this.mergePages }).toPromise()
             : this.mergeSource === 'CARRY_LE_ROUET'
               ? await this.adminService.previewMergeCarryLeRouet({ pages: this.mergePages }).toPromise()
-              : null;
+              : this.mergeSource === 'SAUSSET_LES_PINS'
+                ? await this.adminService.previewMergeSausset({ pages: this.mergePages }).toPromise()
+                : null;
 
       console.log('[Merge] preview response', res);
       console.log('[Merge] preview debugSamples', res?.debugSamples);
@@ -489,7 +497,9 @@ export class AdminPendingPage implements OnInit {
             ? await this.adminService.applyMergeSalsaOlivier({ urls: preview.urls, toDeleteIds }).toPromise()
             : this.mergeSource === 'CARRY_LE_ROUET'
               ? await this.adminService.applyMergeCarryLeRouet({ urls: preview.urls, toDeleteIds }).toPromise()
-              : null;
+              : this.mergeSource === 'SAUSSET_LES_PINS'
+                ? await this.adminService.applyMergeSausset({ urls: preview.urls, toDeleteIds }).toPromise()
+                : null;
 
       console.log('[Merge] apply response', res);
       console.log('[Merge] apply debugSamples', res?.debugSamples);

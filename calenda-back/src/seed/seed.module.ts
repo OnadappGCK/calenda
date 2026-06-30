@@ -19,6 +19,7 @@ export class SeedModule implements OnModuleInit {
 
   /** Hook NestJS: exécute les seeds (users/events/news) à l'initialisation du module. */
   async onModuleInit() {
+    await this.seedService.ensureDeletedUser();
     await this.seedService.seedDevUsers();
     await this.seedService.seedDevEvents();
     await this.seedService.seedDevNews();

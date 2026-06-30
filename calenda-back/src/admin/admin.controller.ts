@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -6,11 +6,19 @@ import { AdminGuard } from '../common/guards/admin.guard';
 import { ListEventsQueryDto } from '../events/dto/list-events.query';
 import { EventsService } from '../events/events.service';
 import { EtablissementsService } from '../etablissements/etablissements.service';
+import { Event } from '../events/event.entity';
 import { User } from '../users/user.entity';
 import { UserProfileReport } from '../users/user-profile-report.entity';
+import { ConversationGroup } from '../conversations/conversation-group.entity';
+import { ConversationMessage } from '../conversations/conversation-message.entity';
+import { ConversationParticipant } from '../conversations/conversation-participant.entity';
+import { ConversationBlock } from '../conversations/conversation-block.entity';
+import { ConversationMessageLike } from '../conversations/conversation-message-like.entity';
+import { UserNotification } from '../notifications/user-notification.entity';
 import { MartiguesMergeService } from './martigues-merge.service';
 import { SalsaOlivierMergeService } from './salsa-olivier-merge.service';
 import { CarryLeRouetMergeService } from './carry-le-rouet-merge.service';
+import { SaussetMergeService } from './sausset-merge.service';
 import { Repository } from 'typeorm';
 import { AdminCreateUserDto } from './dto/admin-create-user.dto';
 import { AdminUpdateUserDto } from './dto/admin-update-user.dto';
@@ -28,8 +36,11 @@ export class AdminController {
     private readonly martiguesMerge: MartiguesMergeService,
     private readonly salsaMerge: SalsaOlivierMergeService,
     private readonly carryMerge: CarryLeRouetMergeService,
+    private readonly saussetMerge: SaussetMergeService,
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
     @InjectRepository(UserProfileReport) private readonly userProfileReportsRepo: Repository<UserProfileReport>,
+    @InjectRepository(Event) private readonly eventsRepo: Repository<Event>,
+    @InjectRepository(ConversationGroup) private readonly groupsRepo: Repository<ConversationGroup>,
   ) {}
 
   private validateProfileImageForRole(isAdmin: boolean, profileImage: string) {
@@ -281,6 +292,167 @@ export class AdminController {
     return this.userDto(user);
   }
 
+  private async getDeletedUser() {
+    const email = 'deleted@calendago.fr';
+    const user = await this.usersRepo.findOne({ where: { email } });
+    if (!user) {
+      throw new BadRequestException('deleted_user_not_found');
+    }
+    return user;
+  }
+
+  @Delete('users/:id')
+  /** Supprime un compte (admin). Les événements, groupes et messages sont transférés au profil "Profil supprimé". */
+  async deleteUser(@Param('id') id: string, @Req() req: { user?: { id: string } }) {
+    const currentUserId = req.user?.id;
+    if (id === currentUserId) {
+      throw new BadRequestException('cannot_delete_self');
+    }
+
+    const deletedUser = await this.getDeletedUser();
+    if (id === deletedUser.id) {
+      throw new BadRequestException('cannot_delete_deleted_user');
+    }
+
+    const user = await this.usersRepo.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('user_not_found');
+    }
+
+    // Transfère les événements, groupes et messages au profil supprimé
+    await this.eventsRepo
+      .createQueryBuilder()
+      .update(Event)
+      .set({ organisateur: deletedUser })
+      .where('organisateurId = :id', { id })
+      .execute();
+
+    await this.groupsRepo
+      .createQueryBuilder()
+      .update(ConversationGroup)
+      .set({ creator: deletedUser })
+      .where('creatorId = :id', { id })
+      .execute();
+
+    await this.usersRepo.manager
+      .createQueryBuilder()
+      .update(ConversationMessage)
+      .set({ user: deletedUser })
+      .where('userId = :id', { id })
+      .execute();
+
+    // Supprime les liens directs (favoris, participations, blocks, likes, reports, notifications)
+    const fullUser = await this.usersRepo.findOne({ where: { id }, relations: { favorites: true } });
+    if (fullUser) {
+      fullUser.favorites = [];
+      await this.usersRepo.save(fullUser);
+    }
+
+    await this.usersRepo.manager
+      .createQueryBuilder()
+      .delete()
+      .from(ConversationParticipant)
+      .where('userId = :id', { id })
+      .execute();
+
+    await this.usersRepo.manager
+      .createQueryBuilder()
+      .delete()
+      .from(ConversationBlock)
+      .where('blockerId = :id OR blockedId = :id', { id })
+      .execute();
+
+    await this.usersRepo.manager
+      .createQueryBuilder()
+      .delete()
+      .from(ConversationMessageLike)
+      .where('userId = :id', { id })
+      .execute();
+
+    await this.userProfileReportsRepo
+      .createQueryBuilder()
+      .delete()
+      .from(UserProfileReport)
+      .where('reporterId = :id OR reportedId = :id', { id })
+      .execute();
+
+    await this.usersRepo.manager
+      .createQueryBuilder()
+      .delete()
+      .from(UserNotification)
+      .where('userId = :id', { id })
+      .execute();
+
+    await this.usersRepo.remove(user);
+    return { ok: true };
+  }
+
+  @Get('deleted-profile')
+  /** Liste les événements et groupes rattachés au profil "Profil supprimé". */
+  async deletedProfile() {
+    const deletedUser = await this.getDeletedUser();
+
+    const [events, groups] = await Promise.all([
+      this.eventsRepo.find({
+        where: { organisateur: { id: deletedUser.id } },
+        relations: { slots: true },
+        order: { createdAt: 'DESC' },
+      }),
+      this.groupsRepo.find({
+        where: { creator: { id: deletedUser.id } },
+        relations: { event: true },
+        order: { createdAt: 'DESC' },
+      }),
+    ]);
+
+    return {
+      user: this.userDto(deletedUser),
+      events: events.map((e) => ({
+        id: e.id,
+        titre: e.titre,
+        ville: e.ville,
+        lieu: e.lieu,
+        dateDebut: e.dateDebut.toISOString(),
+        public: e.public,
+        createdAt: e.createdAt.toISOString(),
+      })),
+      groups: groups.map((g) => ({
+        id: g.id,
+        title: g.title,
+        status: g.status,
+        createdAt: g.createdAt.toISOString(),
+        event: g.event ? { id: g.event.id, titre: g.event.titre } : null,
+      })),
+    };
+  }
+
+  @Delete('conversation-groups/:id')
+  /** Supprime logiquement un groupe de conversation (admin). */
+  async deleteConversationGroup(@Param('id') id: string) {
+    const group = await this.groupsRepo.findOne({ where: { id } });
+    if (!group) {
+      throw new NotFoundException('group_not_found');
+    }
+
+    group.status = 'DELETED';
+    await this.groupsRepo.save(group);
+    return { ok: true };
+  }
+
+  @Patch('users/:id/verify-email')
+  /** Valide manuellement l'email d'un compte. */
+  async verifyUserEmail(@Param('id') id: string) {
+    const user = await this.usersRepo.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('user_not_found');
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    await this.usersRepo.save(user);
+    return this.userDto(user);
+  }
+
   @Patch('events/:id/validate')
   /** Valide un événement (le rend public). */
   async validate(@Param('id') id: string) {
@@ -359,19 +531,39 @@ export class AdminController {
     return this.carryMerge.apply({ urls: body?.urls ?? [], toDeleteIds: body?.toDeleteIds ?? [] });
   }
 
+  @Post('merge/sausset')
+  async mergeSausset(@Query('pages') pages?: string, @Query('dryRun') dryRun?: string) {
+    const pagesN = pages ? Number(pages) : undefined;
+    const dry = (dryRun ?? '').toLowerCase() === 'true';
+    return this.saussetMerge.merge({ pages: pagesN, dryRun: dry });
+  }
+
+  @Get('merge/sausset/preview')
+  async previewMergeSausset(@Query('pages') pages?: string) {
+    const pagesN = pages ? Number(pages) : undefined;
+    return this.saussetMerge.preview({ pages: pagesN });
+  }
+
+  @Post('merge/sausset/apply')
+  async applyMergeSausset(@Body() body: { urls?: string[]; toDeleteIds?: string[] }) {
+    return this.saussetMerge.apply({ urls: body?.urls ?? [], toDeleteIds: body?.toDeleteIds ?? [] });
+  }
+
   @Post('merge/backfill-organizers')
   async backfillMergeOrganizers() {
-    const [martigues, salsaOlivier, carryLeRouet] = await Promise.all([
+    const [martigues, salsaOlivier, carryLeRouet, sausset] = await Promise.all([
       this.martiguesMerge.backfillOrganizer(),
       this.salsaMerge.backfillOrganizer(),
       this.carryMerge.backfillOrganizer(),
+      this.saussetMerge.backfillOrganizer(),
     ]);
 
     return {
       martigues,
       salsaOlivier,
       carryLeRouet,
-      total: martigues + salsaOlivier + carryLeRouet,
+      sausset,
+      total: martigues + salsaOlivier + carryLeRouet + sausset,
     };
   }
 }

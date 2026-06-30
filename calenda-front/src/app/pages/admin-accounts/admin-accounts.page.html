@@ -48,6 +48,7 @@
   <div class="tabs">
     <button class="tabBtn" type="button" [class.isActive]="tab() === 'users'" (click)="setTab('users')">Comptes</button>
     <button class="tabBtn" type="button" [class.isActive]="tab() === 'reports'" (click)="setTab('reports')">Reports profils</button>
+    <button class="tabBtn" type="button" [class.isActive]="tab() === 'deleted'" (click)="setTab('deleted')">Profil supprimé</button>
   </div>
 
   @if (loading()) {
@@ -83,6 +84,66 @@
           }
         </div>
       }
+    } @else if (tab() === 'deleted') {
+      @if (deletedProfile()) {
+        <div class="deletedProfile">
+          <div class="line1">
+            <span class="pseudo">{{ deletedProfile()!.user.pseudo }}</span>
+            <span class="role">Profil système</span>
+          </div>
+          <div class="line2">{{ deletedProfile()!.user.email }}</div>
+        </div>
+
+        <h3 class="sectionTitle">Événements</h3>
+        @if (deletedProfile()!.events.length === 0) {
+          <div class="empty">Aucun événement rattaché.</div>
+        } @else {
+          <div class="list">
+            @for (e of deletedProfile()!.events; track e.id) {
+              <div class="row">
+                <div class="main">
+                  <div class="line1">
+                    <span class="pseudo">{{ e.titre }}</span>
+                    <span class="role">{{ e.public ? 'PUBLIC' : 'EN ATTENTE' }}</span>
+                  </div>
+                  <div class="line2">{{ e.ville }} · {{ e.lieu }}</div>
+                  <div class="line3">{{ e.dateDebut | date: 'dd/MM/yyyy HH:mm' }}</div>
+                </div>
+                <div class="actions">
+                  <button class="btn btnDanger" type="button" (click)="deleteEvent(e.id)">Supprimer</button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <h3 class="sectionTitle">Groupes de conversation</h3>
+        @if (deletedProfile()!.groups.length === 0) {
+          <div class="empty">Aucun groupe rattaché.</div>
+        } @else {
+          <div class="list">
+            @for (g of deletedProfile()!.groups; track g.id) {
+              <div class="row">
+                <div class="main">
+                  <div class="line1">
+                    <span class="pseudo">{{ g.title }}</span>
+                    <span class="role">{{ g.status }}</span>
+                  </div>
+                  @if (g.event) {
+                    <div class="line2">Événement : {{ g.event.titre }}</div>
+                  }
+                  <div class="line3">{{ g.createdAt | date: 'dd/MM/yyyy HH:mm' }}</div>
+                </div>
+                <div class="actions">
+                  <button class="btn btnDanger" type="button" (click)="deleteGroup(g.id)">Supprimer</button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      } @else {
+        <div class="empty">Profil supprimé introuvable.</div>
+      }
     } @else {
       @if (filteredSorted().length === 0) {
         <div class="empty">Aucun compte.</div>
@@ -102,6 +163,10 @@
               </div>
               <div class="actions">
                 <button class="btn" type="button" (click)="openEdit(u)">Modifier</button>
+                @if (!u.emailVerified) {
+                  <button class="btn btnPrimary" type="button" (click)="verifyEmail(u.id)">Valider l'email</button>
+                }
+                <button class="btn btnDanger" type="button" (click)="deleteUser(u)">Supprimer</button>
               </div>
             </div>
           }

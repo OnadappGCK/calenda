@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { isPlatformBrowser } from '@angular/common';
-import { Component, OnDestroy, OnInit, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { afterNextRender, Component, OnDestroy, OnInit, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { API_BASE_URL } from '../../core/api.config';
 import { EventsService, EventDto } from '../../core/events.service';
@@ -96,6 +96,21 @@ export class HomePage implements OnInit, OnDestroy {
   protected readonly tagIcon = tagIcon;
   protected readonly resolveEventImageUrl = resolveEventImageUrl;
 
+  private readonly catI18nMap: Record<string, string> = {
+    'Culture & spectacle': 'home.catCultureSpectacle',
+    'Arts & expos': 'home.catArtsExpos',
+    'Sortie': 'home.catSortie',
+    'Activités': 'home.catActivites',
+    'Vie locale': 'home.catVieLocale',
+    'Famille': 'home.catFamille',
+    'Spécial': 'home.catSpecial',
+  };
+
+  translateCategory(cat: string): string {
+    const key = this.catI18nMap[cat];
+    return key ? this.i18n.t(key) : cat;
+  }
+
   newsImageUrl(image: string | null): string | null {
     const raw = (image ?? '').trim();
     if (!raw) return null;
@@ -111,39 +126,42 @@ export class HomePage implements OnInit, OnDestroy {
   private autoTimer: any = null;
   private scrollTimers: any[] = [];
 
-  private forceTopSequence() {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
+  private scrollToTop() {
+    if (isPlatformBrowser(this.platformId)) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
+  }
 
-    for (const delay of [0, 80, 250, 800, 1600]) {
-      const timer = setTimeout(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-      }, delay);
-      this.scrollTimers.push(timer);
-    }
+  constructor() {
+    afterNextRender(() => {
+      this.scrollToTop();
+    });
   }
 
   /** Hook Angular: charge featured + news, et démarre l'auto-rotation côté navigateur. */
   async ngOnInit() {
-    this.forceTopSequence();
+    if (!isPlatformBrowser(this.platformId)) return;
 
-    const featured = await this.eventsService.featured().toPromise();
+    this.scrollToTop();
+
+    const [featured, newsRes, all] = await Promise.all([
+      this.eventsService.featured().toPromise(),
+      this.newsService.list(1, 5).toPromise(),
+      this.eventsService.list().toPromise(),
+    ]);
+
     this.featured.set(featured ?? []);
+    this.news.set(newsRes?.items ?? []);
+    this.allEvents.set(all ?? []);
 
-    if (isPlatformBrowser(this.platformId) && (featured?.length ?? 0) > 1) {
+    // Scroll to top after all data loaded and DOM updated
+    setTimeout(() => this.scrollToTop(), 0);
+
+    if ((featured?.length ?? 0) > 1) {
       this.autoTimer = setInterval(() => {
         this.nextFeatured();
       }, 8000);
     }
-
-    const news = await this.newsService.list(1, 5).toPromise();
-    this.news.set(news?.items ?? []);
-
-    const all = await this.eventsService.list().toPromise();
-    this.allEvents.set(all ?? []);
-
-    this.forceTopSequence();
   }
 
   /** Hook Angular: stoppe le timer d'auto-rotation du carrousel. */

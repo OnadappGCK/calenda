@@ -24,6 +24,7 @@ import { News } from './news/news.entity';
 import { NewsModule } from './news/news.module';
 import { Etablissement } from './etablissements/etablissement.entity';
 import { EtablissementsModule } from './etablissements/etablissements.module';
+import { ContactModule } from './contact/contact.module';
 import { SeedModule } from './seed/seed.module';
 import { User } from './users/user.entity';
 import { UserProfileReport } from './users/user-profile-report.entity';
@@ -110,6 +111,7 @@ import { UserNotification } from './notifications/user-notification.entity';
     ConversationsModule,
     NotificationsModule,
     AdminModule,
+    ContactModule,
     EtablissementsModule,
     SeedModule,
   ],

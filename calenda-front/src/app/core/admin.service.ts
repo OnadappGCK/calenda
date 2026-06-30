@@ -80,6 +80,26 @@ export class AdminService {
     return this.http.patch(`${this.apiBaseUrl}/admin/users/${id}/ban`, { isBanned });
   }
 
+  deleteUser(id: string) {
+    return this.http.delete(`${this.apiBaseUrl}/admin/users/${id}`);
+  }
+
+  verifyEmail(id: string) {
+    return this.http.patch(`${this.apiBaseUrl}/admin/users/${id}/verify-email`, {});
+  }
+
+  getDeletedProfileContent() {
+    return this.http.get<{
+      user: { id: string; pseudo: string; email: string };
+      events: { id: string; titre: string; ville: string; lieu: string; dateDebut: string; public: boolean; createdAt: string }[];
+      groups: { id: string; title: string; status: string; createdAt: string; event: { id: string; titre: string } | null }[];
+    }>(`${this.apiBaseUrl}/admin/deleted-profile`);
+  }
+
+  deleteConversationGroup(id: string) {
+    return this.http.delete(`${this.apiBaseUrl}/admin/conversation-groups/${id}`);
+  }
+
   /** Liste les événements en attente de validation (admin). */
   pendingEvents() {
     return this.http.get<EventDto[]>(`${this.apiBaseUrl}/admin/pending-events`);
@@ -289,5 +309,55 @@ export class AdminService {
         dateFin?: string | null;
       }[];
     }>(`${this.apiBaseUrl}/admin/merge/carry-le-rouet/apply`, body);
+  }
+
+  previewMergeSausset(params?: { pages?: number }) {
+    const query: Record<string, string> = {};
+    if (params?.pages !== undefined) query['pages'] = String(params.pages);
+
+    return this.http.get<{
+      scannedPages: number;
+      foundUrls: number;
+      dedupedUrls: number;
+      parsed: number;
+      withImage: number;
+      withDescription: number;
+      wouldCreate: number;
+      skippedExisting: number;
+      skippedPast: number;
+      failed: number;
+      urls: string[];
+      toDelete: { id: string; titre: string; dateDebut: string; dateFin: string | null }[];
+      failures: { url: string; reason: string }[];
+      debugSamples: {
+        status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'addable';
+        url: string;
+        reason?: string;
+        titre?: string;
+        dateDebut?: string;
+        dateFin?: string | null;
+        image?: boolean;
+        descLen?: number;
+      }[];
+    }>(`${this.apiBaseUrl}/admin/merge/sausset/preview`, { params: query });
+  }
+
+  applyMergeSausset(body: { urls: string[]; toDeleteIds?: string[] }) {
+    return this.http.post<{
+      processed: number;
+      created: number;
+      skippedExisting: number;
+      skippedPast: number;
+      deleted: number;
+      failed: number;
+      debugSamples: {
+        status: 'parse_failed' | 'exception' | 'past' | 'existing' | 'created';
+        url: string;
+        reason?: string;
+        titre?: string;
+        dateDebut?: string;
+        dateFin?: string | null;
+      }[];
+    }>(`${this.apiBaseUrl}/admin/merge/sausset/apply`, body);
   }
 }

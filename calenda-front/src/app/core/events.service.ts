@@ -21,7 +21,7 @@ export type EventTag =
   | 'JOUR' | 'NUIT' | 'FOOD' | 'BOISSON' | 'DJ' | 'LIVE';
 
 /** Origine d'un événement (création manuelle ou import externe). */
-export type EventOrigin = 'MANUAL' | 'MARTIGUES_SITE' | 'SALSA_OLIVIER' | 'CARRY_LE_ROUET';
+export type EventOrigin = 'MANUAL' | 'MARTIGUES_SITE' | 'SALSA_OLIVIER' | 'CARRY_LE_ROUET' | 'SAUSSET_LES_PINS';
 
 /** DTO d'un créneau horaire. */
 export type EventSlotDto = {

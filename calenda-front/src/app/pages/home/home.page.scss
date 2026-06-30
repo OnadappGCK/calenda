@@ -621,3 +621,23 @@
 .sortieBtnIcon {
   font-size: 2rem;
 }
+
+// ─── About section ──────────────────────────────────────────────
+
+.aboutSection {
+  text-align: center;
+  padding-bottom: 2.5rem;
+}
+
+.aboutTitle {
+  font-size: 1.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.aboutText {
+  max-width: 720px;
+  margin: 0 auto;
+  line-height: 1.7;
+  font-size: 1rem;
+  color: var(--text-primary, #333);
+}

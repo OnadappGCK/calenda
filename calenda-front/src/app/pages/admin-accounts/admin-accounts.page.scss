@@ -53,6 +53,25 @@
   border-color: $text-1;
 }
 
+.btnDanger {
+  background: var(--status-danger);
+  color: #fff;
+  border-color: var(--status-danger);
+}
+
+.sectionTitle {
+  font-weight: 900;
+  font-size: 1.05rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.deletedProfile {
+  border: 1px solid $border-1;
+  border-radius: 1rem;
+  background: $surface-1;
+  padding: 0.75rem;
+}
+
 .iconBtn {
   border: 1px solid $border-1;
   background: $surface-1;

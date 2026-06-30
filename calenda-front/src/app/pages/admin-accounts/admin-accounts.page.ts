@@ -28,6 +28,12 @@ type UserReportDto = {
   reported: { id: string; pseudo: string; email: string; isBanned: boolean };
 };
 
+type DeletedProfileDto = {
+  user: UserDto;
+  events: { id: string; titre: string; ville: string; lieu: string; dateDebut: string; public: boolean; createdAt: string }[];
+  groups: { id: string; title: string; status: string; createdAt: string; event: { id: string; titre: string } | null }[];
+};
+
 type SortKey = 'pseudo' | 'email' | 'isAdmin' | 'createdAt';
 
 type EditModel = {
@@ -65,9 +71,10 @@ type CreateModel = {
 export class AdminAccountsPage implements OnInit {
   private readonly adminService = inject(AdminService);
 
-  readonly tab = signal<'users' | 'reports'>('users');
+  readonly tab = signal<'users' | 'reports' | 'deleted'>('users');
   readonly items = signal<UserDto[]>([]);
   readonly reports = signal<UserReportDto[]>([]);
+  readonly deletedProfile = signal<DeletedProfileDto | null>(null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -142,6 +149,9 @@ export class AdminAccountsPage implements OnInit {
       if (this.tab() === 'reports') {
         const reports = await this.adminService.userReports().toPromise();
         this.reports.set((reports ?? []) as any);
+      } else if (this.tab() === 'deleted') {
+        const content = await this.adminService.getDeletedProfileContent().toPromise();
+        this.deletedProfile.set((content ?? null) as any);
       } else {
         const users = await this.adminService.users().toPromise();
         this.items.set((users ?? []) as any);
@@ -153,7 +163,7 @@ export class AdminAccountsPage implements OnInit {
     }
   }
 
-  async setTab(next: 'users' | 'reports') {
+  async setTab(next: 'users' | 'reports' | 'deleted') {
     if (this.tab() === next) {
       return;
     }
@@ -270,6 +280,37 @@ export class AdminAccountsPage implements OnInit {
     await this.adminService.updateUser(e.id, payload).toPromise();
     this.showEdit.set(false);
     this.edit.set(null);
+    await this.reload();
+  }
+
+  async deleteUser(u: UserDto) {
+    const confirmed = window.confirm(
+      `Supprimer le compte de « ${u.pseudo} » (${u.email}) ?\nSes événements et groupes seront transférés au profil « Profil supprimé ».`,
+    );
+    if (!confirmed) return;
+
+    await this.adminService.deleteUser(u.id).toPromise();
+    await this.reload();
+  }
+
+  async verifyEmail(id: string) {
+    await this.adminService.verifyEmail(id).toPromise();
+    await this.reload();
+  }
+
+  async deleteEvent(id: string) {
+    const confirmed = window.confirm('Supprimer cet événement ?');
+    if (!confirmed) return;
+
+    await this.adminService.deleteEvent(id).toPromise();
+    await this.reload();
+  }
+
+  async deleteGroup(id: string) {
+    const confirmed = window.confirm('Supprimer ce groupe de conversation ?');
+    if (!confirmed) return;
+
+    await this.adminService.deleteConversationGroup(id).toPromise();
     await this.reload();
   }
 }

@@ -2,7 +2,11 @@
   <h1>Contact</h1>
 
   @if (ok()) {
-    <div class="ok">Message envoyé (demo)</div>
+    <div class="ok">Message envoyé avec succès !</div>
+  }
+
+  @if (error()) {
+    <div class="error">{{ error() }}</div>
   }
 
   <form class="form" (ngSubmit)="submit()">
@@ -12,8 +16,8 @@
     </label>
 
     <label class="field">
-      Motif
-      <input type="text" name="motif" [(ngModel)]="motif" required />
+      Sujet
+      <input type="text" name="sujet" [(ngModel)]="sujet" required />
     </label>
 
     <label class="field">
@@ -21,6 +25,14 @@
       <textarea rows="6" name="message" [(ngModel)]="message" required></textarea>
     </label>
 
-    <button class="btn btnPrimary" type="submit">Envoyer</button>
+    <button class="btn btnPrimary" type="submit" [disabled]="loading() || cooldown() > 0">
+      @if (loading()) {
+        Envoi en cours...
+      } @else if (cooldown() > 0) {
+        Patienter {{ cooldown() }}s
+      } @else {
+        Envoyer
+      }
+    </button>
   </form>
 </section>
