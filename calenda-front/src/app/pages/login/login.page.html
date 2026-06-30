@@ -32,6 +32,11 @@
       </div>
     </label>
 
+    <div #captchaContainer></div>
+    @if (turnstileError()) {
+      <div class="error">{{ turnstileError() }}</div>
+    }
+
     <button class="btn" type="submit">Se connecter</button>
   </form>
 
