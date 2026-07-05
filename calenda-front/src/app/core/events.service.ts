@@ -63,6 +63,7 @@ export type EventDto = {
   dateDebut: string;
   dateFin: string | null;
   public: boolean;
+  isOwner: boolean;
   couleur: string | null;
   slots?: EventSlotDto[];
   highlights?: HighlightDto[];
@@ -116,6 +117,7 @@ export class EventsService {
     slots?: { date: string; heureDebut: string; heureFin: string }[];
     dateDebut?: string;
     dateFin?: string | null;
+    isOwner?: boolean;
     honeypot?: string;
   }) {
     return this.http.post<EventDto>(`${this.apiBaseUrl}/events`, payload);
@@ -142,6 +144,7 @@ export class EventsService {
       dateDebut?: string;
       dateFin?: string | null;
       public?: boolean;
+      isOwner?: boolean;
       couleur?: string | null;
     },
   ) {

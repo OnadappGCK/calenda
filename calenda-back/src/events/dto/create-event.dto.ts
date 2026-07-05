@@ -93,6 +93,11 @@ export class CreateEventDto {
   @IsBoolean()
   enAvant?: boolean;
 
+  /** Indique si l'utilisateur est l'organisateur de l'événement. */
+  @IsOptional()
+  @IsBoolean()
+  isOwner?: boolean;
+
   /** Couleur custom (optionnel). */
   @IsOptional()
   @IsString()

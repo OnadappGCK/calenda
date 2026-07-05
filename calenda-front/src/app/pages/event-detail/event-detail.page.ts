@@ -43,6 +43,7 @@ type Draft = {
   /** Créneaux horaires de l'événement en cours d'édition. */
   slots: { date: string; heureDebut: string; heureFin: string }[];
   public: boolean;
+  isOwner: boolean;
   couleur: string | null;
 };
 
@@ -930,6 +931,7 @@ export class EventDetailPage implements OnInit, OnDestroy {
       organisateurId: '',
       slots: this.slotsFromEvent(e),
       public: e.public,
+      isOwner: e.isOwner ?? false,
       couleur: e.couleur ?? null,
     });
 
@@ -1030,6 +1032,8 @@ export class EventDetailPage implements OnInit, OnDestroy {
       } else {
         payload.caracteristiques = [];
       }
+
+      payload.isOwner = d.isOwner;
 
       if (this.isAdmin()) {
         payload.public = d.public;

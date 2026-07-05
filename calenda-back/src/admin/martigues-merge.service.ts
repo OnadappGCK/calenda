@@ -2,7 +2,7 @@ import { normalizePhone } from './merge-utils';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { Between, In, MoreThanOrEqual, Repository } from 'typeorm';
+import { Between, MoreThanOrEqual, Repository } from 'typeorm';
 import { EventCategory } from '../common/enums/event-category.enum';
 import { EventTag } from '../common/enums/event-tag.enum';
 import { EventOrigin } from '../common/enums/event-origin.enum';
@@ -127,6 +127,7 @@ export class MartiguesMergeService {
 
     for (const ev of toUpdate) {
       ev.organisateur = organizer;
+      ev.isOwner = false;
     }
     await this.eventsRepo.save(toUpdate);
     this.logger.log(`martigues_backfill_organizer updated=${toUpdate.length} organizerId=${organizer.id}`);
@@ -421,6 +422,10 @@ export class MartiguesMergeService {
             existing.organisateur = mergeOrganizer;
             shouldSaveExisting = true;
           }
+          if (existing.isOwner !== false) {
+            existing.isOwner = false;
+            shouldSaveExisting = true;
+          }
           if (shouldSaveExisting) {
             await this.eventsRepo.save(existing);
           }
@@ -475,6 +480,7 @@ export class MartiguesMergeService {
           couleur: null,
           enAvant: false,
           public: false,
+          isOwner: false,
           organisateur: mergeOrganizer,
         });
 
@@ -546,6 +552,28 @@ export class MartiguesMergeService {
     };
   }
 
+  private effectiveEndForPastCheck(dateDebut: Date, dateFin: Date | null) {
+    if (dateFin) return dateFin;
+    const d = new Date(dateDebut);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }
+
+  private async fetchHtml(url: string) {
+    const res = await fetch(url, {
+      headers: {
+        'user-agent': 'calenda-bot/1.0',
+        accept: 'text/html,application/xhtml+xml',
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`fetch_failed_${res.status}`);
+    }
+
+    return await res.text();
+  }
+
   private async listAgendaUrls(pages: number) {
     const allUrls: string[] = [];
     for (let page = 1; page <= pages; page++) {
@@ -568,21 +596,6 @@ export class MartiguesMergeService {
       allUrls.push(...urls);
     }
     return allUrls;
-  }
-
-  private async fetchHtml(url: string) {
-    const res = await fetch(url, {
-      headers: {
-        'user-agent': 'calenda-bot/1.0',
-        accept: 'text/html,application/xhtml+xml',
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error(`fetch_failed_${res.status}`);
-    }
-
-    return await res.text();
   }
 
   private extractDetailUrls(html: string): string[] {
@@ -1382,13 +1395,6 @@ export class MartiguesMergeService {
     if (!dateFin) return false;
     const diffDays = (dateFin.getTime() - dateDebut.getTime()) / (1000 * 60 * 60 * 24);
     return diffDays > 90;
-  }
-
-  private effectiveEndForPastCheck(dateDebut: Date, dateFin: Date | null) {
-    if (dateFin) return dateFin;
-    const d = new Date(dateDebut);
-    d.setHours(23, 59, 59, 999);
-    return d;
   }
 
   private firstString(v: unknown): string | null {

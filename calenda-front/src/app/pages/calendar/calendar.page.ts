@@ -489,6 +489,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
   newImagePreviewState: 'idle' | 'loading' | 'loaded' | 'error' = 'idle';
   newContact = '';
   newSlots: { date: string; heureDebut: string; heureFin: string }[] = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
+  newIsOwner = false;
 
   newWeeklyForm: { dateDebut: string; dateFin: string; heureDebut: string; heureFin: string; days: Set<number> } | null = null;
   newWeeklyFormError: string | null = null;
@@ -2145,6 +2146,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
         heureFin: s.heureFin,
       })),
       honeypot: this.newHoneypot,
+      isOwner: this.newIsOwner,
     };
 
     // Only send contact if the user typed something.
@@ -2169,6 +2171,7 @@ export class CalendarPage implements OnInit, AfterViewInit, OnDestroy {
     this.newContact = '';
     this.newSlots = [{ date: '', heureDebut: '09:00', heureFin: '18:00' }];
     this.newHoneypot = '';
+    this.newIsOwner = false;
 
     this.closePropose();
     await this.reload();

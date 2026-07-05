@@ -122,6 +122,7 @@ export class SalsaOlivierMergeService {
 
     for (const ev of toUpdate) {
       ev.organisateur = organizer;
+      ev.isOwner = false;
     }
     await this.eventsRepo.save(toUpdate);
     this.logger.log(`salsa_backfill_organizer updated=${toUpdate.length} organizerId=${organizer.id}`);
@@ -159,6 +160,11 @@ export class SalsaOlivierMergeService {
 
     if (!existing.organisateur || existing.organisateur.id !== organizer.id) {
       existing.organisateur = organizer;
+      changed = true;
+    }
+
+    if (existing.isOwner !== false) {
+      existing.isOwner = false;
       changed = true;
     }
 
@@ -461,6 +467,7 @@ export class SalsaOlivierMergeService {
           couleur: null,
           enAvant: false,
           public: false,
+          isOwner: false,
           organisateur: mergeOrganizer,
         });
 
@@ -517,7 +524,7 @@ export class SalsaOlivierMergeService {
     return d;
   }
 
-  private async fetchHtml(url: string) {
+  private async fetchHtml(url: string): Promise<string> {
     const res = await fetch(url, {
       headers: {
         'user-agent': 'calenda-bot/1.0',

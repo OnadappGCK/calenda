@@ -592,6 +592,10 @@
         Contact <span class="formOptional">(optionnel)</span>
         <textarea rows="2" [(ngModel)]="newContact" name="newContact" placeholder="Email, téléphone, site web…"></textarea>
       </label>
+      <label class="span2 checkbox">
+        <input type="checkbox" [(ngModel)]="newIsOwner" name="newIsOwner" />
+        {{ i18n.t('eventDetail.isOwner') }}
+      </label>
     </div>
 
     <div class="actions">

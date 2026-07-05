@@ -300,8 +300,8 @@
               <div class="meta">📍 {{ et.adresse }}{{ et.adresse && et.ville ? ' · ' : '' }}{{ et.ville }}</div>
             }
             @if (et.horaires) { <div class="meta">🕐 {{ et.horaires }}</div> }
-            @if ((et.tags ?? []).length > 0) {
-              <div class="meta">🏷 {{ (et.tags ?? []).join(', ') }}</div>
+            @if (et.tags.length > 0) {
+              <div class="meta">🏷 {{ et.tags.join(', ') }}</div>
             }
             <div class="actions">
               <button class="btn btnEdit" type="button" (click)="startEditEtab(et)">Modifier</button>

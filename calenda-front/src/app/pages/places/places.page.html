@@ -260,9 +260,9 @@
                       <div class="csNom">{{ p.nom }}</div>
                       @if (p.ville) { <div class="csVille">📍 {{ p.ville }}</div> }
                       @if (p.description) { <div class="csDesc">{{ p.description }}</div> }
-                      @if ((p.tags ?? []).length > 0) {
+                      @if (p.tags.length > 0) {
                         <div class="csTags">
-                          @for (tag of (p.tags ?? []).slice(0, 5); track tag) {
+                          @for (tag of p.tags.slice(0, 5); track tag) {
                             <span class="tagChip">{{ tag }}</span>
                           }
                         </div>
@@ -350,7 +350,7 @@
                   @if (place.ville) { <div class="placeCardVille">📍 {{ place.ville }}</div> }
                   @if (place.description) { <div class="placeCardDesc">{{ place.description }}</div> }
                   <div class="placeCardTags">
-                    @for (tag of (place.tags ?? []).slice(0, 3); track tag) {
+                    @for (tag of place.tags.slice(0, 3); track tag) {
                       <span class="tagChip">{{ tag }}</span>
                     }
                   </div>

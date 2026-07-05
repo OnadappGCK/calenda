@@ -91,6 +91,10 @@ export class Event {
   /** Indique si l'événement est mis en avant (homepage). */
   enAvant!: boolean;
 
+  @Column({ default: false })
+  /** Indique si l'utilisateur est l'organisateur de l'événement. */
+  isOwner!: boolean;
+
   @Column({ type: 'text', nullable: true })
   /** Couleur custom (optionnel). */
   couleur!: string | null;

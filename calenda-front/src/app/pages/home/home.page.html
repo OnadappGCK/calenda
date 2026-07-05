@@ -107,7 +107,7 @@
               <h3 class="categoryRowTitle">{{ translateCategory(entry[0]) }}</h3>
             </div>
             <div class="categoryRowNav">
-              <button class="rowNavBtn" type="button" (click)="rowScroll.scrollLeft -= rowScroll.offsetWidth * 0.8" aria-label="Précédent">‹</button>
+              <button class="rowNavBtn prev" type="button" (click)="rowScroll.scrollLeft -= rowScroll.offsetWidth * 0.8" aria-label="Précédent"><span class="rowNavIcon">‹</span></button>
               <div class="categoryScroll" #rowScroll>
                 @for (ev of entry[1]; track ev.id) {
                   <a class="eventCard" [routerLink]="['/events', ev.id]">
@@ -120,7 +120,7 @@
                   </a>
                 }
               </div>
-              <button class="rowNavBtn" type="button" (click)="rowScroll.scrollLeft += rowScroll.offsetWidth * 0.8" aria-label="Suivant">›</button>
+              <button class="rowNavBtn next" type="button" (click)="rowScroll.scrollLeft += rowScroll.offsetWidth * 0.8" aria-label="Suivant"><span class="rowNavIcon">›</span></button>
             </div>
           </div>
         }

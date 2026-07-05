@@ -146,6 +146,7 @@ export class CarryLeRouetMergeService {
 
     for (const ev of toUpdate) {
       ev.organisateur = organizer;
+      ev.isOwner = false;
     }
     await this.eventsRepo.save(toUpdate);
     this.logger.log(`carry_backfill_organizer updated=${toUpdate.length} organizerId=${organizer.id}`);
@@ -411,6 +412,10 @@ export class CarryLeRouetMergeService {
             existing.organisateur = mergeOrganizer;
             shouldSaveExisting = true;
           }
+          if (existing.isOwner !== false) {
+            existing.isOwner = false;
+            shouldSaveExisting = true;
+          }
           if (shouldSaveExisting) {
             await this.eventsRepo.save(existing);
           }
@@ -454,7 +459,7 @@ export class CarryLeRouetMergeService {
           latitude: detail.latitude,
           longitude: detail.longitude,
           theme: null,
-          caracteristiques: detail.caracteristiques.length ? detail.caracteristiques : null,
+          caracteristiques: detail.caracteristiques.length ? this.sanitizeCarryTags(detail.caracteristiques) : null,
           imageUrl: detail.imageUrl,
           tarif: detail.tarif ?? 'Non renseigné',
           contact: detail.contact,
@@ -463,6 +468,7 @@ export class CarryLeRouetMergeService {
           couleur: null,
           enAvant: false,
           public: false,
+          isOwner: false,
           organisateur: mergeOrganizer,
         });
 
@@ -518,6 +524,23 @@ export class CarryLeRouetMergeService {
     );
 
     return { processed: uniqueUrls.length, created, skippedExisting, skippedPast, deleted, failed, debugSamples };
+  }
+
+  private effectiveEndForPastCheck(dateDebut: Date, dateFin: Date | null): Date {
+    if (dateFin) return dateFin;
+    const d = new Date(dateDebut);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }
+
+  // ─── HTML utilities (same CMS as Martigues / Tourinsoft) ───────────────────
+
+  private async fetchHtml(url: string): Promise<string> {
+    const res = await fetch(url, {
+      headers: { 'user-agent': 'calenda-bot/1.0', accept: 'text/html,application/xhtml+xml' },
+    });
+    if (!res.ok) throw new Error(`fetch_failed_${res.status}`);
+    return await res.text();
   }
 
   // ─── Agenda scraping ───────────────────────────────────────────────────────
@@ -929,14 +952,6 @@ export class CarryLeRouetMergeService {
   }
 
   // ─── HTML utilities (same CMS as Martigues / Tourinsoft) ───────────────────
-
-  private async fetchHtml(url: string): Promise<string> {
-    const res = await fetch(url, {
-      headers: { 'user-agent': 'calenda-bot/1.0', accept: 'text/html,application/xhtml+xml' },
-    });
-    if (!res.ok) throw new Error(`fetch_failed_${res.status}`);
-    return await res.text();
-  }
 
   private decodeHtml(s: string): string {
     const map: Record<string, string> = {
@@ -1573,13 +1588,6 @@ export class CarryLeRouetMergeService {
     }
     const joined = out.join(' ').replace(/\s+/g, ' ').trim();
     return joined || null;
-  }
-
-  private effectiveEndForPastCheck(dateDebut: Date, dateFin: Date | null): Date {
-    if (dateFin) return dateFin;
-    const d = new Date(dateDebut);
-    d.setHours(23, 59, 59, 999);
-    return d;
   }
 
   private guessCategory(_sourceUrl: string, titre: string): EventCategory {

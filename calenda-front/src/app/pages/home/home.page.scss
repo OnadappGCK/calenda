@@ -359,10 +359,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  position: relative;
   transition: background 0.15s, opacity 0.15s;
 
   &:hover {
     background: $surface-2;
+  }
+
+  .rowNavIcon {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+  }
+
+  &.prev .rowNavIcon {
+    transform: translate(-58%, -58%);
+  }
+
+  &.next .rowNavIcon {
+        transform: translate(-42%, -58%);
   }
 }
 
@@ -370,7 +386,6 @@
   flex: 1;
   display: flex;
   gap: 0.55rem;
-  overflow-x: auto;
   scroll-behavior: smooth;
   scrollbar-width: none;
 
@@ -639,5 +654,11 @@
   margin: 0 auto;
   line-height: 1.7;
   font-size: 1rem;
-  color: var(--text-primary, #333);
+  color: #333;
+}
+
+:host-context(body.theme-dark) {
+  .aboutText {
+    color: #e3dcd3;
+  }
 }

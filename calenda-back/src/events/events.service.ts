@@ -318,6 +318,7 @@ export class EventsService {
       couleur: dto.couleur ?? null,
       enAvant: isAdmin ? (dto.enAvant ?? false) : false,
       public: isAdmin ? (dto.public ?? true) : false,
+      isOwner: dto.isOwner ?? false,
       organisateur,
     });
 
@@ -425,6 +426,10 @@ export class EventsService {
         throw new ForbiddenException('forbidden');
       }
       event.public = dto.public;
+    }
+
+    if (dto.isOwner !== undefined) {
+      event.isOwner = dto.isOwner;
     }
 
     return this.eventsRepo.save(event);

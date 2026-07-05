@@ -138,14 +138,14 @@
       }
 
       <div class="organizerRow">
-        <span class="organizerLabel">{{ i18n.t('eventDetail.organizer') }}:</span>
+        <span class="organizerLabel">{{ event()!.isOwner ? i18n.t('eventDetail.organizer') : i18n.t('eventDetail.source') }}:</span>
         @if (event()!.organisateur) {
           <a class="organizerBubble" [routerLink]="['/profiles', event()!.organisateur!.id]">
             <img class="organizerAvatar" [src]="organizerAvatarUrl(event()!)" alt="" loading="lazy" />
             <span class="organizerName">{{ event()!.organisateur!.pseudo }}</span>
           </a>
         } @else {
-          <span class="organizerMissing">{{ i18n.t('eventDetail.organizerMissing') }}</span>
+          <span class="organizerMissing">{{ event()!.isOwner ? i18n.t('eventDetail.organizerMissing') : i18n.t('eventDetail.sourceMissing') }}</span>
         }
       </div>
 
@@ -600,6 +600,17 @@
             }
           </div>
         }
+
+        <div class="row2">
+          <label class="field inline">
+            <input
+              type="checkbox"
+              [ngModel]="draft()!.isOwner"
+              (ngModelChange)="setDraft({ isOwner: $event })"
+            />
+            {{ i18n.t('eventDetail.isOwner') }}
+          </label>
+        </div>
 
         @if (canEdit() && !isAdmin()) {
           <div class="highlightSection">

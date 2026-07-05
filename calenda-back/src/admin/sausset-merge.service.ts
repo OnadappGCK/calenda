@@ -143,13 +143,12 @@ export class SaussetMergeService {
 
     for (const ev of toUpdate) {
       ev.organisateur = organizer;
+      ev.isOwner = false;
     }
     await this.eventsRepo.save(toUpdate);
     this.logger.log(`sausset_backfill_organizer updated=${toUpdate.length} organizerId=${organizer.id}`);
     return toUpdate.length;
   }
-
-  // ─── Public API ────────────────────────────────────────────────────────────
 
   async merge(options?: MergeOptions): Promise<MergeResult> {
     await this.backfillOrganizer();
@@ -397,6 +396,10 @@ export class SaussetMergeService {
             existing.organisateur = mergeOrganizer;
             shouldSave = true;
           }
+          if (existing.isOwner !== false) {
+            existing.isOwner = false;
+            shouldSave = true;
+          }
           if (shouldSave) {
             await this.eventsRepo.save(existing);
           }
@@ -428,6 +431,7 @@ export class SaussetMergeService {
           couleur: null,
           enAvant: false,
           public: false,
+          isOwner: false,
           organisateur: mergeOrganizer,
         });
 
@@ -691,8 +695,6 @@ export class SaussetMergeService {
 
     return EventCategory.SORTIE;
   }
-
-  // ─── Utilities ──────────────────────────────────────────────────────────────
 
   private effectiveEndForPastCheck(dateDebut: Date, dateFin: Date | null) {
     if (dateFin) return dateFin;
